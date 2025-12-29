@@ -282,4 +282,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public getIsStunned(): boolean {
     return this.isStunned;
   }
+
+  /**
+   * Récupère la santé actuelle du joueur
+   */
+  public getHealth(): number {
+    return this.health;
+  }
+
+  /**
+   * Récupère la santé maximale du joueur
+   */
+  public getMaxHealth(): number {
+    return this.maxHealth;
+  }
 }

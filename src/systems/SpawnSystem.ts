@@ -4,6 +4,7 @@ import type { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import type { ZombieType } from '@/types/entities';
 import type { Door } from '@arena/Door';
 import type { WaveConfig } from './WaveSystem';
+import type { SpawnPlan } from './ThreatSystem';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@config/constants';
 import { BALANCE } from '@config/balance';
 
@@ -75,11 +76,57 @@ export class SpawnSystem {
    */
   public startWaveSpawning(waveConfig: WaveConfig): void {
     this.currentWaveConfig = waveConfig;
-    this.spawnQueue = this.buildSpawnQueue(waveConfig);
-    this.spawnIndex = 0;
 
+    // Utiliser les spawn plans du ThreatSystem si disponibles
+    if (waveConfig.spawnPlans && waveConfig.spawnPlans.length > 0) {
+      this.spawnQueue = this.buildSpawnQueueFromPlans(waveConfig.spawnPlans);
+    } else {
+      this.spawnQueue = this.buildSpawnQueue(waveConfig);
+    }
+
+    this.spawnIndex = 0;
     this.isSpawning = true;
-    this.scheduleNextWaveSpawn();
+
+    // Si on a des spawn plans avec délais, les utiliser
+    if (waveConfig.spawnPlans && waveConfig.spawnPlans.length > 0) {
+      this.scheduleSpawnsFromPlans(waveConfig.spawnPlans);
+    } else {
+      this.scheduleNextWaveSpawn();
+    }
+  }
+
+  /**
+   * Construit la queue de spawn à partir des plans du ThreatSystem
+   */
+  private buildSpawnQueueFromPlans(spawnPlans: SpawnPlan[]): { type: ZombieType; door: Door | null }[] {
+    const activeDoors = this.getActiveDoors();
+
+    return spawnPlans.map((plan) => ({
+      type: plan.type,
+      door: activeDoors.length > 0
+        ? activeDoors[Math.floor(Math.random() * activeDoors.length)]
+        : null,
+    }));
+  }
+
+  /**
+   * Programme les spawns en utilisant les délais des spawn plans
+   */
+  private scheduleSpawnsFromPlans(spawnPlans: SpawnPlan[]): void {
+    for (let i = 0; i < spawnPlans.length; i++) {
+      const plan = spawnPlans[i];
+
+      this.scene.time.delayedCall(
+        plan.delay,
+        () => {
+          if (this.isSpawning && this.spawnIndex < this.spawnQueue.length) {
+            this.spawnFromQueue();
+          }
+        },
+        [],
+        this
+      );
+    }
   }
 
   /**

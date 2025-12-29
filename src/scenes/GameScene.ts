@@ -4,10 +4,12 @@ import { Player } from '@entities/Player';
 import { Arena } from '@arena/Arena';
 import { BulletPool } from '@entities/projectiles/BulletPool';
 import { PoolManager } from '@managers/PoolManager';
+import { TelemetryManager } from '@managers/TelemetryManager';
 import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
 import { SpawnSystem } from '@systems/SpawnSystem';
 import { WaveSystem } from '@systems/WaveSystem';
+import { DDASystem } from '@systems/DDASystem';
 import { Pathfinder } from '@utils/pathfinding';
 import type { Zombie } from '@entities/zombies/Zombie';
 
@@ -27,6 +29,8 @@ export class GameScene extends Phaser.Scene {
   private spawnSystem!: SpawnSystem;
   private waveSystem!: WaveSystem;
   private pathfinder!: Pathfinder;
+  private telemetryManager!: TelemetryManager;
+  private ddaSystem!: DDASystem;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -91,8 +95,70 @@ export class GameScene extends Phaser.Scene {
     // Système de spawn
     this.spawnSystem = new SpawnSystem(this, this.zombieFactory);
 
-    // Système de vagues
+    // Gestionnaire de télémétrie (Phase 3.6)
+    this.telemetryManager = new TelemetryManager();
+    this.telemetryManager.start();
+
+    // Système de difficulté adaptative (Phase 3.6)
+    this.ddaSystem = new DDASystem();
+    this.ddaSystem.setTelemetryManager(this.telemetryManager);
+
+    // Système de vagues (avec intégration ThreatSystem et DDA)
     this.waveSystem = new WaveSystem(this);
+    this.waveSystem.setDDASystem(this.ddaSystem);
+
+    // Connecter les événements de télémétrie
+    this.setupTelemetryEvents();
+  }
+
+  /**
+   * Configure les événements de télémétrie
+   */
+  private setupTelemetryEvents(): void {
+    // Événements de combat
+    this.events.on('zombieDeath', (zombie: Zombie) => {
+      this.telemetryManager.log('zombie:killed', {
+        type: zombie.zombieType,
+        zombieId: zombie.name || `zombie_${Date.now()}`,
+        damage: zombie.getScoreValue(),
+      });
+    });
+
+    this.events.on('playerHit', (data: { damage: number; source: string; distance: number }) => {
+      this.telemetryManager.log('player:hit', data);
+    });
+
+    this.events.on('playerHeal', (data: { amount: number }) => {
+      this.telemetryManager.log('player:heal', data);
+    });
+
+    this.events.on('playerDash', () => {
+      this.telemetryManager.log('player:dash', {});
+    });
+
+    // Événements d'armes
+    this.events.on('weaponFired', (data: { weapon: string }) => {
+      this.telemetryManager.log('weapon:fired', data);
+    });
+
+    this.events.on('weaponHit', (data: { weapon: string; damage: number }) => {
+      this.telemetryManager.log('weapon:hit', data);
+    });
+
+    // Événements de vagues
+    this.events.on('waveStart', (wave: number) => {
+      this.telemetryManager.log('wave:start', { wave });
+    });
+
+    this.events.on('waveComplete', (wave: number) => {
+      this.telemetryManager.log('wave:clear', { wave });
+    });
+
+    // Événements de combo/score
+    this.events.on('scoreUpdate', (score: number, _kills: number) => {
+      this.telemetryManager.updateScore(score);
+      this.telemetryManager.log('combo:updated', { combo: 0, score });
+    });
   }
 
   /**
@@ -113,6 +179,15 @@ export class GameScene extends Phaser.Scene {
 
     // Mettre à jour le système de combat
     this.combatSystem.update(time, delta);
+
+    // Mettre à jour le système DDA (Phase 3.6)
+    this.ddaSystem.update(delta);
+
+    // Mettre à jour la télémétrie avec la santé actuelle du joueur
+    this.telemetryManager.updateHealth(
+      this.player.getHealth(),
+      this.player.getMaxHealth()
+    );
   }
 
   /**
@@ -193,6 +268,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le gestionnaire de télémétrie (Phase 3.6)
+   */
+  public getTelemetryManager(): TelemetryManager {
+    return this.telemetryManager;
+  }
+
+  /**
+   * Récupère le système DDA (Phase 3.6)
+   */
+  public getDDASystem(): DDASystem {
+    return this.ddaSystem;
+  }
+
+  /**
    * Nettoie la scène
    */
   shutdown(): void {
@@ -200,5 +289,6 @@ export class GameScene extends Phaser.Scene {
     this.spawnSystem?.destroy();
     this.combatSystem?.destroy();
     this.poolManager?.destroy();
+    this.ddaSystem?.reset();
   }
 }

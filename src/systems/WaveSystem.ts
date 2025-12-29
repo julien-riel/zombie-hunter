@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import type { GameScene } from '@scenes/GameScene';
 import type { ZombieType } from '@/types/entities';
 import { BALANCE } from '@config/balance';
+import { ThreatSystem, type SpawnPlan, type WaveComposition } from './ThreatSystem';
+import type { DDASystem } from './DDASystem';
 
 /**
  * Configuration d'un groupe de spawn dans une vague
@@ -20,6 +22,10 @@ export interface WaveConfig {
   activeDoors: number;
   spawnGroups: SpawnGroup[];
   totalZombies: number;
+  /** Plans de spawn détaillés (si générés par ThreatSystem) */
+  spawnPlans?: SpawnPlan[];
+  /** Composition de la vague (si générée par ThreatSystem) */
+  composition?: WaveComposition;
 }
 
 /**
@@ -53,11 +59,42 @@ export class WaveSystem {
 
   private transitionTimer: Phaser.Time.TimerEvent | null = null;
 
+  /** Système de budget de menace pour la génération de vagues */
+  private threatSystem: ThreatSystem;
+  /** Système de difficulté adaptative (optionnel) */
+  private ddaSystem: DDASystem | null = null;
+  /** Active l'utilisation du ThreatSystem pour la génération de vagues */
+  private useThreatSystem: boolean = true;
+
   constructor(scene: GameScene) {
     this.scene = scene;
 
+    // Initialiser le ThreatSystem
+    this.threatSystem = new ThreatSystem();
+
     // Écouter les événements de mort des zombies
     this.scene.events.on('zombieDeath', this.onZombieDeath, this);
+  }
+
+  /**
+   * Configure le système DDA
+   */
+  public setDDASystem(ddaSystem: DDASystem): void {
+    this.ddaSystem = ddaSystem;
+  }
+
+  /**
+   * Active ou désactive l'utilisation du ThreatSystem
+   */
+  public setUseThreatSystem(use: boolean): void {
+    this.useThreatSystem = use;
+  }
+
+  /**
+   * Récupère le ThreatSystem
+   */
+  public getThreatSystem(): ThreatSystem {
+    return this.threatSystem;
   }
 
   /**
@@ -117,11 +154,16 @@ export class WaveSystem {
   /**
    * Appelé quand un zombie est tué
    */
-  private onZombieDeath(): void {
+  private onZombieDeath(zombie?: { zombieType?: ZombieType }): void {
     if (this.state !== WaveState.ACTIVE && this.state !== WaveState.CLEARING) return;
 
     this.zombiesKilled++;
     this.zombiesRemaining = Math.max(0, this.zombiesRemaining - 1);
+
+    // Notifier le ThreatSystem pour libérer le slot du rôle
+    if (zombie?.zombieType) {
+      this.threatSystem.onZombieKilled(zombie.zombieType);
+    }
 
     // Émettre l'événement de progression
     this.scene.events.emit('waveProgress', {
@@ -166,6 +208,9 @@ export class WaveSystem {
   private completeWave(): void {
     this.state = WaveState.COMPLETED;
 
+    // Notifier le DDA que la vague est terminée
+    this.ddaSystem?.onWaveComplete();
+
     // Émettre l'événement de fin de vague
     this.scene.events.emit('waveComplete', this.currentWave);
 
@@ -184,16 +229,70 @@ export class WaveSystem {
    * Génère la configuration d'une vague
    */
   private generateWaveConfig(waveNumber: number): WaveConfig {
-    // Calculer le nombre de zombies
-    const totalZombies = Math.min(
-      WAVES.maxZombiesPerWave,
-      WAVES.baseZombieCount + (waveNumber - 1) * WAVES.zombiesPerWave
-    );
-
     // Calculer le nombre de portes actives
     const activeDoors = Math.min(
       WAVES.maxDoors,
       WAVES.initialDoors + Math.floor((waveNumber - 1) / WAVES.doorsPerWaves)
+    );
+
+    // Utiliser le ThreatSystem si activé
+    if (this.useThreatSystem) {
+      return this.generateWaveConfigWithThreatSystem(waveNumber, activeDoors);
+    }
+
+    // Fallback: méthode legacy
+    return this.generateLegacyWaveConfig(waveNumber, activeDoors);
+  }
+
+  /**
+   * Génère une configuration de vague en utilisant le ThreatSystem
+   */
+  private generateWaveConfigWithThreatSystem(waveNumber: number, activeDoors: number): WaveConfig {
+    // Récupérer les modificateurs DDA
+    const ddaModifiers = this.ddaSystem?.getModifiers();
+    const spawnDelayMultiplier = ddaModifiers?.spawnDelayMultiplier ?? 1.0;
+    const budgetMultiplier = ddaModifiers?.budgetMultiplier ?? 1.0;
+
+    // Ajuster le budget si DDA actif
+    if (budgetMultiplier !== 1.0) {
+      const currentConfig = this.threatSystem.getConfig();
+      this.threatSystem.updateConfig({
+        baseBudget: currentConfig.baseBudget * budgetMultiplier,
+      });
+    }
+
+    // Générer la composition de vague
+    const composition = this.threatSystem.generateWaveComposition(waveNumber, spawnDelayMultiplier);
+
+    // Convertir en SpawnGroups pour compatibilité avec le système existant
+    const spawnGroups: SpawnGroup[] = [];
+    for (const [type, count] of Object.entries(composition.zombieCounts)) {
+      if (count > 0) {
+        spawnGroups.push({
+          zombieType: type as ZombieType,
+          count,
+        });
+      }
+    }
+
+    return {
+      waveNumber,
+      activeDoors,
+      spawnGroups,
+      totalZombies: composition.spawnPlans.length,
+      spawnPlans: composition.spawnPlans,
+      composition,
+    };
+  }
+
+  /**
+   * Génère une configuration de vague avec la méthode legacy
+   */
+  private generateLegacyWaveConfig(waveNumber: number, activeDoors: number): WaveConfig {
+    // Calculer le nombre de zombies
+    const totalZombies = Math.min(
+      WAVES.maxZombiesPerWave,
+      WAVES.baseZombieCount + (waveNumber - 1) * WAVES.zombiesPerWave
     );
 
     // Obtenir les types de zombies disponibles pour cette vague
@@ -343,6 +442,9 @@ export class WaveSystem {
     this.zombiesSpawned = 0;
     this.zombiesKilled = 0;
     this.waveConfig = null;
+
+    // Réinitialiser le ThreatSystem
+    this.threatSystem.reset();
   }
 
   /**

@@ -73,6 +73,13 @@ export abstract class Zombie extends Entity {
   }
 
   /**
+   * Propriété de commodité pour accéder au type de zombie
+   */
+  public get zombieType(): ZombieType {
+    return this.config.type;
+  }
+
+  /**
    * Récupère la valeur en points
    */
   public getScoreValue(): number {

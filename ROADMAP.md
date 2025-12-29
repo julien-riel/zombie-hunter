@@ -137,7 +137,7 @@ Vagues successives de zombies avec difficulté croissante.
 
 ---
 
-## Phase 3.6 : Système de Balance Avancé
+## Phase 3.6 : Système de Balance Avancé ✅
 
 ### Objectif
 Mettre en place l'infrastructure pour un équilibrage mathématique et itératif du gameplay.
@@ -148,36 +148,36 @@ Basé sur les recommandations d'un spécialiste en game design, cette phase tran
 ### Tâches
 
 #### 3.6.1 Métriques Dérivées
-- [ ] Créer `derivedBalance.ts` avec calculs automatiques
-- [ ] Calculer DPS soutenu par arme (avec reload)
-- [ ] Calculer TTK (Time-to-Kill) par zombie/arme
-- [ ] Calculer TTC (Time-to-Contact) par distances de référence
-- [ ] Calculer score de menace (threatScore) par zombie
-- [ ] Ajouter table de vérité pour validation des valeurs
-- [ ] Créer tests unitaires de validation de balance
+- [x] Créer `derivedBalance.ts` avec calculs automatiques
+- [x] Calculer DPS soutenu par arme (avec reload)
+- [x] Calculer TTK (Time-to-Kill) par zombie/arme
+- [x] Calculer TTC (Time-to-Contact) par distances de référence
+- [x] Calculer score de menace (threatScore) par zombie
+- [x] Ajouter table de vérité pour validation des valeurs
+- [x] Créer tests unitaires de validation de balance
 
 #### 3.6.2 Système de Budget de Menace
-- [ ] Créer `ThreatSystem.ts`
-- [ ] Définir coût par type de zombie basé sur threatScore
-- [ ] Remplacer count fixe par budget dynamique
-- [ ] Implémenter caps par rôle (max tanks, spitters, etc.)
-- [ ] Implémenter pacing pic/respiration
-- [ ] Intégrer avec WaveSystem existant
+- [x] Créer `ThreatSystem.ts`
+- [x] Définir coût par type de zombie basé sur threatScore
+- [x] Remplacer count fixe par budget dynamique
+- [x] Implémenter caps par rôle (max tanks, spitters, etc.)
+- [x] Implémenter pacing pic/respiration
+- [x] Intégrer avec WaveSystem existant
 
 #### 3.6.3 Télémétrie
-- [ ] Créer `TelemetryManager.ts`
-- [ ] Logger événements : kills, dégâts, accuracy, etc.
-- [ ] Implémenter métriques temps réel (fenêtre glissante)
-- [ ] Générer résumé de fin de run
-- [ ] Ajouter export JSON pour analyse
+- [x] Créer `TelemetryManager.ts`
+- [x] Logger événements : kills, dégâts, accuracy, etc.
+- [x] Implémenter métriques temps réel (fenêtre glissante)
+- [x] Générer résumé de fin de run
+- [x] Ajouter export JSON pour analyse
 
 #### 3.6.4 DDA Light (Difficulté Adaptative)
-- [ ] Créer `DDASystem.ts`
-- [ ] Observer métriques : accuracy, dégâts/min, near deaths
-- [ ] Ajuster spawnDelay comme levier principal
-- [ ] Ajuster weights de composition si struggling/dominating
-- [ ] Implémenter hysteresis (cooldown entre ajustements)
-- [ ] Ajouter option ON/OFF dans les settings
+- [x] Créer `DDASystem.ts`
+- [x] Observer métriques : accuracy, dégâts/min, near deaths
+- [x] Ajuster spawnDelay comme levier principal
+- [x] Ajuster weights de composition si struggling/dominating
+- [x] Implémenter hysteresis (cooldown entre ajustements)
+- [x] Ajouter option ON/OFF dans les settings
 
 ### Livrable
 Système de balance calculable, mesurable et ajustable dynamiquement.
