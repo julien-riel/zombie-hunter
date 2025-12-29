@@ -177,6 +177,15 @@ export const BALANCE = {
     transitionDelay: 3000,
     baseSpawnDelay: 1000,
     minSpawnDelay: 300,
+    // Paramètres de spawn (SpawnSystem)
+    spawnInterval: 2000, // Intervalle initial entre spawns (mode legacy)
+    minSpawnInterval: 500, // Intervalle minimum
+    spawnDecrement: 50, // Réduction par accélération
+    spawnDelayVariance: 500, // Variance aléatoire sur les spawns
+    spawnWaveMultiplierMin: 0.5, // Multiplicateur minimum de délai
+    spawnWaveMultiplierDecrement: 0.02, // Réduction du multiplicateur par vague
+    legacySpawnDelay: 200, // Délai entre spawns successifs (mode legacy)
+    minPlayerSpawnDistance: 150, // Distance minimum du joueur pour spawn
     zombieTypeUnlocks: [
       { wave: 1, type: 'shambler' as const, weight: 0.7 },
       { wave: 1, type: 'runner' as const, weight: 0.3 },

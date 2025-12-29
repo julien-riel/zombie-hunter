@@ -26,9 +26,9 @@ export class SpawnSystem {
   private spawnTimer: Phaser.Time.TimerEvent | null = null;
   private isSpawning: boolean = false;
 
-  private spawnInterval: number = 2000;
-  private minSpawnInterval: number = 500;
-  private spawnDecrement: number = 50;
+  private spawnInterval: number = BALANCE.waves.spawnInterval;
+  private minSpawnInterval: number = BALANCE.waves.minSpawnInterval;
+  private spawnDecrement: number = BALANCE.waves.spawnDecrement;
 
   // Configuration de vague actuelle
   private currentWaveConfig: WaveConfig | null = null;
@@ -124,8 +124,12 @@ export class SpawnSystem {
 
     // Calculer le délai entre les spawns
     const baseDelay = BALANCE.waves.baseSpawnDelay;
-    const waveMultiplier = Math.max(0.5, 1 - (this.currentWaveConfig?.waveNumber || 1) * 0.02);
-    const delay = baseDelay * waveMultiplier + Math.random() * 500;
+    const waveNumber = this.currentWaveConfig?.waveNumber || 1;
+    const waveMultiplier = Math.max(
+      BALANCE.waves.spawnWaveMultiplierMin,
+      1 - waveNumber * BALANCE.waves.spawnWaveMultiplierDecrement
+    );
+    const delay = baseDelay * waveMultiplier + Math.random() * BALANCE.waves.spawnDelayVariance;
 
     this.spawnTimer = this.scene.time.delayedCall(
       delay,
@@ -243,9 +247,9 @@ export class SpawnSystem {
    */
   public spawnWave(count: number): void {
     for (let i = 0; i < count; i++) {
-      // Délai aléatoire pour éviter un spawn simultané
+      // Délai échelonné pour éviter un spawn simultané
       this.scene.time.delayedCall(
-        i * 200,
+        i * BALANCE.waves.legacySpawnDelay,
         () => {
           this.spawnZombie();
         },
@@ -276,7 +280,7 @@ export class SpawnSystem {
       const dx = point.x - player.x;
       const dy = point.y - player.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      return distance > 150; // Au moins 150px du joueur
+      return distance > BALANCE.waves.minPlayerSpawnDistance;
     });
 
     if (validPoints.length === 0) {
@@ -329,7 +333,7 @@ export class SpawnSystem {
    */
   public reset(): void {
     this.stopSpawning();
-    this.spawnInterval = 2000;
+    this.spawnInterval = BALANCE.waves.spawnInterval;
     this.currentWaveConfig = null;
     this.spawnQueue = [];
     this.spawnIndex = 0;

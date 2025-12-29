@@ -136,7 +136,10 @@ export class WaveSystem {
   }
 
   /**
-   * Appelé quand un zombie est spawné
+   * Notifie le système qu'un zombie a été spawné.
+   * Met à jour le compteur de zombies spawnés et passe en mode CLEARING
+   * lorsque tous les zombies de la vague ont été créés.
+   * @emits Passe en état CLEARING quand totalZombies atteint
    */
   public onZombieSpawned(): void {
     this.zombiesSpawned++;
@@ -271,35 +274,41 @@ export class WaveSystem {
   }
 
   /**
-   * Récupère le numéro de vague actuel
+   * Récupère le numéro de vague actuel.
+   * @returns Le numéro de la vague en cours (1-indexed), 0 si pas encore démarré
    */
   public getCurrentWave(): number {
     return this.currentWave;
   }
 
   /**
-   * Récupère l'état de la vague
+   * Récupère l'état actuel du système de vagues.
+   * @returns L'état de la vague (IDLE, PREPARING, ACTIVE, CLEARING, COMPLETED)
    */
   public getState(): WaveState {
     return this.state;
   }
 
   /**
-   * Récupère le nombre de zombies restants
+   * Récupère le nombre de zombies restants à éliminer dans la vague.
+   * @returns Le nombre de zombies encore vivants ou non spawnés
    */
   public getZombiesRemaining(): number {
     return this.zombiesRemaining;
   }
 
   /**
-   * Récupère la configuration de la vague actuelle
+   * Récupère la configuration de la vague actuelle.
+   * Contient le nombre de zombies, les portes actives et les groupes de spawn.
+   * @returns La configuration de la vague ou null si aucune vague active
    */
   public getWaveConfig(): WaveConfig | null {
     return this.waveConfig;
   }
 
   /**
-   * Met en pause le système
+   * Met en pause le système de vagues.
+   * Les timers de transition sont suspendus mais les zombies restent actifs.
    */
   public pause(): void {
     if (this.transitionTimer) {
@@ -308,7 +317,8 @@ export class WaveSystem {
   }
 
   /**
-   * Reprend le système
+   * Reprend le système de vagues après une pause.
+   * Les timers de transition reprennent là où ils s'étaient arrêtés.
    */
   public resume(): void {
     if (this.transitionTimer) {
@@ -317,7 +327,9 @@ export class WaveSystem {
   }
 
   /**
-   * Réinitialise le système
+   * Réinitialise le système de vagues à son état initial.
+   * Annule les timers, remet les compteurs à zéro et retourne à l'état IDLE.
+   * Utilisé lors d'un game over ou d'un restart.
    */
   public reset(): void {
     if (this.transitionTimer) {
@@ -334,7 +346,9 @@ export class WaveSystem {
   }
 
   /**
-   * Nettoie le système
+   * Nettoie le système et libère les ressources.
+   * Désinscrit les listeners d'événements et réinitialise l'état.
+   * Doit être appelé lors de la destruction de la scène.
    */
   public destroy(): void {
     this.scene.events.off('zombieDeath', this.onZombieDeath, this);

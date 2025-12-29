@@ -1,5 +1,9 @@
 # Plan Phase 3.5 — Consolidation Avant Arsenal
 
+> **✅ PHASE TERMINÉE** — Toutes les tâches ont été complétées avec succès.
+> - Build OK, 86 tests passent (97.63% coverage)
+> - Prêt pour la Phase 4 (Arsenal)
+
 ## Contexte
 
 Les phases 1 à 3 sont complètes. Le jeu dispose actuellement de :
@@ -333,15 +337,21 @@ Les systèmes de vagues et de combat sont critiques. Des régressions ici casser
 
 ### 3.5.5 Refactoring Mineur
 
-**Priorité : Basse**
+**Priorité : Basse** ✅ TERMINÉ
 
 Nettoyage de code pour faciliter la Phase 4.
 
 **Actions :**
-- [ ] Extraire les magic numbers restants vers `constants.ts` ou `balance.ts`
-- [ ] Ajouter JSDoc manquants sur méthodes publiques de `WaveSystem`
-- [ ] Créer type `ZombieType` union depuis balance.ts (remplacer strings)
-- [ ] Documenter les events émis par chaque système dans `src/types/events.ts`
+- [x] Extraire les magic numbers restants vers `constants.ts` ou `balance.ts`
+  - Ajout de 8 nouvelles constantes dans `BALANCE.waves` (spawnInterval, minSpawnInterval, etc.)
+  - Migration de SpawnSystem.ts pour utiliser ces constantes
+- [x] Ajouter JSDoc manquants sur méthodes publiques de `WaveSystem`
+  - Documentation complète de 9 méthodes publiques avec @returns et descriptions
+- [x] Créer type `ZombieType` union depuis balance.ts (remplacer strings)
+  - Déjà implémenté via `ZombieBalanceType` dans `balance.ts` et `ZombieType` dans `entities.ts`
+- [x] Documenter les events émis par chaque système dans `src/types/events.ts`
+  - Documentation complète de 26 événements avec leurs payloads typés
+  - Ajout de helpers de typage (EventListener, HasPayload)
 
 ---
 
@@ -351,7 +361,7 @@ Nettoyage de code pour faciliter la Phase 4.
 - [x] Pathfinding A* fonctionnel — zombies contournent les piliers
 - [x] Crawler implémenté et intégré aux vagues
 - [x] Tests unitaires passent avec coverage > 80% sur systèmes ciblés (86 tests, 97.63% coverage)
-- [ ] Aucune régression sur le gameplay existant
+- [x] Aucune régression sur le gameplay existant (build OK, 86 tests passent)
 
 ---
 
@@ -363,7 +373,7 @@ Nettoyage de code pour faciliter la Phase 4.
 | 3.5.2 Pathfinding | Haute | 5 fichiers (nouveau + intégration) | ✅ Terminé |
 | 3.5.3 Crawler | Moyenne | 4 fichiers (Crawler.ts, Player.ts, ZombieFactory.ts, index.ts) | ✅ Terminé |
 | 3.5.4 Tests | Moyenne | 3 fichiers nouveaux (86 tests, 97.63% coverage) | ✅ Terminé |
-| 3.5.5 Refactoring | Faible | Plusieurs fichiers | ⏳ En attente |
+| 3.5.5 Refactoring | Faible | 4 fichiers (balance.ts, SpawnSystem.ts, WaveSystem.ts, events.ts) | ✅ Terminé |
 
 ---
 
@@ -375,7 +385,9 @@ Nettoyage de code pour faciliter la Phase 4.
 2. ~~**Pathfinding** — Bloquant pour le gameplay tactique~~ ✅
 3. ~~**Crawler** — Validation design + nouveau contenu~~ ✅
 4. ~~**Tests** — Peuvent être écrits en parallèle~~ ✅
-5. **Refactoring** — À faire en continu
+5. ~~**Refactoring** — À faire en continu~~ ✅
+
+**🎉 Phase 3.5 terminée ! Prêt pour la Phase 4 (Arsenal).**
 
 ### Points d'Attention
 
