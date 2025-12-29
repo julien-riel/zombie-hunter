@@ -2,6 +2,8 @@ import type { GameScene } from '@scenes/GameScene';
 import { Entity } from '@entities/Entity';
 import { ZombieStateMachine, ZombieState } from './ZombieStateMachine';
 import type { ZombieType } from '@/types/entities';
+import type { HordeManager } from '@ai/HordeManager';
+import type { TacticalBehaviors } from '@ai/TacticalBehaviors';
 
 /**
  * Configuration d'un type de zombie
@@ -107,6 +109,27 @@ export abstract class Zombie extends Entity {
    */
   public setStunned(duration: number): void {
     this.stateMachine.setStunned(duration);
+  }
+
+  /**
+   * Configure le mode horde pour ce zombie
+   * @param hordeManager Gestionnaire de horde
+   * @param tacticalBehaviors Comportements tactiques
+   */
+  public configureHordeMode(
+    hordeManager: HordeManager,
+    tacticalBehaviors: TacticalBehaviors
+  ): void {
+    this.stateMachine.setHordeManager(hordeManager);
+    this.stateMachine.setTacticalBehaviors(tacticalBehaviors);
+    this.stateMachine.setHordeMode(true);
+  }
+
+  /**
+   * Désactive le mode horde pour ce zombie
+   */
+  public disableHordeMode(): void {
+    this.stateMachine.setHordeMode(false);
   }
 
   /**

@@ -37,15 +37,26 @@ const ZOMBIE_CLASSES: Partial<Record<ZombieType, ZombieConstructor>> = {
 /**
  * Factory pour créer des zombies
  * Utilise le PoolManager pour optimiser les performances
+ * Configure automatiquement le mode horde pour les zombies créés
  */
 export class ZombieFactory {
+  private scene: GameScene;
   private poolManager: PoolManager;
+  private hordeEnabled: boolean = true;
 
-  constructor(_scene: GameScene, poolManager: PoolManager) {
+  constructor(scene: GameScene, poolManager: PoolManager) {
+    this.scene = scene;
     this.poolManager = poolManager;
 
     // Pré-enregistrer les pools pour chaque type de zombie
     this.initializePools();
+  }
+
+  /**
+   * Active ou désactive le mode horde pour les nouveaux zombies
+   */
+  public setHordeEnabled(enabled: boolean): void {
+    this.hordeEnabled = enabled;
   }
 
   /**
@@ -61,6 +72,7 @@ export class ZombieFactory {
 
   /**
    * Crée un zombie du type spécifié
+   * Configure automatiquement le mode horde si activé
    */
   public create(type: ZombieType, x: number, y: number): Zombie | null {
     const classType = ZOMBIE_CLASSES[type];
@@ -70,7 +82,25 @@ export class ZombieFactory {
     }
 
     const zombie = this.poolManager.getZombie<Zombie>(type, x, y, classType);
+
+    // Configurer le mode horde si activé
+    if (zombie && this.hordeEnabled) {
+      this.configureHordeMode(zombie);
+    }
+
     return zombie;
+  }
+
+  /**
+   * Configure le mode horde pour un zombie
+   */
+  private configureHordeMode(zombie: Zombie): void {
+    const hordeManager = this.scene.getHordeManager?.();
+    const tacticalBehaviors = this.scene.getTacticalBehaviors?.();
+
+    if (hordeManager && tacticalBehaviors) {
+      zombie.configureHordeMode(hordeManager, tacticalBehaviors);
+    }
   }
 
   /**

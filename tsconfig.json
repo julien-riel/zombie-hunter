@@ -31,7 +31,8 @@
       "@ui/*": ["./src/ui/*"],
       "@managers/*": ["./src/managers/*"],
       "@utils/*": ["./src/utils/*"],
-      "@types/*": ["./src/types/*"]
+      "@types/*": ["./src/types/*"],
+      "@ai/*": ["./src/ai/*"]
     },
     "baseUrl": "."
   },

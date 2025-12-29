@@ -352,14 +352,14 @@ Arsenal complet avec armes conventionnelles, spéciales et mêlée.
 
 ---
 
-## Sous-Phase 4.4 : IA Avancée (Hordes)
+## Sous-Phase 4.4 : IA Avancée (Hordes) ✅
 
 ### Objectif
 Implémenter des comportements de groupe sophistiqués pour les zombies.
 
 ### Tâches
 
-#### 4.4.1 Steering Behaviors
+#### 4.4.1 Steering Behaviors ✅
 **Fichier** : `src/ai/SteeringBehaviors.ts`
 
 ```typescript
@@ -373,53 +373,69 @@ class SteeringBehaviors {
 }
 ```
 
-- [ ] Implémenter `separation()` - éviter les autres zombies
-- [ ] Implémenter `alignment()` - s'aligner avec le groupe
-- [ ] Implémenter `cohesion()` - rester groupé
-- [ ] Implémenter `arrive()` - ralentir à l'approche
-- [ ] Implémenter `flee()` - pour Necromancer/Spitter
+- [x] Implémenter `separation()` - éviter les autres zombies
+- [x] Implémenter `alignment()` - s'aligner avec le groupe
+- [x] Implémenter `cohesion()` - rester groupé
+- [x] Implémenter `arrive()` - ralentir à l'approche
+- [x] Implémenter `flee()` - pour Necromancer/Spitter
+- [x] Implémenter `seek()` - se diriger vers une cible
+- [x] Méthode `flock()` pour combiner les trois comportements de flocking
+- [x] Méthode `calculateCombinedForce()` pour pondérer tous les comportements
 
-#### 4.4.2 Gestionnaire de Groupe
+#### 4.4.2 Gestionnaire de Groupe ✅
 **Fichier** : `src/ai/HordeManager.ts`
 
 ```typescript
 class HordeManager {
-  private groups: Map<string, Zombie[]>;
+  private spatialGrid: Map<string, SpatialCell>;
 
   getNeighbors(zombie: Zombie, radius: number): Zombie[];
   calculateGroupVelocity(zombie: Zombie): Vector2;
-  assignToGroup(zombie: Zombie): void;
+  getGroupStats(zombie: Zombie): GroupStats;
+  getZombiesToUpdate(zombies: Zombie[]): Zombie[];
 }
 ```
 
-- [ ] Créer HordeManager singleton
-- [ ] Grouper zombies par proximité
-- [ ] Calculer vélocité de groupe (moyenne pondérée)
-- [ ] Intégrer dans update des zombies
+- [x] Créer HordeManager avec spatial hashing
+- [x] Grouper zombies par proximité (grille spatiale)
+- [x] Calculer vélocité de groupe (moyenne pondérée)
+- [x] Intégrer dans update des zombies via GameScene
+- [x] Cache des voisins pour éviter les recalculs
 
-#### 4.4.3 Comportements Tactiques
+#### 4.4.3 Comportements Tactiques ✅
 **Fichier** : `src/ai/TacticalBehaviors.ts`
 
-- [ ] **Encerclement** : zombies se répartissent autour du joueur
-- [ ] **Flanking** : certains zombies contournent
-- [ ] **Coordination Screamer** : zombies répondent au buff
-- [ ] **Protection Necromancer** : zombies se regroupent autour
+- [x] **Encerclement** : zombies se répartissent autour du joueur (slots d'angle)
+- [x] **Flanking** : certains zombies contournent (FLANK_LEFT, FLANK_RIGHT)
+- [x] **Coordination Screamer** : méthode `applyScreamerBuff()` pour buff de vitesse
+- [x] **Protection Necromancer** : zombies se regroupent autour (rôle PROTECT)
+- [x] Système de rôles tactiques (FRONTAL, FLANK, ENCIRCLE, RANGED, PROTECT)
 
-#### 4.4.4 Intégration State Machine
+#### 4.4.4 Intégration State Machine ✅
 **Fichier** : `src/entities/zombies/ZombieStateMachine.ts`
 
-- [ ] Ajouter état `GROUP_CHASE` (poursuite coordonnée)
-- [ ] Intégrer steering behaviors dans le mouvement
-- [ ] Évitement de collision entre zombies
-- [ ] Transitions fluides solo ↔ groupe
+- [x] Ajouter état `GROUP_CHASE` (poursuite coordonnée)
+- [x] Intégrer steering behaviors dans le mouvement
+- [x] Évitement de collision entre zombies (via separation force)
+- [x] Transitions fluides solo ↔ groupe (basé sur nombre de voisins)
+- [x] Méthode `chaseWithHordeBehavior()` pour combiner pathfinding et steering
 
-#### 4.4.5 Optimisations
-- [ ] Spatial hashing pour requêtes de voisinage
-- [ ] Throttling : pas tous les zombies chaque frame
-- [ ] LOD comportemental : IA simplifiée si hors écran
+#### 4.4.5 Optimisations ✅
+- [x] Spatial hashing pour requêtes de voisinage (grille cellSize=64)
+- [x] Throttling : `maxUpdatesPerFrame=25` zombies par frame
+- [x] LOD comportemental : méthode `isOnScreen()` pour prioriser les zombies visibles
+- [x] Cache des voisins avec invalidation périodique
+- [x] Mise à jour du steering à intervalle régulier (50ms)
 
-### Livrable 4.4
+### Livrable 4.4 ✅
 Zombies coordonnés avec comportements de horde réalistes.
+
+**Implémenté le 29/12/2025** - Système d'IA de horde complet :
+- SteeringBehaviors : 6 comportements (seek, flee, arrive, separation, alignment, cohesion)
+- HordeManager : spatial hashing avec grille 64px, cache de voisins, throttling
+- TacticalBehaviors : 5 rôles tactiques, encerclement par slots d'angle, flanking
+- ZombieStateMachine : état GROUP_CHASE avec transition automatique basée sur voisinage
+- Optimisations : LOD comportemental, mise à jour throttlée, priorité écran
 
 ---
 
@@ -481,17 +497,21 @@ MODIFIÉ:
   src/systems/CombatSystem.ts (gestion clous NailGun) ✅
 ```
 
-### Sous-Phase 4.4
+### Sous-Phase 4.4 ✅
 ```
-CRÉER:
-  src/ai/SteeringBehaviors.ts
-  src/ai/HordeManager.ts
-  src/ai/TacticalBehaviors.ts
+CRÉÉ:
+  src/ai/SteeringBehaviors.ts ✅
+  src/ai/HordeManager.ts ✅
+  src/ai/TacticalBehaviors.ts ✅
+  src/ai/index.ts ✅
 
-MODIFIER:
-  src/entities/zombies/ZombieStateMachine.ts
-  src/entities/zombies/Zombie.ts
-  src/scenes/GameScene.ts (HordeManager)
+MODIFIÉ:
+  src/entities/zombies/ZombieStateMachine.ts ✅ (état GROUP_CHASE, steering)
+  src/entities/zombies/Zombie.ts ✅ (configureHordeMode)
+  src/entities/zombies/ZombieFactory.ts ✅ (configuration auto horde)
+  src/scenes/GameScene.ts ✅ (HordeManager, TacticalBehaviors)
+  tsconfig.json ✅ (@ai/* alias)
+  vite.config.ts ✅ (@ai alias)
 ```
 
 ---
@@ -561,10 +581,10 @@ MODIFIER:
 - [x] NailGun immobilise les zombies (état PINNED)
 - [x] MicrowaveCannon dégâts en cône avec charge
 
-**4.4** :
-- [ ] Zombies ne se chevauchent pas
-- [ ] Zombies encerclent le joueur
-- [ ] Performance stable avec 50+ zombies
+**4.4** ✅ :
+- [x] Zombies ne se chevauchent pas (separation behavior avec force pondérée à 2.0)
+- [x] Zombies encerclent le joueur (TacticalRole.ENCIRCLE avec slots d'angle 45°)
+- [x] Performance stable avec 50+ zombies (spatial hashing + throttling 25 updates/frame)
 
 ---
 

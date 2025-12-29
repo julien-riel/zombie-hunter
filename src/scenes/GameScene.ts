@@ -14,6 +14,8 @@ import { SpawnSystem } from '@systems/SpawnSystem';
 import { WaveSystem } from '@systems/WaveSystem';
 import { DDASystem } from '@systems/DDASystem';
 import { Pathfinder } from '@utils/pathfinding';
+import { HordeManager } from '@ai/HordeManager';
+import { TacticalBehaviors } from '@ai/TacticalBehaviors';
 import type { Zombie } from '@entities/zombies/Zombie';
 import type { MiniZombie } from '@entities/zombies/MiniZombie';
 
@@ -38,6 +40,8 @@ export class GameScene extends Phaser.Scene {
   private pathfinder!: Pathfinder;
   private telemetryManager!: TelemetryManager;
   private ddaSystem!: DDASystem;
+  private hordeManager!: HordeManager;
+  private tacticalBehaviors!: TacticalBehaviors;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -123,6 +127,23 @@ export class GameScene extends Phaser.Scene {
     this.waveSystem = new WaveSystem(this);
     this.waveSystem.setDDASystem(this.ddaSystem);
 
+    // Gestionnaire de horde pour les comportements de groupe (Phase 4.4)
+    this.hordeManager = new HordeManager(this, {
+      cellSize: 64,
+      neighborRadius: 120,
+      spatialUpdateInterval: 100,
+      maxUpdatesPerFrame: 25,
+    });
+
+    // Comportements tactiques pour l'encerclement et le flanking
+    this.tacticalBehaviors = new TacticalBehaviors({
+      encircleRadius: 100,
+      encircleSpacing: 45,
+      flankingOffset: 150,
+      flankingRatio: 0.3,
+    });
+    this.tacticalBehaviors.setHordeManager(this.hordeManager);
+
     // Connecter les événements de télémétrie
     this.setupTelemetryEvents();
 
@@ -207,6 +228,13 @@ export class GameScene extends Phaser.Scene {
 
     // Mettre à jour tous les zombies actifs
     const activeZombies = this.poolManager.getActiveZombies();
+
+    // Mettre à jour le gestionnaire de horde (Phase 4.4)
+    this.hordeManager.update(activeZombies, time);
+
+    // Mettre à jour les comportements tactiques
+    this.tacticalBehaviors.update(this.player.x, this.player.y, activeZombies);
+
     for (const zombie of activeZombies) {
       zombie.update(time, delta);
     }
@@ -316,6 +344,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le gestionnaire de horde (Phase 4.4)
+   */
+  public getHordeManager(): HordeManager {
+    return this.hordeManager;
+  }
+
+  /**
+   * Récupère les comportements tactiques (Phase 4.4)
+   */
+  public getTacticalBehaviors(): TacticalBehaviors {
+    return this.tacticalBehaviors;
+  }
+
+  /**
    * Nettoie la scène
    */
   shutdown(): void {
@@ -327,6 +369,8 @@ export class GameScene extends Phaser.Scene {
     this.acidSpitPool?.destroy();
     this.flamePool?.destroy();
     this.corpseManager?.destroy();
+    this.hordeManager?.destroy();
+    this.tacticalBehaviors?.reset();
     this.events.off('miniZombieSpawned', this.onMiniZombieSpawned, this);
   }
 }

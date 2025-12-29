@@ -18,6 +18,7 @@ export default defineConfig({
       '@managers': resolve(__dirname, './src/managers'),
       '@utils': resolve(__dirname, './src/utils'),
       '@types': resolve(__dirname, './src/types'),
+      '@ai': resolve(__dirname, './src/ai'),
     },
   },
   server: {
