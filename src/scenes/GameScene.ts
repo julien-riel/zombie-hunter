@@ -3,8 +3,10 @@ import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import { Player } from '@entities/Player';
 import { Arena } from '@arena/Arena';
 import { BulletPool } from '@entities/projectiles/BulletPool';
+import { AcidSpitPool } from '@entities/projectiles/AcidSpitPool';
 import { PoolManager } from '@managers/PoolManager';
 import { TelemetryManager } from '@managers/TelemetryManager';
+import { CorpseManager } from '@managers/CorpseManager';
 import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
 import { SpawnSystem } from '@systems/SpawnSystem';
@@ -12,6 +14,7 @@ import { WaveSystem } from '@systems/WaveSystem';
 import { DDASystem } from '@systems/DDASystem';
 import { Pathfinder } from '@utils/pathfinding';
 import type { Zombie } from '@entities/zombies/Zombie';
+import type { MiniZombie } from '@entities/zombies/MiniZombie';
 
 /**
  * Scène principale du jeu
@@ -21,7 +24,9 @@ export class GameScene extends Phaser.Scene {
   public player!: Player;
   public arena!: Arena;
   public bulletPool!: BulletPool;
+  public acidSpitPool!: AcidSpitPool;
   public walls!: Phaser.Physics.Arcade.StaticGroup;
+  public corpseManager!: CorpseManager;
 
   private poolManager!: PoolManager;
   private zombieFactory!: ZombieFactory;
@@ -55,6 +60,12 @@ export class GameScene extends Phaser.Scene {
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
     this.player = new Player(this, centerX, centerY);
+
+    // Créer le pool de projectiles acides (pour les Spitters)
+    this.acidSpitPool = new AcidSpitPool(this);
+
+    // Créer le gestionnaire de cadavres (pour les Necromancers)
+    this.corpseManager = new CorpseManager(this);
 
     // Initialiser les systèmes
     this.initializeSystems();
@@ -109,6 +120,22 @@ export class GameScene extends Phaser.Scene {
 
     // Connecter les événements de télémétrie
     this.setupTelemetryEvents();
+
+    // Gérer les mini-zombies spawnés par les Splitters
+    this.events.on('miniZombieSpawned', this.onMiniZombieSpawned, this);
+  }
+
+  /**
+   * Gère un mini-zombie spawné par un Splitter
+   */
+  private onMiniZombieSpawned(miniZombie: MiniZombie): void {
+    // Enregistrer les collisions pour le mini-zombie
+    this.combatSystem.registerZombieGroup(
+      this.add.group([miniZombie])
+    );
+
+    // Collision avec les murs
+    this.physics.add.collider(miniZombie, this.walls);
   }
 
   /**
@@ -168,8 +195,9 @@ export class GameScene extends Phaser.Scene {
     // Mettre à jour le joueur
     this.player.update(time, delta);
 
-    // Mettre à jour le pool de projectiles
+    // Mettre à jour les pools de projectiles
     this.bulletPool.update();
+    this.acidSpitPool.update();
 
     // Mettre à jour tous les zombies actifs
     const activeZombies = this.poolManager.getActiveZombies();
@@ -290,5 +318,8 @@ export class GameScene extends Phaser.Scene {
     this.combatSystem?.destroy();
     this.poolManager?.destroy();
     this.ddaSystem?.reset();
+    this.acidSpitPool?.destroy();
+    this.corpseManager?.destroy();
+    this.events.off('miniZombieSpawned', this.onMiniZombieSpawned, this);
   }
 }

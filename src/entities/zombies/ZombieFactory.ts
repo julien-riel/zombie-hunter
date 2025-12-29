@@ -4,6 +4,13 @@ import type { Zombie } from './Zombie';
 import { Shambler } from './Shambler';
 import { Runner } from './Runner';
 import { Crawler } from './Crawler';
+import { Tank } from './Tank';
+import { Spitter } from './Spitter';
+import { Bomber } from './Bomber';
+import { Screamer } from './Screamer';
+import { Splitter } from './Splitter';
+import { Invisible } from './Invisible';
+import { Necromancer } from './Necromancer';
 import { PoolManager } from '@managers/PoolManager';
 
 /**
@@ -18,6 +25,13 @@ const ZOMBIE_CLASSES: Partial<Record<ZombieType, ZombieConstructor>> = {
   shambler: Shambler,
   runner: Runner,
   crawler: Crawler,
+  tank: Tank,
+  spitter: Spitter,
+  bomber: Bomber,
+  screamer: Screamer,
+  splitter: Splitter,
+  invisible: Invisible,
+  necromancer: Necromancer,
 };
 
 /**
@@ -78,6 +92,55 @@ export class ZombieFactory {
    */
   public createCrawler(x: number, y: number): Crawler | null {
     return this.create('crawler', x, y) as Crawler | null;
+  }
+
+  /**
+   * Crée un Tank
+   */
+  public createTank(x: number, y: number): Tank | null {
+    return this.create('tank', x, y) as Tank | null;
+  }
+
+  /**
+   * Crée un Spitter
+   */
+  public createSpitter(x: number, y: number): Spitter | null {
+    return this.create('spitter', x, y) as Spitter | null;
+  }
+
+  /**
+   * Crée un Bomber
+   */
+  public createBomber(x: number, y: number): Bomber | null {
+    return this.create('bomber', x, y) as Bomber | null;
+  }
+
+  /**
+   * Crée un Screamer
+   */
+  public createScreamer(x: number, y: number): Screamer | null {
+    return this.create('screamer', x, y) as Screamer | null;
+  }
+
+  /**
+   * Crée un Splitter
+   */
+  public createSplitter(x: number, y: number): Splitter | null {
+    return this.create('splitter', x, y) as Splitter | null;
+  }
+
+  /**
+   * Crée un Invisible
+   */
+  public createInvisible(x: number, y: number): Invisible | null {
+    return this.create('invisible', x, y) as Invisible | null;
+  }
+
+  /**
+   * Crée un Necromancer
+   */
+  public createNecromancer(x: number, y: number): Necromancer | null {
+    return this.create('necromancer', x, y) as Necromancer | null;
   }
 
   /**

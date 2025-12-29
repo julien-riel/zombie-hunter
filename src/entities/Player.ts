@@ -407,6 +407,32 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
+   * Applique un knockback au joueur
+   * Repousse le joueur dans une direction donnée
+   * @param sourceX Position X de la source du knockback
+   * @param sourceY Position Y de la source du knockback
+   * @param force Force du knockback
+   */
+  public applyKnockback(sourceX: number, sourceY: number, force: number): void {
+    // Calculer la direction opposée à la source
+    const direction = new Phaser.Math.Vector2(
+      this.x - sourceX,
+      this.y - sourceY
+    ).normalize();
+
+    // Appliquer la vélocité
+    this.setVelocity(direction.x * force, direction.y * force);
+
+    // Effet visuel
+    this.setTint(0xff6600);
+    this.scene.time.delayedCall(150, () => {
+      if (this.active && !this.isStunned) {
+        this.clearTint();
+      }
+    });
+  }
+
+  /**
    * Vérifie si le joueur est actuellement étourdi
    */
   public getIsStunned(): boolean {

@@ -113,7 +113,7 @@ Implémenter les 7 types de zombies restants avec leurs comportements uniques.
 
 ### Tâches
 
-#### 4.2.1 Tank
+#### 4.2.1 Tank ✅
 **Fichier** : `src/entities/zombies/Tank.ts`
 
 ```typescript
@@ -123,12 +123,12 @@ Implémenter les 7 types de zombies restants avec leurs comportements uniques.
 // - Détruit couvertures destructibles
 ```
 
-- [ ] Créer classe Tank étendant Zombie
-- [ ] Override `attack()` pour appliquer knockback au joueur
-- [ ] Méthode `applyKnockback(target, force)` sur Player
-- [ ] Collision avec destructibles → les détruit
+- [x] Créer classe Tank étendant Zombie
+- [x] Override `attack()` pour appliquer knockback au joueur
+- [x] Méthode `applyKnockback(target, force)` sur Player
+- [ ] Collision avec destructibles → les détruit (non implémenté - pas de destructibles actuellement)
 
-#### 4.2.2 Spitter
+#### 4.2.2 Spitter ✅
 **Fichier** : `src/entities/zombies/Spitter.ts`
 
 ```typescript
@@ -138,15 +138,15 @@ Implémenter les 7 types de zombies restants avec leurs comportements uniques.
 // - projectileSpeed: 250
 ```
 
-**Fichier** : `src/entities/projectiles/AcidSpit.ts`
+**Fichier** : `src/entities/projectiles/AcidSpitPool.ts`
 
-- [ ] Créer classe AcidSpit (projectile ennemi)
-- [ ] Pool séparé pour projectiles ennemis
-- [ ] Créer classe Spitter avec IA ranged
-- [ ] IA : maintient distance, fuit si joueur proche
-- [ ] Override state machine pour comportement ranged
+- [x] Créer classe AcidSpitPool (pool de projectiles ennemis)
+- [x] Pool séparé pour projectiles ennemis
+- [x] Créer classe Spitter avec IA ranged
+- [x] IA : maintient distance, fuit si joueur proche
+- [x] Comportement ranged personnalisé dans update()
 
-#### 4.2.3 Bomber
+#### 4.2.3 Bomber ✅
 **Fichier** : `src/entities/zombies/Bomber.ts`
 
 ```typescript
@@ -156,12 +156,12 @@ Implémenter les 7 types de zombies restants avec leurs comportements uniques.
 // - Chain reaction avec autres Bombers
 ```
 
-- [ ] Créer classe Bomber étendant Zombie
-- [ ] Override `die()` pour déclencher explosion
-- [ ] `explode()` : dégâts de zone, effets visuels
-- [ ] Détection autres Bombers dans le radius → chain
+- [x] Créer classe Bomber étendant Zombie
+- [x] Override `die()` pour déclencher explosion
+- [x] `explode()` : dégâts de zone, effets visuels
+- [x] Détection autres Bombers dans le radius → chain
 
-#### 4.2.4 Screamer
+#### 4.2.4 Screamer ✅
 **Fichier** : `src/entities/zombies/Screamer.ts`
 
 ```typescript
@@ -171,13 +171,13 @@ Implémenter les 7 types de zombies restants avec leurs comportements uniques.
 // - screamDuration: 5000ms, screamCooldown: 8000ms
 ```
 
-- [ ] Créer classe Screamer étendant Zombie
-- [ ] Méthode `scream()` avec cooldown
-- [ ] Buff tous les zombies dans le radius (speedBoost)
-- [ ] Animation wind-up avant le cri (télégraphié)
-- [ ] Audio cue distinctif
+- [x] Créer classe Screamer étendant Zombie
+- [x] Méthode `scream()` avec cooldown
+- [x] Buff tous les zombies dans le radius (speedBoost)
+- [x] Animation wind-up avant le cri (télégraphié)
+- [ ] Audio cue distinctif (non implémenté - nécessite assets audio)
 
-#### 4.2.5 Splitter
+#### 4.2.5 Splitter ✅
 **Fichier** : `src/entities/zombies/Splitter.ts`
 
 ```typescript
@@ -188,12 +188,12 @@ Implémenter les 7 types de zombies restants avec leurs comportements uniques.
 
 **Fichier** : `src/entities/zombies/MiniZombie.ts`
 
-- [ ] Créer classe MiniZombie (version réduite)
-- [ ] Créer classe Splitter étendant Zombie
-- [ ] Override `die()` pour spawner `splitCount` minis
-- [ ] Minis spawn à positions légèrement décalées
+- [x] Créer classe MiniZombie (version réduite)
+- [x] Créer classe Splitter étendant Zombie
+- [x] Override `die()` pour spawner `splitCount` minis
+- [x] Minis spawn à positions légèrement décalées
 
-#### 4.2.6 Invisible
+#### 4.2.6 Invisible ✅
 **Fichier** : `src/entities/zombies/Invisible.ts`
 
 ```typescript
@@ -203,13 +203,14 @@ Implémenter les 7 types de zombies restants avec leurs comportements uniques.
 // - Révélé par : feu, électricité, flaques
 ```
 
-- [ ] Créer classe Invisible étendant Zombie
-- [ ] Alpha très bas par défaut (0.1)
-- [ ] `reveal()` quand joueur à proximité
-- [ ] `reveal()` si touché par feu/électricité
-- [ ] Effet de distorsion visuelle (shader optionnel)
+- [x] Créer classe Invisible étendant Zombie
+- [x] Alpha très bas par défaut (0.1)
+- [x] `reveal()` quand joueur à proximité
+- [x] `reveal()` si touché (dégâts)
+- [ ] Révélation par feu/électricité (sera implémenté avec les armes spéciales en 4.3)
+- [ ] Effet de distorsion visuelle (shader optionnel - non implémenté)
 
-#### 4.2.7 Necromancer
+#### 4.2.7 Necromancer ✅
 **Fichier** : `src/entities/zombies/Necromancer.ts`
 
 ```typescript
@@ -219,21 +220,32 @@ Implémenter les 7 types de zombies restants avec leurs comportements uniques.
 // - fleeDistance: 250
 ```
 
-- [ ] Créer classe Necromancer étendant Zombie
-- [ ] IA spéciale : fuit le joueur activement
-- [ ] Cherche cadavres dans le radius
-- [ ] `resurrect(corpse)` : réanime un zombie mort
-- [ ] Système de tracking des cadavres (positions de mort)
+**Fichier** : `src/managers/CorpseManager.ts`
 
-#### 4.2.8 Mise à Jour Factory
+- [x] Créer classe Necromancer étendant Zombie
+- [x] IA spéciale : fuit le joueur activement
+- [x] Cherche cadavres dans le radius
+- [x] `resurrect(corpse)` : réanime un zombie mort
+- [x] Système de tracking des cadavres (CorpseManager)
+
+#### 4.2.8 Mise à Jour Factory ✅
 **Fichier** : `src/entities/zombies/ZombieFactory.ts`
 
-- [ ] Enregistrer Tank, Spitter, Bomber, Screamer, Splitter, Invisible, Necromancer
-- [ ] Créer pools pour chaque nouveau type
-- [ ] Enregistrer MiniZombie (pour Splitter)
+- [x] Enregistrer Tank, Spitter, Bomber, Screamer, Splitter, Invisible, Necromancer
+- [x] Créer pools pour chaque nouveau type (automatique via PoolManager)
+- [x] MiniZombie géré via événement 'miniZombieSpawned'
 
-### Livrable 4.2
+### Livrable 4.2 ✅
 Tous les types de zombies du GDD sont jouables avec comportements distincts.
+
+**Implémenté le 29/12/2025** - Tous les 7 nouveaux types de zombies sont fonctionnels :
+- Tank : knockback sur le joueur
+- Spitter : attaque à distance avec projectiles acides
+- Bomber : explosion à la mort avec chain reaction
+- Screamer : buff de vitesse pour les zombies proches
+- Splitter : se divise en mini-zombies à la mort
+- Invisible : quasi-invisible, révélé par proximité ou dégâts
+- Necromancer : fuit le joueur et ressuscite les morts
 
 ---
 
@@ -418,23 +430,24 @@ MODIFIER:
   src/entities/projectiles/BulletPool.ts (si piercing)
 ```
 
-### Sous-Phase 4.2
+### Sous-Phase 4.2 ✅
 ```
-CRÉER:
-  src/entities/zombies/Tank.ts
-  src/entities/zombies/Spitter.ts
-  src/entities/zombies/Bomber.ts
-  src/entities/zombies/Screamer.ts
-  src/entities/zombies/Splitter.ts
-  src/entities/zombies/MiniZombie.ts
-  src/entities/zombies/Invisible.ts
-  src/entities/zombies/Necromancer.ts
-  src/entities/projectiles/AcidSpit.ts
+CRÉÉ:
+  src/entities/zombies/Tank.ts ✅
+  src/entities/zombies/Spitter.ts ✅
+  src/entities/zombies/Bomber.ts ✅
+  src/entities/zombies/Screamer.ts ✅
+  src/entities/zombies/Splitter.ts ✅
+  src/entities/zombies/MiniZombie.ts ✅
+  src/entities/zombies/Invisible.ts ✅
+  src/entities/zombies/Necromancer.ts ✅
+  src/entities/projectiles/AcidSpitPool.ts ✅
+  src/managers/CorpseManager.ts ✅
 
-MODIFIER:
-  src/entities/zombies/ZombieFactory.ts
-  src/entities/Player.ts (knockback)
-  src/scenes/GameScene.ts (corpse tracking)
+MODIFIÉ:
+  src/entities/zombies/ZombieFactory.ts ✅
+  src/entities/Player.ts (knockback) ✅
+  src/scenes/GameScene.ts (AcidSpitPool, CorpseManager) ✅
 ```
 
 ### Sous-Phase 4.3
@@ -519,14 +532,14 @@ MODIFIER:
 - [x] Sniper traverse les ennemis
 - [x] HUD affiche l'inventaire d'armes
 
-**4.2** :
-- [ ] Tank repousse le joueur et détruit obstacles
-- [ ] Spitter maintient ses distances et crache
-- [ ] Bomber explose et chain-react
-- [ ] Screamer buff les zombies proches
-- [ ] Splitter se divise en minis
-- [ ] Invisible quasi-invisible jusqu'à proximité
-- [ ] Necromancer fuit et ressuscite
+**4.2** ✅ :
+- [x] Tank repousse le joueur (détruit obstacles: non implémenté)
+- [x] Spitter maintient ses distances et crache
+- [x] Bomber explose et chain-react
+- [x] Screamer buff les zombies proches
+- [x] Splitter se divise en minis
+- [x] Invisible quasi-invisible jusqu'à proximité
+- [x] Necromancer fuit et ressuscite
 
 **4.3** :
 - [ ] Armes de mêlée fonctionnent en arc
