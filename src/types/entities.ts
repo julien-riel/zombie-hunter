@@ -1,18 +1,16 @@
 /**
  * Types liés aux entités du jeu
+ *
+ * Note: Les valeurs numériques de configuration sont dans src/config/balance.ts
+ * Ces types définissent les structures, balance.ts définit les valeurs.
  */
 
-export type ZombieType =
-  | 'shambler'
-  | 'runner'
-  | 'crawler'
-  | 'tank'
-  | 'spitter'
-  | 'bomber'
-  | 'screamer'
-  | 'splitter'
-  | 'invisible'
-  | 'necromancer';
+import { ZombieBalanceType } from '@config/balance';
+
+/**
+ * Type des zombies - dérivé de balance.ts pour cohérence
+ */
+export type ZombieType = ZombieBalanceType;
 
 export type BossType = 'abomination' | 'patient_zero' | 'colossus';
 

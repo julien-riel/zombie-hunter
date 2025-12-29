@@ -4,7 +4,8 @@ import type { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import type { ZombieType } from '@/types/entities';
 import type { Door } from '@arena/Door';
 import type { WaveConfig } from './WaveSystem';
-import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, BASE_SPAWN_DELAY } from '@config/constants';
+import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@config/constants';
+import { BALANCE } from '@config/balance';
 
 /**
  * Point de spawn (utilisé en mode legacy sans portes)
@@ -122,7 +123,7 @@ export class SpawnSystem {
     }
 
     // Calculer le délai entre les spawns
-    const baseDelay = BASE_SPAWN_DELAY;
+    const baseDelay = BALANCE.waves.baseSpawnDelay;
     const waveMultiplier = Math.max(0.5, 1 - (this.currentWaveConfig?.waveNumber || 1) * 0.02);
     const delay = baseDelay * waveMultiplier + Math.random() * 500;
 

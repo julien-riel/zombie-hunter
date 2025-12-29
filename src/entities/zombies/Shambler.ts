@@ -1,20 +1,21 @@
 import type { GameScene } from '@scenes/GameScene';
 import { Zombie, ZombieConfig } from './Zombie';
 import { ASSET_KEYS } from '@config/assets.manifest';
+import { BALANCE } from '@config/balance';
 
 /**
- * Configuration du Shambler
+ * Configuration du Shambler depuis balance.ts
  */
 const SHAMBLER_CONFIG: ZombieConfig = {
   type: 'shambler',
   texture: ASSET_KEYS.SHAMBLER,
-  maxHealth: 30,
-  speed: 60,
-  damage: 10,
-  detectionRange: 300,
-  attackRange: 35,
-  attackCooldown: 1200,
-  scoreValue: 10,
+  maxHealth: BALANCE.zombies.shambler.health,
+  speed: BALANCE.zombies.shambler.speed,
+  damage: BALANCE.zombies.shambler.damage,
+  detectionRange: BALANCE.zombies.shambler.detectionRange,
+  attackRange: BALANCE.zombies.shambler.attackRange,
+  attackCooldown: BALANCE.zombies.shambler.attackCooldown,
+  scoreValue: BALANCE.zombies.shambler.scoreValue,
 };
 
 /**

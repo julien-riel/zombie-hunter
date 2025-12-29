@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { GameScene } from '@scenes/GameScene';
 import type { ZombieType } from '@/types/entities';
-import { WAVE_TRANSITION_DELAY } from '@config/constants';
+import { BALANCE } from '@config/balance';
 
 /**
  * Configuration d'un groupe de spawn dans une vague
@@ -34,39 +34,9 @@ export enum WaveState {
 }
 
 /**
- * Configuration de difficulté par vague
+ * Alias pour accéder plus facilement aux constantes de vagues
  */
-interface DifficultyConfig {
-  baseZombieCount: number;
-  zombiesPerWave: number;
-  maxZombiesPerWave: number;
-  doorsStartCount: number;
-  doorsPerWaves: number;
-  maxDoors: number;
-  zombieTypeUnlocks: { wave: number; type: ZombieType; weight: number }[];
-}
-
-const DIFFICULTY_CONFIG: DifficultyConfig = {
-  baseZombieCount: 5,
-  zombiesPerWave: 3,
-  maxZombiesPerWave: 50,
-  doorsStartCount: 2,
-  doorsPerWaves: 5,
-  maxDoors: 8,
-  zombieTypeUnlocks: [
-    { wave: 1, type: 'shambler', weight: 0.7 },
-    { wave: 1, type: 'runner', weight: 0.3 },
-    // Les autres types seront ajoutés en Phase 4
-    // { wave: 6, type: 'crawler', weight: 0.2 },
-    // { wave: 6, type: 'spitter', weight: 0.15 },
-    // { wave: 11, type: 'tank', weight: 0.1 },
-    // { wave: 11, type: 'bomber', weight: 0.1 },
-    // { wave: 16, type: 'screamer', weight: 0.1 },
-    // { wave: 16, type: 'splitter', weight: 0.1 },
-    // { wave: 21, type: 'invisible', weight: 0.05 },
-    // { wave: 21, type: 'necromancer', weight: 0.05 },
-  ],
-};
+const WAVES = BALANCE.waves;
 
 /**
  * Système de gestion des vagues
@@ -117,7 +87,7 @@ export class WaveSystem {
 
     // Court délai avant le début de la vague
     this.transitionTimer = this.scene.time.delayedCall(
-      WAVE_TRANSITION_DELAY,
+      WAVES.transitionDelay,
       () => {
         this.beginWave();
       },
@@ -198,7 +168,7 @@ export class WaveSystem {
 
     // Transition vers la prochaine vague après un délai
     this.transitionTimer = this.scene.time.delayedCall(
-      WAVE_TRANSITION_DELAY,
+      WAVES.transitionDelay,
       () => {
         this.startNextWave();
       },
@@ -213,15 +183,14 @@ export class WaveSystem {
   private generateWaveConfig(waveNumber: number): WaveConfig {
     // Calculer le nombre de zombies
     const totalZombies = Math.min(
-      DIFFICULTY_CONFIG.maxZombiesPerWave,
-      DIFFICULTY_CONFIG.baseZombieCount + (waveNumber - 1) * DIFFICULTY_CONFIG.zombiesPerWave
+      WAVES.maxZombiesPerWave,
+      WAVES.baseZombieCount + (waveNumber - 1) * WAVES.zombiesPerWave
     );
 
     // Calculer le nombre de portes actives
     const activeDoors = Math.min(
-      DIFFICULTY_CONFIG.maxDoors,
-      DIFFICULTY_CONFIG.doorsStartCount +
-        Math.floor((waveNumber - 1) / DIFFICULTY_CONFIG.doorsPerWaves)
+      WAVES.maxDoors,
+      WAVES.initialDoors + Math.floor((waveNumber - 1) / WAVES.doorsPerWaves)
     );
 
     // Obtenir les types de zombies disponibles pour cette vague
@@ -242,7 +211,7 @@ export class WaveSystem {
    * Récupère les types de zombies disponibles pour une vague
    */
   private getAvailableZombieTypes(waveNumber: number): { type: ZombieType; weight: number }[] {
-    return DIFFICULTY_CONFIG.zombieTypeUnlocks
+    return WAVES.zombieTypeUnlocks
       .filter((unlock) => waveNumber >= unlock.wave)
       .map((unlock) => ({ type: unlock.type, weight: unlock.weight }));
   }

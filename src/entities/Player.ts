@@ -1,11 +1,5 @@
 import Phaser from 'phaser';
-import {
-  PLAYER_SPEED,
-  PLAYER_DASH_SPEED,
-  PLAYER_DASH_DURATION,
-  PLAYER_DASH_COOLDOWN,
-  PLAYER_MAX_HEALTH,
-} from '@config/constants';
+import { BALANCE } from '@config/balance';
 import { ASSET_KEYS } from '@config/assets.manifest';
 import { Weapon } from '@weapons/Weapon';
 import { Pistol } from '@weapons/firearms/Pistol';
@@ -35,7 +29,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   constructor(scene: GameScene, x: number, y: number) {
     super(scene, x, y, ASSET_KEYS.PLAYER);
-    this.maxHealth = PLAYER_MAX_HEALTH;
+    this.maxHealth = BALANCE.player.maxHealth;
     this.health = this.maxHealth;
 
     // Ajouter au jeu et à la physique
@@ -90,7 +84,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private handleMovement(): void {
     if (this.isDashing) return;
 
-    const speed = PLAYER_SPEED;
+    const speed = BALANCE.player.speed;
     let velocityX = 0;
     let velocityY = 0;
 
@@ -176,21 +170,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Appliquer la vitesse de dash
     this.setVelocity(
-      this.dashDirection.x * PLAYER_DASH_SPEED,
-      this.dashDirection.y * PLAYER_DASH_SPEED
+      this.dashDirection.x * BALANCE.player.dashSpeed,
+      this.dashDirection.y * BALANCE.player.dashSpeed
     );
 
     // Effet visuel de dash
     this.setAlpha(0.7);
 
     // Fin du dash
-    this.scene.time.delayedCall(PLAYER_DASH_DURATION, () => {
+    this.scene.time.delayedCall(BALANCE.player.dashDuration, () => {
       this.isDashing = false;
       this.setAlpha(1);
     });
 
     // Cooldown du dash
-    this.scene.time.delayedCall(PLAYER_DASH_COOLDOWN, () => {
+    this.scene.time.delayedCall(BALANCE.player.dashCooldown, () => {
       this.canDash = true;
     });
   }

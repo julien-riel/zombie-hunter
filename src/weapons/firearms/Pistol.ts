@@ -1,20 +1,20 @@
 import Phaser from 'phaser';
 import { Weapon, WeaponConfig } from '@weapons/Weapon';
-import { DEFAULT_BULLET_SPEED, DEFAULT_BULLET_DAMAGE } from '@config/constants';
+import { BALANCE } from '@config/balance';
 import type { GameScene } from '@scenes/GameScene';
 import type { Player } from '@entities/Player';
 
 /**
- * Configuration du pistolet
+ * Configuration du pistolet depuis balance.ts
  */
 const PISTOL_CONFIG: WeaponConfig = {
   name: 'Pistolet',
-  damage: DEFAULT_BULLET_DAMAGE,
-  fireRate: 250, // 4 tirs par seconde
-  maxAmmo: 12,
-  reloadTime: 1000,
-  bulletSpeed: DEFAULT_BULLET_SPEED,
-  spread: 0.05, // Léger spread
+  damage: BALANCE.weapons.pistol.damage,
+  fireRate: BALANCE.weapons.pistol.fireRate,
+  maxAmmo: BALANCE.weapons.pistol.magazineSize,
+  reloadTime: BALANCE.weapons.pistol.reloadTime,
+  bulletSpeed: BALANCE.weapons.pistol.bulletSpeed,
+  spread: BALANCE.weapons.pistol.spread,
 };
 
 /**

@@ -1,30 +1,14 @@
 /**
  * Constantes globales du jeu
+ *
+ * Note: Les constantes de gameplay (joueur, zombies, armes, vagues, combat)
+ * sont centralisées dans src/config/balance.ts
  */
 
 // Dimensions
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 export const TILE_SIZE = 32;
-
-// Joueur
-export const PLAYER_SPEED = 200;
-export const PLAYER_DASH_SPEED = 400;
-export const PLAYER_DASH_DURATION = 200;
-export const PLAYER_DASH_COOLDOWN = 1000;
-export const PLAYER_MAX_HEALTH = 100;
-
-// Combat
-export const DEFAULT_BULLET_SPEED = 600;
-export const DEFAULT_BULLET_DAMAGE = 10;
-
-// Combo
-export const COMBO_TIMEOUT = 3000;
-export const COMBO_MAX_MULTIPLIER = 10;
-
-// Vagues
-export const WAVE_TRANSITION_DELAY = 3000;
-export const BASE_SPAWN_DELAY = 1000;
 
 // Catégories de collision (bitmask)
 export const COLLISION_CATEGORIES = {
