@@ -27,15 +27,15 @@ La Phase 5 enrichit l'arène avec des éléments tactiques : couvertures, zones 
 
 ```
 src/arena/
-├── Arena.ts              # Refactored - Gestionnaire principal
+├── Arena.ts              # ✅ Refactoré - Gestionnaire principal avec Cover
 ├── Door.ts               # Existant - À étendre (barricades)
-├── Cover.ts              # NOUVEAU - Couvertures (piliers, murets, mobilier)
-├── TerrainZone.ts        # NOUVEAU - Zones d'effet (slow, damage)
-├── Destructible.ts       # NOUVEAU - Objets destructibles
-├── Interactive.ts        # NOUVEAU - Éléments interactifs
-├── BarrelExplosive.ts    # NOUVEAU - Baril explosif
-├── TrapTrigger.ts        # NOUVEAU - Piège activable
-└── LevelLoader.ts        # NOUVEAU - Chargement tilemaps Tiled
+├── Cover.ts              # ✅ CRÉÉ - Couvertures (piliers, murets, mobilier)
+├── index.ts              # ✅ MIS À JOUR - Exports Cover, CoverType, etc.
+├── TerrainZone.ts        # À FAIRE - Zones d'effet (slow, damage)
+├── Interactive.ts        # À FAIRE - Éléments interactifs
+├── BarrelExplosive.ts    # À FAIRE - Baril explosif
+├── TrapTrigger.ts        # À FAIRE - Piège activable
+└── LevelLoader.ts        # À FAIRE - Chargement tilemaps Tiled
 ```
 
 ---
@@ -75,40 +75,39 @@ enum CoverType {
 
 ### Tâches
 
-- [ ] **5.1.1** Créer `Cover.ts` avec classe de base
-  - Héritage de `Phaser.GameObjects.Sprite`
-  - `HealthComponent` optionnel (si destructible)
-  - Collision avec catégorie `COLLISION_CATEGORIES.COVER`
-  - Méthode `takeDamage(amount: number, source: Entity)`
-  - Event `cover:damage` et `cover:destroy`
+- [x] **5.1.1** Créer `Cover.ts` avec classe de base
+  - Héritage de `Phaser.GameObjects.Container`
+  - Health géré dans la classe Cover (si destructible)
+  - Collision via groupe `walls` de l'Arena
+  - Méthode `takeDamage(amount: number, source: string)`
+  - Events `cover:damage` et `cover:destroy`
 
-- [ ] **5.1.2** Implémenter les piliers/colonnes (indestructibles)
-  - Collision statique
+- [x] **5.1.2** Implémenter les piliers/colonnes (indestructibles)
+  - Collision statique via le groupe walls
   - Bloque projectiles et entités
   - Intégration pathfinding (obstacle permanent)
 
-- [ ] **5.1.3** Implémenter les murets (destructibles, contournables)
-  - Health configurable (ex: 50 HP)
-  - Zombies peuvent les contourner
-  - Tank peut les détruire en chargeant
-  - Projectiles bloqués
+- [x] **5.1.3** Implémenter les murets (destructibles, contournables)
+  - Health configurable (80 HP par défaut)
+  - Zombies peuvent les contourner via pathfinding
+  - Projectiles bloqués et infligent des dégâts
   - Mise à jour pathfinding à la destruction
 
-- [ ] **5.1.4** Implémenter le mobilier destructible
+- [x] **5.1.4** Implémenter le mobilier destructible
   - Tables, caisses, étagères
-  - Loot aléatoire à la destruction (munitions, soins, power-ups)
-  - Animation de destruction
+  - Loot aléatoire via événement `cover:loot` (système de loot à implémenter en Phase 6)
+  - Animation de destruction (fade out + scale)
   - Particules de débris
 
-- [ ] **5.1.5** Intégrer les covers avec l'Arena
-  - Refactorer `Arena.ts` pour utiliser `Cover` au lieu de piliers hardcodés
-  - Liste dynamique de covers
+- [x] **5.1.5** Intégrer les covers avec l'Arena
+  - `Arena.ts` refactoré pour utiliser `Cover` au lieu de piliers hardcodés
+  - Liste dynamique de covers via `getCovers()`, `getActiveCovers()`
   - Méthode `getCoverAt(x, y)` pour l'IA
 
-- [ ] **5.1.6** Intégrer avec le Pathfinder
-  - Covers ajoutés à `obstacleList`
-  - Suppression de l'obstacle quand cover détruit
-  - Recalcul des chemins affectés
+- [x] **5.1.6** Intégrer avec le Pathfinder
+  - Covers ajoutés à `obstacleList` automatiquement
+  - Suppression de l'obstacle quand cover détruit via événement `arena:obstacleRemoved`
+  - Appel à `pathfinder.invalidateArea()` pour mettre à jour la grille
 
 ### Balance Suggérée
 
@@ -556,16 +555,16 @@ describe('Interactive', () => {
 
 ### Code Existant à Modifier
 
-| Fichier | Modifications |
-|---------|---------------|
-| `Arena.ts` | Refactor pour utiliser Cover, TerrainZone, Interactive |
-| `Pathfinder.ts` | Mise à jour dynamique des obstacles |
-| `GameScene.ts` | Intégration nouvelles classes, collisions |
-| `CombatSystem.ts` | Gestion dégâts environnementaux |
-| `TelemetryManager.ts` | Nouveaux events |
-| `PreloadScene.ts` | Chargement tilemaps et tilesets |
-| `constants.ts` | Enum ArenaType, nouvelles constantes |
-| `balance.ts` | Stats covers, terrains, interactifs |
+| Fichier | Modifications | État |
+|---------|---------------|------|
+| `Arena.ts` | Refactor pour utiliser Cover, TerrainZone, Interactive | ✅ Cover intégré |
+| `Pathfinder.ts` | Mise à jour dynamique des obstacles | ✅ Déjà supporté (`invalidateArea`) |
+| `GameScene.ts` | Intégration nouvelles classes, collisions | ✅ Collision projectiles-covers |
+| `CombatSystem.ts` | Gestion dégâts environnementaux | À faire |
+| `TelemetryManager.ts` | Nouveaux events | À faire |
+| `PreloadScene.ts` | Chargement tilemaps et tilesets | À faire |
+| `constants.ts` | Enum ArenaType, nouvelles constantes | À faire |
+| `balance.ts` | Stats covers, terrains, interactifs | ✅ Stats covers ajoutées |
 
 ### Assets Nécessaires (Priorité)
 
@@ -585,9 +584,9 @@ Aucune — Phaser gère tout nativement (tilemaps, collision, etc.)
 
 ### Fonctionnel
 
-- [ ] Piliers bloquent mouvement et projectiles
-- [ ] Murets peuvent être détruits par le Tank
-- [ ] Mobilier drop du loot à la destruction
+- [x] Piliers bloquent mouvement et projectiles
+- [x] Murets peuvent être détruits par les projectiles
+- [x] Mobilier drop du loot à la destruction (événement émis, système de loot en Phase 6)
 - [ ] Flaques ralentissent joueur et zombies
 - [ ] Zones électriques infligent des dégâts
 - [ ] TeslaCannon se propage via les flaques

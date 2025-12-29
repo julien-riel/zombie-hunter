@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import { Player } from '@entities/Player';
 import { Arena } from '@arena/Arena';
+import { Cover } from '@arena/Cover';
 import { BulletPool } from '@entities/projectiles/BulletPool';
 import { AcidSpitPool } from '@entities/projectiles/AcidSpitPool';
 import { FlamePool } from '@entities/projectiles/FlamePool';
@@ -58,6 +59,9 @@ export class GameScene extends Phaser.Scene {
     // Initialiser le pathfinder avec les obstacles de l'arène
     this.pathfinder = new Pathfinder();
     this.pathfinder.buildGrid(this.arena.getObstacles());
+
+    // Écouter les changements d'obstacles pour mettre à jour le pathfinder
+    this.events.on('arena:obstacleRemoved', this.onObstacleRemoved, this);
 
     // Créer le pool de projectiles
     this.bulletPool = new BulletPool(this);
@@ -160,8 +164,9 @@ export class GameScene extends Phaser.Scene {
       this.add.group([miniZombie])
     );
 
-    // Collision avec les murs
+    // Collision avec les murs et covers
     this.physics.add.collider(miniZombie, this.walls);
+    this.physics.add.collider(miniZombie, this.arena.getCoverGroup());
   }
 
   /**
@@ -256,16 +261,49 @@ export class GameScene extends Phaser.Scene {
    * Configure les collisions entre entités
    */
   private setupCollisions(): void {
+    const coverGroup = this.arena.getCoverGroup();
+
     // Collision joueur avec les murs
     this.physics.add.collider(this.player, this.walls);
 
-    // Collision projectiles avec les murs
+    // Collision joueur avec les covers
+    this.physics.add.collider(this.player, coverGroup);
+
+    // Collision projectiles avec les murs (simple release)
     this.physics.add.collider(
       this.bulletPool.getGroup(),
       this.walls,
       (bullet) => {
-        const b = bullet as Phaser.Physics.Arcade.Sprite;
-        this.bulletPool.release(b);
+        this.bulletPool.release(bullet as Phaser.Physics.Arcade.Sprite);
+      },
+      undefined,
+      this
+    );
+
+    // Collision projectiles avec les covers (avec dégâts)
+    this.physics.add.collider(
+      this.bulletPool.getGroup(),
+      coverGroup,
+      (obj1, obj2) => {
+        // Identifier le projectile et le cover
+        let bullet: Phaser.Physics.Arcade.Sprite;
+        let cover: Cover;
+
+        if (obj1 instanceof Cover) {
+          cover = obj1;
+          bullet = obj2 as Phaser.Physics.Arcade.Sprite;
+        } else {
+          bullet = obj1 as Phaser.Physics.Arcade.Sprite;
+          cover = obj2 as Cover;
+        }
+
+        // Infliger des dégâts si destructible
+        if (cover.destructible) {
+          const damage = this.bulletPool.getDamage(bullet);
+          cover.takeDamage(damage, 'bullet');
+        }
+
+        this.bulletPool.release(bullet);
       },
       undefined,
       this
@@ -274,6 +312,9 @@ export class GameScene extends Phaser.Scene {
     // Collision zombies avec les murs
     for (const group of this.poolManager.getAllZombieGroups()) {
       this.physics.add.collider(group, this.walls);
+
+      // Collision zombies avec les covers
+      this.physics.add.collider(group, coverGroup);
 
       // Collision zombies entre eux
       this.physics.add.collider(group, group);
@@ -358,6 +399,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère l'arène
+   */
+  public getArena(): Arena {
+    return this.arena;
+  }
+
+  /**
+   * Gère la suppression d'un obstacle (cover détruit)
+   * Met à jour le pathfinder pour que les zombies puissent passer
+   */
+  private onObstacleRemoved(event: { x: number; y: number; width: number; height: number }): void {
+    this.pathfinder.invalidateArea(event.x, event.y, event.width, event.height);
+  }
+
+  /**
    * Nettoie la scène
    */
   shutdown(): void {
@@ -371,6 +427,8 @@ export class GameScene extends Phaser.Scene {
     this.corpseManager?.destroy();
     this.hordeManager?.destroy();
     this.tacticalBehaviors?.reset();
+    this.arena?.destroy();
     this.events.off('miniZombieSpawned', this.onMiniZombieSpawned, this);
+    this.events.off('arena:obstacleRemoved', this.onObstacleRemoved, this);
   }
 }

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@config/constants';
 import type { GameScene } from '@scenes/GameScene';
 import { Door, type DoorConfig } from './Door';
+import { Cover, CoverType, type CoverConfig } from './Cover';
 
 /**
  * Représente un obstacle pour le pathfinding
@@ -20,9 +21,11 @@ export interface ObstacleData {
 export class Arena {
   private scene: GameScene;
   private walls: Phaser.Physics.Arcade.StaticGroup;
+  private coverGroup: Phaser.GameObjects.Group;
   private floor: Phaser.GameObjects.TileSprite;
   private doors: Door[] = [];
   private obstacles: ObstacleData[] = [];
+  private covers: Cover[] = [];
 
   constructor(scene: GameScene) {
     this.scene = scene;
@@ -34,7 +37,13 @@ export class Arena {
     this.walls = scene.physics.add.staticGroup();
     this.createWalls();
     this.createDoors();
-    this.createObstacles();
+
+    // Créer le groupe pour les covers (séparé des murs statiques)
+    this.coverGroup = scene.add.group();
+    this.createCovers();
+
+    // Écouter les événements de destruction de covers
+    this.scene.events.on('cover:destroy', this.onCoverDestroyed, this);
   }
 
   /**
@@ -214,51 +223,97 @@ export class Arena {
   }
 
   /**
-   * Crée des obstacles dans l'arène
+   * Crée les couvertures dans l'arène
    */
-  private createObstacles(): void {
-    // Colonnes/piliers (indestructibles)
+  private createCovers(): void {
+    // Piliers indestructibles aux coins et au centre
     const pillarPositions = [
       { x: 200, y: 200 },
       { x: GAME_WIDTH - 200, y: 200 },
       { x: 200, y: GAME_HEIGHT - 200 },
       { x: GAME_WIDTH - 200, y: GAME_HEIGHT - 200 },
-      { x: GAME_WIDTH / 2, y: 200 },
-      { x: GAME_WIDTH / 2, y: GAME_HEIGHT - 200 },
+      { x: GAME_WIDTH / 2, y: 180 },
+      { x: GAME_WIDTH / 2, y: GAME_HEIGHT - 180 },
     ];
 
-    pillarPositions.forEach((pos) => {
-      this.createPillar(pos.x, pos.y);
-    });
+    for (const pos of pillarPositions) {
+      this.createCover({ type: CoverType.PILLAR, x: pos.x, y: pos.y });
+    }
 
-    // Murets horizontaux (trackés comme obstacles pour le pathfinding)
-    this.createWallSegment(400, GAME_HEIGHT / 2, TILE_SIZE * 3, TILE_SIZE, true);
-    this.createWallSegment(GAME_WIDTH - 400, GAME_HEIGHT / 2, TILE_SIZE * 3, TILE_SIZE, true);
+    // Murets destructibles (écartés du centre)
+    this.createCover({ type: CoverType.HALF_WALL, x: 350, y: GAME_HEIGHT / 2 });
+    this.createCover({ type: CoverType.HALF_WALL, x: GAME_WIDTH - 350, y: GAME_HEIGHT / 2 });
+
+    // Tables (écartées pour éviter chevauchement)
+    this.createCover({ type: CoverType.TABLE, x: GAME_WIDTH / 2 - 100, y: GAME_HEIGHT / 2 - 80 });
+    this.createCover({ type: CoverType.TABLE, x: GAME_WIDTH / 2 + 100, y: GAME_HEIGHT / 2 - 80 });
+
+    // Caisses (positionnées différemment)
+    this.createCover({ type: CoverType.CRATE, x: 280, y: GAME_HEIGHT / 2 - 120 });
+    this.createCover({ type: CoverType.CRATE, x: GAME_WIDTH - 280, y: GAME_HEIGHT / 2 + 120 });
+
+    // Étagère (en bas du centre)
+    this.createCover({ type: CoverType.SHELF, x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 + 120 });
   }
 
   /**
-   * Crée un pilier
+   * Crée une couverture et l'ajoute à la liste
    */
-  private createPillar(x: number, y: number): void {
-    const size = TILE_SIZE * 2;
+  public createCover(config: CoverConfig): Cover {
+    const cover = new Cover(this.scene, config);
+    this.covers.push(cover);
 
-    // Créer la texture du pilier
-    const graphics = this.scene.add.graphics();
-    graphics.fillStyle(0x5d6d7e);
-    graphics.fillRect(0, 0, size, size);
-    graphics.lineStyle(3, 0x34495e);
-    graphics.strokeRect(0, 0, size, size);
-
-    const textureKey = `pillar_${x}_${y}`;
-    graphics.generateTexture(textureKey, size, size);
-    graphics.destroy();
-
-    const pillar = this.walls.create(x, y, textureKey) as Phaser.Physics.Arcade.Sprite;
-    pillar.setImmovable(true);
-    pillar.refreshBody();
+    // Ajouter au groupe des covers (pour collisions séparées)
+    this.coverGroup.add(cover);
 
     // Enregistrer comme obstacle pour le pathfinding
-    this.obstacles.push({ x, y, width: size, height: size });
+    const data = cover.getCoverData();
+    this.obstacles.push({
+      x: data.x,
+      y: data.y,
+      width: data.width,
+      height: data.height,
+    });
+
+    return cover;
+  }
+
+  /**
+   * Gère la destruction d'une couverture
+   */
+  private onCoverDestroyed(event: {
+    cover: Cover;
+    type: CoverType;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }): void {
+    // Retirer de la liste des covers
+    const index = this.covers.indexOf(event.cover);
+    if (index !== -1) {
+      this.covers.splice(index, 1);
+    }
+
+    // Retirer de la liste des obstacles
+    const obstacleIndex = this.obstacles.findIndex(
+      (obs) =>
+        obs.x === event.x &&
+        obs.y === event.y &&
+        obs.width === event.width &&
+        obs.height === event.height
+    );
+    if (obstacleIndex !== -1) {
+      this.obstacles.splice(obstacleIndex, 1);
+    }
+
+    // Émettre un événement pour notifier le pathfinder
+    this.scene.events.emit('arena:obstacleRemoved', {
+      x: event.x,
+      y: event.y,
+      width: event.width,
+      height: event.height,
+    });
   }
 
   /**
@@ -266,6 +321,13 @@ export class Arena {
    */
   public getWalls(): Phaser.Physics.Arcade.StaticGroup {
     return this.walls;
+  }
+
+  /**
+   * Retourne le groupe de covers pour les collisions
+   */
+  public getCoverGroup(): Phaser.GameObjects.Group {
+    return this.coverGroup;
   }
 
   /**
@@ -317,5 +379,66 @@ export class Arena {
    */
   public getObstacles(): ObstacleData[] {
     return this.obstacles;
+  }
+
+  /**
+   * Retourne toutes les couvertures
+   */
+  public getCovers(): Cover[] {
+    return this.covers;
+  }
+
+  /**
+   * Retourne les couvertures actives (non détruites)
+   */
+  public getActiveCovers(): Cover[] {
+    return this.covers.filter((cover) => !cover.isDestroyed());
+  }
+
+  /**
+   * Retourne la couverture à une position donnée
+   */
+  public getCoverAt(x: number, y: number, radius: number = 0): Cover | null {
+    for (const cover of this.covers) {
+      if (cover.isDestroyed()) continue;
+
+      const data = cover.getCoverData();
+      const halfWidth = data.width / 2 + radius;
+      const halfHeight = data.height / 2 + radius;
+
+      if (
+        x >= data.x - halfWidth &&
+        x <= data.x + halfWidth &&
+        y >= data.y - halfHeight &&
+        y <= data.y + halfHeight
+      ) {
+        return cover;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Retourne toutes les couvertures destructibles
+   */
+  public getDestructibleCovers(): Cover[] {
+    return this.covers.filter((cover) => cover.destructible && !cover.isDestroyed());
+  }
+
+  /**
+   * Nettoie les ressources
+   */
+  public destroy(): void {
+    this.scene.events.off('cover:destroy', this.onCoverDestroyed, this);
+
+    for (const cover of this.covers) {
+      cover.destroy();
+    }
+    this.covers = [];
+
+    for (const door of this.doors) {
+      door.destroy();
+    }
+    this.doors = [];
   }
 }

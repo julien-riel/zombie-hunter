@@ -292,6 +292,42 @@ export const BALANCE = {
     invulnerabilityOnHit: 200,
   },
 
+  covers: {
+    pillar: {
+      health: Infinity,
+      blocksLineOfSight: true,
+      providesPartialCover: false,
+    },
+    halfWall: {
+      health: 80,
+      blocksLineOfSight: true,
+      providesPartialCover: true,
+    },
+    table: {
+      health: 40,
+      blocksLineOfSight: false,
+      providesPartialCover: true,
+      lootChance: 0.1,
+    },
+    crate: {
+      health: 30,
+      blocksLineOfSight: false,
+      providesPartialCover: false,
+      lootChance: 0.3,
+    },
+    shelf: {
+      health: 50,
+      blocksLineOfSight: false,
+      providesPartialCover: false,
+      lootChance: 0.5,
+    },
+    barricade: {
+      health: 100,
+      blocksLineOfSight: true,
+      providesPartialCover: false,
+    },
+  },
+
   // Calculs de référence pour validation de l'équilibrage
   reference: {
     // Temps pour tuer un Shambler avec Pistol : 30 HP / 40 DPS = 0.75 secondes
