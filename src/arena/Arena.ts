@@ -3,6 +3,10 @@ import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@config/constants';
 import type { GameScene } from '@scenes/GameScene';
 import { Door, type DoorConfig } from './Door';
 import { Cover, CoverType, type CoverConfig } from './Cover';
+import { TerrainZone, TerrainType } from './TerrainZone';
+import { PuddleZone, type PuddleConfig } from './PuddleZone';
+import { DebrisZone, type DebrisConfig } from './DebrisZone';
+import { ElectricZone, type ElectricZoneConfig } from './ElectricZone';
 
 /**
  * Représente un obstacle pour le pathfinding
@@ -22,10 +26,12 @@ export class Arena {
   private scene: GameScene;
   private walls: Phaser.Physics.Arcade.StaticGroup;
   private coverGroup: Phaser.GameObjects.Group;
+  private terrainZoneGroup: Phaser.GameObjects.Group;
   private floor: Phaser.GameObjects.TileSprite;
   private doors: Door[] = [];
   private obstacles: ObstacleData[] = [];
   private covers: Cover[] = [];
+  private terrainZones: TerrainZone[] = [];
 
   constructor(scene: GameScene) {
     this.scene = scene;
@@ -42,8 +48,15 @@ export class Arena {
     this.coverGroup = scene.add.group();
     this.createCovers();
 
+    // Créer le groupe pour les terrain zones
+    this.terrainZoneGroup = scene.add.group();
+    this.createTerrainZones();
+
     // Écouter les événements de destruction de covers
     this.scene.events.on('cover:destroy', this.onCoverDestroyed, this);
+
+    // Écouter les événements de destruction de terrain zones
+    this.scene.events.on('terrain:destroy', this.onTerrainZoneDestroyed, this);
   }
 
   /**
@@ -426,15 +439,158 @@ export class Arena {
   }
 
   /**
+   * Crée les zones de terrain dans l'arène
+   */
+  private createTerrainZones(): void {
+    // Quelques flaques d'eau près des portes
+    this.createPuddle({ x: GAME_WIDTH * 0.25, y: 100, isBlood: false });
+    this.createPuddle({ x: GAME_WIDTH * 0.75, y: GAME_HEIGHT - 100, isBlood: false });
+
+    // Quelques flaques de sang (près des zones de combat)
+    this.createPuddle({ x: 150, y: GAME_HEIGHT * 0.33, isBlood: true });
+    this.createPuddle({ x: GAME_WIDTH - 150, y: GAME_HEIGHT * 0.67, isBlood: true });
+
+    // Zones de gravats
+    this.createDebrisZone({ x: 300, y: 300 });
+    this.createDebrisZone({ x: GAME_WIDTH - 300, y: GAME_HEIGHT - 300 });
+
+    // Zone électrique (désactivée par défaut)
+    this.createElectricZone({ x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 + 50, active: false });
+  }
+
+  /**
+   * Crée une flaque (eau ou sang)
+   */
+  public createPuddle(config: PuddleConfig): PuddleZone {
+    const puddle = new PuddleZone(this.scene, config);
+    this.terrainZones.push(puddle);
+    this.terrainZoneGroup.add(puddle);
+    return puddle;
+  }
+
+  /**
+   * Crée une zone de gravats
+   */
+  public createDebrisZone(config: DebrisConfig): DebrisZone {
+    const debris = new DebrisZone(this.scene, config);
+    this.terrainZones.push(debris);
+    this.terrainZoneGroup.add(debris);
+    return debris;
+  }
+
+  /**
+   * Crée une zone électrique
+   */
+  public createElectricZone(config: ElectricZoneConfig): ElectricZone {
+    const electric = new ElectricZone(this.scene, config);
+    this.terrainZones.push(electric);
+    this.terrainZoneGroup.add(electric);
+    return electric;
+  }
+
+  /**
+   * Ajoute une zone de terrain existante (créée ailleurs, ex: FireZone, AcidZone)
+   */
+  public addTerrainZone(zone: TerrainZone): void {
+    this.terrainZones.push(zone);
+    this.terrainZoneGroup.add(zone);
+  }
+
+  /**
+   * Gère la destruction d'une zone de terrain
+   */
+  private onTerrainZoneDestroyed(event: { zone: TerrainZone }): void {
+    const index = this.terrainZones.indexOf(event.zone);
+    if (index !== -1) {
+      this.terrainZones.splice(index, 1);
+    }
+  }
+
+  /**
+   * Retourne le groupe de zones de terrain pour les collisions
+   */
+  public getTerrainZoneGroup(): Phaser.GameObjects.Group {
+    return this.terrainZoneGroup;
+  }
+
+  /**
+   * Retourne toutes les zones de terrain
+   */
+  public getTerrainZones(): TerrainZone[] {
+    return this.terrainZones;
+  }
+
+  /**
+   * Retourne les zones de terrain actives
+   */
+  public getActiveTerrainZones(): TerrainZone[] {
+    return this.terrainZones.filter((zone) => zone.isActive());
+  }
+
+  /**
+   * Retourne les zones de terrain à une position donnée
+   */
+  public getTerrainZonesAt(x: number, y: number): TerrainZone[] {
+    const zonesAtPosition: TerrainZone[] = [];
+
+    for (const zone of this.terrainZones) {
+      if (!zone.isActive()) continue;
+
+      const distance = Phaser.Math.Distance.Between(x, y, zone.x, zone.y);
+      if (distance <= zone.getRadius()) {
+        zonesAtPosition.push(zone);
+      }
+    }
+
+    return zonesAtPosition;
+  }
+
+  /**
+   * Retourne les zones qui conduisent l'électricité (pour TeslaCannon)
+   */
+  public getConductiveZones(): TerrainZone[] {
+    return this.terrainZones.filter(
+      (zone) => zone.isActive() && zone.conductElectricity
+    );
+  }
+
+  /**
+   * Retourne les zones de terrain d'un type spécifique
+   */
+  public getTerrainZonesByType(type: TerrainType): TerrainZone[] {
+    return this.terrainZones.filter(
+      (zone) => zone.isActive() && zone.terrainType === type
+    );
+  }
+
+  /**
+   * Met à jour les zones de terrain
+   * Doit être appelé depuis GameScene.update()
+   */
+  public update(): void {
+    for (const zone of this.terrainZones) {
+      if (zone.isActive()) {
+        zone.update();
+      }
+    }
+  }
+
+  /**
    * Nettoie les ressources
    */
   public destroy(): void {
     this.scene.events.off('cover:destroy', this.onCoverDestroyed, this);
+    this.scene.events.off('terrain:destroy', this.onTerrainZoneDestroyed, this);
 
     for (const cover of this.covers) {
       cover.destroy();
     }
     this.covers = [];
+
+    for (const zone of this.terrainZones) {
+      zone.destroy();
+    }
+    this.terrainZones = [];
 
     for (const door of this.doors) {
       door.destroy();

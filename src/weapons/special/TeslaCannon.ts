@@ -4,6 +4,7 @@ import { BALANCE } from '@config/balance';
 import type { GameScene } from '@scenes/GameScene';
 import type { Player } from '@entities/Player';
 import type { Zombie } from '@entities/zombies/Zombie';
+import type { TerrainZone } from '@arena/TerrainZone';
 
 /**
  * Configuration du canon Tesla
@@ -117,6 +118,15 @@ export class TeslaCannon extends Weapon {
     const hitTargets: Zombie[] = [primaryTarget];
     let currentDamage = this.config.damage;
 
+    // Vérifier si la cible est dans une flaque conductrice
+    const conductiveZone = this.findConductiveZoneAt(primaryTarget.x, primaryTarget.y);
+    const inConductiveZone = conductiveZone !== null;
+
+    // Appliquer le bonus de dégâts si dans une flaque
+    if (inConductiveZone) {
+      currentDamage *= BALANCE.tesla.puddleChainDamageBonus;
+    }
+
     // Infliger les dégâts à la cible primaire
     primaryTarget.takeDamage(currentDamage);
     this.revealInvisible(primaryTarget);
@@ -124,7 +134,12 @@ export class TeslaCannon extends Weapon {
     // Dessiner l'arc vers la cible primaire
     this.drawLightningArc(this.owner.x, this.owner.y, primaryTarget.x, primaryTarget.y, 0);
 
-    // Chercher des cibles secondaires
+    // Propagation via la flaque si applicable
+    if (inConductiveZone && conductiveZone) {
+      this.propagateThroughPuddle(conductiveZone, currentDamage, hitTargets);
+    }
+
+    // Chercher des cibles secondaires (chaîne normale)
     let lastTarget = primaryTarget;
     for (let i = 1; i < this.chainCount; i++) {
       currentDamage *= this.chainDamageFalloff;
@@ -133,11 +148,24 @@ export class TeslaCannon extends Weapon {
       if (!nextTarget) break;
 
       hitTargets.push(nextTarget);
-      nextTarget.takeDamage(currentDamage);
+
+      // Vérifier si la nouvelle cible est aussi dans une flaque
+      const nextConductiveZone = this.findConductiveZoneAt(nextTarget.x, nextTarget.y);
+      let chainDamage = currentDamage;
+      if (nextConductiveZone) {
+        chainDamage *= BALANCE.tesla.puddleChainDamageBonus;
+      }
+
+      nextTarget.takeDamage(chainDamage);
       this.revealInvisible(nextTarget);
 
       // Dessiner l'arc de chaîne
       this.drawLightningArc(lastTarget.x, lastTarget.y, nextTarget.x, nextTarget.y, i);
+
+      // Propagation via la flaque si la nouvelle cible est dans une flaque
+      if (nextConductiveZone) {
+        this.propagateThroughPuddle(nextConductiveZone, chainDamage * 0.5, hitTargets);
+      }
 
       lastTarget = nextTarget;
     }
@@ -145,6 +173,89 @@ export class TeslaCannon extends Weapon {
     // Nettoyer les graphiques après un délai
     this.scene.time.delayedCall(200, () => {
       this.lightningGraphics.clear();
+    });
+  }
+
+  /**
+   * Trouve une zone conductrice à une position
+   */
+  private findConductiveZoneAt(x: number, y: number): TerrainZone | null {
+    const arena = this.scene.getArena();
+    const conductiveZones = arena.getConductiveZones();
+
+    for (const zone of conductiveZones) {
+      const distance = Phaser.Math.Distance.Between(x, y, zone.x, zone.y);
+      if (distance <= zone.getRadius()) {
+        return zone;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Propage l'électricité à travers une flaque
+   */
+  private propagateThroughPuddle(zone: TerrainZone, damage: number, alreadyHit: Zombie[]): void {
+    const activeZombies = this.scene.getActiveZombies();
+    const puddleRadius = BALANCE.tesla.puddleChainRadius;
+
+    for (const zombie of activeZombies) {
+      if (!zombie.active) continue;
+      if (alreadyHit.includes(zombie)) continue;
+
+      // Vérifier si le zombie est dans la même flaque
+      const distanceToZone = Phaser.Math.Distance.Between(zombie.x, zombie.y, zone.x, zone.y);
+      if (distanceToZone > zone.getRadius()) continue;
+
+      // Vérifier si dans le rayon de propagation
+      const distanceToSource = Phaser.Math.Distance.Between(
+        zombie.x,
+        zombie.y,
+        alreadyHit[0].x,
+        alreadyHit[0].y
+      );
+      if (distanceToSource > puddleRadius) continue;
+
+      // Infliger les dégâts
+      alreadyHit.push(zombie);
+      zombie.takeDamage(damage);
+      this.revealInvisible(zombie);
+
+      // Dessiner un arc de propagation aquatique
+      this.drawPuddleArc(zone.x, zone.y, zombie.x, zombie.y);
+    }
+  }
+
+  /**
+   * Dessine un arc de propagation dans l'eau
+   */
+  private drawPuddleArc(x1: number, y1: number, x2: number, y2: number): void {
+    this.lightningGraphics.lineStyle(2, 0x88ccff, 0.6);
+    this.lightningGraphics.beginPath();
+    this.lightningGraphics.moveTo(x1, y1);
+
+    const segments = 4;
+    const dx = (x2 - x1) / segments;
+    const dy = (y2 - y1) / segments;
+
+    for (let i = 1; i < segments; i++) {
+      const jitterX = (Math.random() - 0.5) * 10;
+      const jitterY = (Math.random() - 0.5) * 10;
+      this.lightningGraphics.lineTo(x1 + dx * i + jitterX, y1 + dy * i + jitterY);
+    }
+
+    this.lightningGraphics.lineTo(x2, y2);
+    this.lightningGraphics.strokePath();
+
+    // Effet d'éclaboussure électrique
+    const splash = this.scene.add.circle(x2, y2, 12, 0x88ccff, 0.6);
+    this.scene.tweens.add({
+      targets: splash,
+      alpha: 0,
+      scale: 1.5,
+      duration: 150,
+      onComplete: () => splash.destroy(),
     });
   }
 

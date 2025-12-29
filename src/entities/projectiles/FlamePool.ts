@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { GameScene } from '@scenes/GameScene';
 import type { Zombie } from '@entities/zombies/Zombie';
-import { FireZone } from '@entities/effects/FireZone';
+import { FireZone } from '@arena/FireZone';
 import { BALANCE } from '@config/balance';
 
 /**

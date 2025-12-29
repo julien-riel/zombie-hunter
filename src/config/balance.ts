@@ -328,6 +328,62 @@ export const BALANCE = {
     },
   },
 
+  terrainZones: {
+    puddle: {
+      slowFactor: 0.6,
+      damagePerSecond: 0,
+      duration: 0, // Permanent
+      revealInvisibles: true,
+      conductElectricity: true,
+      radius: 40,
+    },
+    blood_pool: {
+      slowFactor: 0.8,
+      damagePerSecond: 0,
+      duration: 0, // Permanent
+      revealInvisibles: true,
+      conductElectricity: false,
+      radius: 35,
+    },
+    debris: {
+      slowFactor: 0.7,
+      damagePerSecond: 0,
+      duration: 0, // Permanent
+      revealInvisibles: false,
+      conductElectricity: false,
+      radius: 50,
+    },
+    electric: {
+      slowFactor: 1,
+      damagePerSecond: 15,
+      duration: 0, // Activable
+      revealInvisibles: true,
+      conductElectricity: false,
+      radius: 45,
+    },
+    fire: {
+      slowFactor: 1,
+      damagePerSecond: 20,
+      duration: 3000, // 3 secondes
+      revealInvisibles: true,
+      conductElectricity: false,
+      radius: 30,
+    },
+    acid: {
+      slowFactor: 0.8,
+      damagePerSecond: 10,
+      duration: 4000, // 4 secondes
+      revealInvisibles: false,
+      conductElectricity: false,
+      radius: 32,
+    },
+  },
+
+  tesla: {
+    puddleChainDamageBonus: 1.5, // +50% de dégâts dans les flaques
+    puddleChainRadius: 80, // Rayon de propagation dans les flaques
+  },
+
   // Calculs de référence pour validation de l'équilibrage
   reference: {
     // Temps pour tuer un Shambler avec Pistol : 30 HP / 40 DPS = 0.75 secondes

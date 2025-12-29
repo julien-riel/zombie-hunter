@@ -3,6 +3,8 @@ import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import { Player } from '@entities/Player';
 import { Arena } from '@arena/Arena';
 import { Cover } from '@arena/Cover';
+import type { TerrainZone } from '@arena/TerrainZone';
+import type { Entity } from '@entities/Entity';
 import { BulletPool } from '@entities/projectiles/BulletPool';
 import { AcidSpitPool } from '@entities/projectiles/AcidSpitPool';
 import { FlamePool } from '@entities/projectiles/FlamePool';
@@ -226,6 +228,12 @@ export class GameScene extends Phaser.Scene {
     // Mettre à jour le joueur
     this.player.update(time, delta);
 
+    // Mettre à jour l'arène (terrain zones)
+    this.arena.update();
+
+    // Vérifier les effets de terrain sur les entités
+    this.checkTerrainZoneEffects();
+
     // Mettre à jour les pools de projectiles
     this.bulletPool.update();
     this.acidSpitPool.update();
@@ -403,6 +411,44 @@ export class GameScene extends Phaser.Scene {
    */
   public getArena(): Arena {
     return this.arena;
+  }
+
+  /**
+   * Vérifie les effets de terrain sur le joueur et les zombies
+   */
+  private checkTerrainZoneEffects(): void {
+    const terrainZones = this.arena.getActiveTerrainZones();
+
+    for (const zone of terrainZones) {
+      // Vérifier le joueur
+      this.checkEntityInZone(this.player, zone);
+
+      // Vérifier les zombies
+      const activeZombies = this.poolManager.getActiveZombies();
+      for (const zombie of activeZombies) {
+        if (zombie.active) {
+          this.checkEntityInZone(zombie, zone);
+        }
+      }
+    }
+  }
+
+  /**
+   * Vérifie si une entité est dans une zone de terrain
+   */
+  private checkEntityInZone(
+    entity: { x: number; y: number; active: boolean },
+    zone: TerrainZone
+  ): void {
+    const distance = Phaser.Math.Distance.Between(entity.x, entity.y, zone.x, zone.y);
+    const inZone = distance <= zone.getRadius();
+
+    const entitiesInZone = zone.getEntitiesInZone();
+    const wasInZone = entitiesInZone.includes(entity as Entity);
+
+    if (inZone && !wasInZone) {
+      zone.onEntityEnter(entity as Entity);
+    }
   }
 
   /**

@@ -27,11 +27,16 @@ La Phase 5 enrichit l'arène avec des éléments tactiques : couvertures, zones 
 
 ```
 src/arena/
-├── Arena.ts              # ✅ Refactoré - Gestionnaire principal avec Cover
+├── Arena.ts              # ✅ Refactoré - Gestionnaire principal avec Cover et TerrainZone
 ├── Door.ts               # Existant - À étendre (barricades)
 ├── Cover.ts              # ✅ CRÉÉ - Couvertures (piliers, murets, mobilier)
-├── index.ts              # ✅ MIS À JOUR - Exports Cover, CoverType, etc.
-├── TerrainZone.ts        # À FAIRE - Zones d'effet (slow, damage)
+├── index.ts              # ✅ MIS À JOUR - Exports Cover, TerrainZone, etc.
+├── TerrainZone.ts        # ✅ CRÉÉ - Classe de base zones d'effet
+├── PuddleZone.ts         # ✅ CRÉÉ - Flaques (eau/sang)
+├── DebrisZone.ts         # ✅ CRÉÉ - Zones de gravats
+├── ElectricZone.ts       # ✅ CRÉÉ - Zones électrifiées
+├── FireZone.ts           # ✅ CRÉÉ - Zones de feu (refactoré depuis entities/effects)
+├── AcidZone.ts           # ✅ CRÉÉ - Zones d'acide (Spitter)
 ├── Interactive.ts        # À FAIRE - Éléments interactifs
 ├── BarrelExplosive.ts    # À FAIRE - Baril explosif
 ├── TrapTrigger.ts        # À FAIRE - Piège activable
@@ -155,44 +160,44 @@ enum TerrainType {
 
 ### Tâches
 
-- [ ] **5.2.1** Créer `TerrainZone.ts` avec classe de base
+- [x] **5.2.1** Créer `TerrainZone.ts` avec classe de base
   - Zone de collision (trigger, pas de blocage physique)
   - Détection des entités dans la zone
   - Application des effets (slow, damage)
   - Visuel (sprite ou tileSprite)
 
-- [ ] **5.2.2** Implémenter les flaques (eau/sang)
+- [x] **5.2.2** Implémenter les flaques (eau/sang)
   - `slowFactor: 0.6` (40% de ralentissement)
   - Effet visuel (éclaboussures quand traversé)
   - Révèle les Invisibles (éclaboussures visibles)
   - Conduit l'électricité du TeslaCannon
 
-- [ ] **5.2.3** Implémenter les zones de gravats
+- [x] **5.2.3** Implémenter les zones de gravats
   - `slowFactor: 0.7` (30% de ralentissement)
   - Pas de dégâts
   - Son de pas différent
 
-- [ ] **5.2.4** Implémenter les zones électrifiées
-  - `damagePerSecond: 10`
+- [x] **5.2.4** Implémenter les zones électrifiées
+  - `damagePerSecond: 15`
   - Effet visuel (arcs électriques)
   - Peut être activée/désactivée par générateur
   - Bonus de dégâts si cible dans flaque
 
-- [ ] **5.2.5** Refactorer `FireZone.ts` pour hériter de `TerrainZone`
+- [x] **5.2.5** Refactorer `FireZone.ts` pour hériter de `TerrainZone`
   - Standardiser l'interface
   - Ajouter à la liste des zones de l'Arena
 
-- [ ] **5.2.6** Créer `AcidZone.ts` pour les flaques de Spitter
+- [x] **5.2.6** Créer `AcidZone.ts` pour les flaques de Spitter
   - Durée limitée (disparaît après X secondes)
   - Dégâts corrosifs
   - Créé automatiquement par les projectiles acides
 
-- [ ] **5.2.7** Intégrer avec les entités
-  - `MovementComponent.applyTerrainEffects(zones: TerrainZone[])`
+- [x] **5.2.7** Intégrer avec les entités
+  - `GameScene.checkTerrainZoneEffects()` vérifie les entités
   - Stackable? Non — prendre le pire effet
-  - Durée de l'effet : temps dans la zone + 0.5s après sortie
+  - Durée de l'effet : temps dans la zone + 0.2s après sortie
 
-- [ ] **5.2.8** Intégrer avec TeslaCannon
+- [x] **5.2.8** Intégrer avec TeslaCannon
   - Détecter si cible dans flaque
   - Propager l'arc à toutes les entités dans la même flaque
   - Bonus de dégâts (+50%)
@@ -557,14 +562,16 @@ describe('Interactive', () => {
 
 | Fichier | Modifications | État |
 |---------|---------------|------|
-| `Arena.ts` | Refactor pour utiliser Cover, TerrainZone, Interactive | ✅ Cover intégré |
+| `Arena.ts` | Refactor pour utiliser Cover, TerrainZone, Interactive | ✅ Cover + TerrainZone intégrés |
 | `Pathfinder.ts` | Mise à jour dynamique des obstacles | ✅ Déjà supporté (`invalidateArea`) |
-| `GameScene.ts` | Intégration nouvelles classes, collisions | ✅ Collision projectiles-covers |
+| `GameScene.ts` | Intégration nouvelles classes, collisions | ✅ TerrainZone effects + covers |
+| `TeslaCannon.ts` | Intégration propagation via flaques | ✅ Propagation + bonus dégâts |
+| `FlamePool.ts` | Utilisation nouveau FireZone | ✅ Import mis à jour |
 | `CombatSystem.ts` | Gestion dégâts environnementaux | À faire |
 | `TelemetryManager.ts` | Nouveaux events | À faire |
 | `PreloadScene.ts` | Chargement tilemaps et tilesets | À faire |
 | `constants.ts` | Enum ArenaType, nouvelles constantes | À faire |
-| `balance.ts` | Stats covers, terrains, interactifs | ✅ Stats covers ajoutées |
+| `balance.ts` | Stats covers, terrains, interactifs | ✅ Stats covers + terrainZones + tesla ajoutées |
 
 ### Assets Nécessaires (Priorité)
 
@@ -587,9 +594,9 @@ Aucune — Phaser gère tout nativement (tilemaps, collision, etc.)
 - [x] Piliers bloquent mouvement et projectiles
 - [x] Murets peuvent être détruits par les projectiles
 - [x] Mobilier drop du loot à la destruction (événement émis, système de loot en Phase 6)
-- [ ] Flaques ralentissent joueur et zombies
-- [ ] Zones électriques infligent des dégâts
-- [ ] TeslaCannon se propage via les flaques
+- [x] Flaques ralentissent joueur et zombies
+- [x] Zones électriques infligent des dégâts
+- [x] TeslaCannon se propage via les flaques (+50% dégâts)
 - [ ] Barils explosifs chain react
 - [ ] Interrupteurs activent les pièges
 - [ ] Tilemaps chargent correctement
