@@ -22,35 +22,35 @@ Mettre en place l'infrastructure technique et produire un prototype minimal : un
 - [x] Configurer les alias de paths TypeScript
 
 #### 1.2 Scènes de Base
-- [ ] Créer `BootScene` (initialisation)
-- [ ] Créer `PreloadScene` (chargement assets)
-- [ ] Créer `GameScene` (scène principale vide)
-- [ ] Implémenter les transitions entre scènes
+- [x] Créer `BootScene` (initialisation)
+- [x] Créer `PreloadScene` (chargement assets)
+- [x] Créer `GameScene` (scène principale vide)
+- [x] Implémenter les transitions entre scènes
 
 #### 1.3 Placeholders
-- [ ] Créer le script de génération de placeholders
-- [ ] Générer les sprites basiques (carrés colorés)
-- [ ] Générer une tilemap de test
+- [x] Créer le script de génération de placeholders
+- [x] Générer les sprites basiques (carrés colorés)
+- [x] Générer une tilemap de test
 
 #### 1.4 Joueur - Mouvement
-- [ ] Créer la classe `Player`
-- [ ] Implémenter le mouvement WASD/flèches
-- [ ] Implémenter la rotation vers la souris
-- [ ] Ajouter le dash/esquive
-- [ ] Gérer les collisions avec les murs
+- [x] Créer la classe `Player`
+- [x] Implémenter le mouvement WASD/flèches
+- [x] Implémenter la rotation vers la souris
+- [x] Ajouter le dash/esquive
+- [x] Gérer les collisions avec les murs
 
 #### 1.5 Joueur - Tir
-- [ ] Créer la classe de base `Weapon`
-- [ ] Créer la classe `Pistol`
-- [ ] Implémenter le tir à la souris
-- [ ] Créer la classe `Bullet` avec object pooling
-- [ ] Gérer les collisions projectiles/murs
+- [x] Créer la classe de base `Weapon`
+- [x] Créer la classe `Pistol`
+- [x] Implémenter le tir à la souris
+- [x] Créer la classe `Bullet` avec object pooling
+- [x] Gérer les collisions projectiles/murs
 
 #### 1.6 Arène de Base
-- [ ] Créer la classe `Arena`
-- [ ] Implémenter le chargement de tilemap Tiled
-- [ ] Créer une arène de test rectangulaire
-- [ ] Ajouter quelques murs/obstacles statiques
+- [x] Créer la classe `Arena`
+- [x] Implémenter le chargement de tilemap Tiled
+- [x] Créer une arène de test rectangulaire
+- [x] Ajouter quelques murs/obstacles statiques
 
 ### Livrable
 Un joueur qui se déplace dans une arène et tire des projectiles qui s'arrêtent aux murs.

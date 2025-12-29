@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { BootScene, PreloadScene, GameScene, HUDScene } from '@scenes/index';
 
 /**
  * Configuration principale du jeu Phaser
@@ -20,5 +21,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [],
+  scene: [BootScene, PreloadScene, GameScene, HUDScene],
 };
