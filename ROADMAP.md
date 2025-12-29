@@ -14,12 +14,12 @@ Mettre en place l'infrastructure technique et produire un prototype minimal : un
 ### Tâches
 
 #### 1.1 Setup du Projet
-- [ ] Initialiser le projet avec Vite + TypeScript
-- [ ] Configurer Phaser 3
-- [ ] Configurer ESLint + Prettier
-- [ ] Configurer Vitest pour les tests
-- [ ] Créer la structure de dossiers
-- [ ] Configurer les alias de paths TypeScript
+- [x] Initialiser le projet avec Vite + TypeScript
+- [x] Configurer Phaser 3
+- [x] Configurer ESLint + Prettier
+- [x] Configurer Vitest pour les tests
+- [x] Créer la structure de dossiers
+- [x] Configurer les alias de paths TypeScript
 
 #### 1.2 Scènes de Base
 - [ ] Créer `BootScene` (initialisation)
