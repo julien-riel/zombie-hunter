@@ -43,13 +43,15 @@ export class BulletPool {
 
   /**
    * Récupère une balle du pool et la configure
+   * @param piercing - Si true, la balle traverse les ennemis
    */
   public get(
     x: number,
     y: number,
     direction: Phaser.Math.Vector2,
     speed: number,
-    damage: number
+    damage: number,
+    piercing: boolean = false
   ): Phaser.Physics.Arcade.Sprite | null {
     const bullet = this.pool.getFirstDead(
       true,
@@ -65,6 +67,8 @@ export class BulletPool {
     bullet.setPosition(x, y);
     bullet.setData('damage', damage);
     bullet.setData('speed', speed);
+    bullet.setData('piercing', piercing);
+    bullet.setData('hitTargets', []); // Track already-hit targets for piercing
 
     // Appliquer la vélocité
     const velocityX = direction.x * speed;
@@ -119,5 +123,29 @@ export class BulletPool {
    */
   public getDamage(bullet: Phaser.Physics.Arcade.Sprite): number {
     return bullet.getData('damage') || 0;
+  }
+
+  /**
+   * Vérifie si une balle est perforante
+   */
+  public isPiercing(bullet: Phaser.Physics.Arcade.Sprite): boolean {
+    return bullet.getData('piercing') === true;
+  }
+
+  /**
+   * Vérifie si une cible a déjà été touchée par cette balle perforante
+   */
+  public hasHitTarget(bullet: Phaser.Physics.Arcade.Sprite, targetId: number): boolean {
+    const hitTargets: number[] = bullet.getData('hitTargets') || [];
+    return hitTargets.includes(targetId);
+  }
+
+  /**
+   * Enregistre qu'une cible a été touchée par cette balle perforante
+   */
+  public markTargetHit(bullet: Phaser.Physics.Arcade.Sprite, targetId: number): void {
+    const hitTargets: number[] = bullet.getData('hitTargets') || [];
+    hitTargets.push(targetId);
+    bullet.setData('hitTargets', hitTargets);
   }
 }

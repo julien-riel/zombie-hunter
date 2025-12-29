@@ -79,17 +79,37 @@ export class CombatSystem {
 
     if (!bullet.active || !zombie.active) return;
 
+    // Vérifier si c'est une balle perforante qui a déjà touché ce zombie
+    const isPiercing = this.bulletPool.isPiercing(bullet);
+    const zombieId = (zombie as unknown as Phaser.GameObjects.GameObject)
+      .getData('instanceId') || Date.now() + Math.random();
+
+    // Assigner un ID unique au zombie s'il n'en a pas
+    if (!(zombie as unknown as Phaser.GameObjects.GameObject).getData('instanceId')) {
+      (zombie as unknown as Phaser.GameObjects.GameObject).setData('instanceId', zombieId);
+    }
+
+    if (isPiercing && this.bulletPool.hasHitTarget(bullet, zombieId)) {
+      return; // Cette balle a déjà touché ce zombie
+    }
+
     // Récupérer les dégâts de la balle
     const damage = this.bulletPool.getDamage(bullet);
 
     // Infliger les dégâts au zombie
     zombie.takeDamage(damage);
 
-    // Libérer la balle
-    this.bulletPool.release(bullet);
-
     // Effet d'impact
     this.createImpactEffect(bullet.x, bullet.y);
+
+    // Gérer la balle selon son type
+    if (isPiercing) {
+      // Balle perforante : marquer le zombie comme touché mais ne pas libérer la balle
+      this.bulletPool.markTargetHit(bullet, zombieId);
+    } else {
+      // Balle normale : libérer la balle
+      this.bulletPool.release(bullet);
+    }
   }
 
   /**

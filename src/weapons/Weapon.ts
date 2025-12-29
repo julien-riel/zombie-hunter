@@ -27,8 +27,8 @@ export abstract class Weapon {
   public maxAmmo: number;
   public isReloading: boolean = false;
 
-  private lastFireTime: number = 0;
-  private canFire: boolean = true;
+  protected lastFireTime: number = 0;
+  protected canFire: boolean = true;
 
   constructor(scene: GameScene, owner: Player, config: WeaponConfig) {
     this.scene = scene;

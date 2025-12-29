@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import type { GameScene } from './GameScene';
 import type { WaveConfig } from '@systems/WaveSystem';
+import type { Weapon } from '@weapons/Weapon';
 
 /**
  * Scène d'interface utilisateur (overlay)
@@ -22,6 +23,13 @@ export class HUDScene extends Phaser.Scene {
   private waveAnnouncement!: Phaser.GameObjects.Container;
   private waveAnnouncementText!: Phaser.GameObjects.Text;
   private waveAnnouncementSubtext!: Phaser.GameObjects.Text;
+
+  // Éléments d'inventaire d'armes
+  private weaponSlots: Phaser.GameObjects.Container[] = [];
+  private weaponSlotBgs: Phaser.GameObjects.Rectangle[] = [];
+  private weaponNames: Phaser.GameObjects.Text[] = [];
+  private weaponAmmoTexts: Phaser.GameObjects.Text[] = [];
+  private weaponKeyHints: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super({ key: SCENE_KEYS.HUD });
@@ -44,6 +52,7 @@ export class HUDScene extends Phaser.Scene {
     this.createWaveDisplay();
     this.createWaveAnnouncement();
     this.createControls();
+    this.createWeaponInventory();
 
     // Écouter les événements de score
     this.gameScene.events.on('scoreUpdate', this.onScoreUpdate, this);
@@ -53,6 +62,10 @@ export class HUDScene extends Phaser.Scene {
     this.gameScene.events.on('waveStart', this.onWaveStart, this);
     this.gameScene.events.on('waveProgress', this.onWaveProgress, this);
     this.gameScene.events.on('waveComplete', this.onWaveComplete, this);
+
+    // Écouter les événements d'armes
+    this.gameScene.events.on('weaponInventoryChanged', this.onWeaponInventoryChanged, this);
+    this.gameScene.events.on('weaponChanged', this.onWeaponChanged, this);
   }
 
   /**
@@ -177,6 +190,8 @@ export class HUDScene extends Phaser.Scene {
       'Souris - Viser',
       'Clic gauche - Tirer',
       'Espace - Dash',
+      '1-4/Molette - Arme',
+      'R - Recharger',
     ].join('\n');
 
     this.add
@@ -186,6 +201,123 @@ export class HUDScene extends Phaser.Scene {
         align: 'right',
       })
       .setOrigin(1, 0);
+  }
+
+  /**
+   * Crée l'affichage de l'inventaire d'armes
+   */
+  private createWeaponInventory(): void {
+    const slotWidth = 100;
+    const slotHeight = 50;
+    const slotSpacing = 10;
+    const maxSlots = 4;
+    const totalWidth = maxSlots * slotWidth + (maxSlots - 1) * slotSpacing;
+    const startX = (GAME_WIDTH - totalWidth) / 2;
+    const y = GAME_HEIGHT - slotHeight - 20;
+
+    for (let i = 0; i < maxSlots; i++) {
+      const x = startX + i * (slotWidth + slotSpacing);
+      this.createWeaponSlot(i, x, y, slotWidth, slotHeight);
+    }
+
+    // Initialiser avec les armes du joueur si disponibles
+    if (this.gameScene?.player) {
+      const weapons = this.gameScene.player.getWeapons();
+      const currentIndex = this.gameScene.player.getCurrentWeaponIndex();
+      this.updateWeaponSlots(weapons, currentIndex);
+    }
+  }
+
+  /**
+   * Crée un slot d'arme individuel
+   */
+  private createWeaponSlot(index: number, x: number, y: number, width: number, height: number): void {
+    const container = this.add.container(x, y);
+
+    // Fond du slot
+    const bg = this.add.rectangle(0, 0, width, height, 0x222222, 0.8);
+    bg.setOrigin(0, 0);
+    bg.setStrokeStyle(2, 0x444444);
+    this.weaponSlotBgs.push(bg);
+
+    // Indicateur de touche (1, 2, 3, 4)
+    const keyHint = this.add.text(5, 3, `${index + 1}`, {
+      fontSize: '10px',
+      color: '#666666',
+    });
+    this.weaponKeyHints.push(keyHint);
+
+    // Nom de l'arme
+    const name = this.add.text(width / 2, height / 2 - 8, '', {
+      fontSize: '12px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    });
+    name.setOrigin(0.5);
+    this.weaponNames.push(name);
+
+    // Munitions
+    const ammo = this.add.text(width / 2, height / 2 + 10, '', {
+      fontSize: '10px',
+      color: '#aaaaaa',
+    });
+    ammo.setOrigin(0.5);
+    this.weaponAmmoTexts.push(ammo);
+
+    container.add([bg, keyHint, name, ammo]);
+    this.weaponSlots.push(container);
+  }
+
+  /**
+   * Met à jour les slots d'armes
+   */
+  private updateWeaponSlots(weapons: Weapon[], currentIndex: number): void {
+    for (let i = 0; i < this.weaponSlots.length; i++) {
+      const weapon = weapons[i];
+      const bg = this.weaponSlotBgs[i];
+      const name = this.weaponNames[i];
+      const ammo = this.weaponAmmoTexts[i];
+      const keyHint = this.weaponKeyHints[i];
+
+      if (weapon) {
+        name.setText(weapon.getName());
+        ammo.setText(`${weapon.currentAmmo}/${weapon.maxAmmo}`);
+        name.setVisible(true);
+        ammo.setVisible(true);
+
+        // Highlight pour l'arme sélectionnée
+        if (i === currentIndex) {
+          bg.setStrokeStyle(3, 0x00ff00);
+          bg.setFillStyle(0x003300, 0.9);
+          keyHint.setColor('#00ff00');
+        } else {
+          bg.setStrokeStyle(2, 0x444444);
+          bg.setFillStyle(0x222222, 0.8);
+          keyHint.setColor('#666666');
+        }
+      } else {
+        name.setVisible(false);
+        ammo.setVisible(false);
+        bg.setStrokeStyle(1, 0x333333);
+        bg.setFillStyle(0x111111, 0.5);
+        keyHint.setColor('#333333');
+      }
+    }
+  }
+
+  /**
+   * Gère le changement d'inventaire d'armes
+   */
+  private onWeaponInventoryChanged(weapons: Weapon[], currentIndex: number): void {
+    this.updateWeaponSlots(weapons, currentIndex);
+  }
+
+  /**
+   * Gère le changement d'arme
+   */
+  private onWeaponChanged(index: number, _weapon: Weapon): void {
+    const weapons = this.gameScene.player.getWeapons();
+    this.updateWeaponSlots(weapons, index);
   }
 
   /**
@@ -306,7 +438,35 @@ export class HUDScene extends Phaser.Scene {
   private updateAmmoCounter(): void {
     const weapon = this.gameScene.player.currentWeapon;
     if (weapon) {
-      this.ammoText.setText(`Munitions: ${weapon.currentAmmo}/${weapon.maxAmmo}`);
+      const reloadingText = weapon.isReloading ? ' (Rechargement...)' : '';
+      this.ammoText.setText(`${weapon.getName()}: ${weapon.currentAmmo}/${weapon.maxAmmo}${reloadingText}`);
+    }
+
+    // Mettre à jour aussi les slots d'armes
+    this.updateWeaponSlotsAmmo();
+  }
+
+  /**
+   * Met à jour les munitions dans les slots d'armes
+   */
+  private updateWeaponSlotsAmmo(): void {
+    const weapons = this.gameScene.player.getWeapons();
+    for (let i = 0; i < weapons.length && i < this.weaponAmmoTexts.length; i++) {
+      const weapon = weapons[i];
+      if (weapon) {
+        const reloadingIndicator = weapon.isReloading ? '*' : '';
+        this.weaponAmmoTexts[i].setText(`${weapon.currentAmmo}/${weapon.maxAmmo}${reloadingIndicator}`);
+
+        // Changer la couleur si les munitions sont basses
+        const ammoPercent = weapon.currentAmmo / weapon.maxAmmo;
+        if (ammoPercent <= 0) {
+          this.weaponAmmoTexts[i].setColor('#ff0000');
+        } else if (ammoPercent <= 0.3) {
+          this.weaponAmmoTexts[i].setColor('#ff6600');
+        } else {
+          this.weaponAmmoTexts[i].setColor('#aaaaaa');
+        }
+      }
     }
   }
 
@@ -320,5 +480,7 @@ export class HUDScene extends Phaser.Scene {
     this.gameScene.events.off('waveStart', this.onWaveStart, this);
     this.gameScene.events.off('waveProgress', this.onWaveProgress, this);
     this.gameScene.events.off('waveComplete', this.onWaveComplete, this);
+    this.gameScene.events.off('weaponInventoryChanged', this.onWeaponInventoryChanged, this);
+    this.gameScene.events.off('weaponChanged', this.onWeaponChanged, this);
   }
 }

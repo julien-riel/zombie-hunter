@@ -3,7 +3,13 @@ import { BALANCE } from '@config/balance';
 import { ASSET_KEYS } from '@config/assets.manifest';
 import { Weapon } from '@weapons/Weapon';
 import { Pistol } from '@weapons/firearms/Pistol';
+import { Shotgun } from '@weapons/firearms/Shotgun';
+import { SMG } from '@weapons/firearms/SMG';
+import { SniperRifle } from '@weapons/firearms/SniperRifle';
 import type { GameScene } from '@scenes/GameScene';
+
+/** Nombre maximum d'armes que le joueur peut porter */
+const MAX_WEAPONS = 4;
 
 /**
  * Classe du joueur
@@ -14,6 +20,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public maxHealth: number;
   public currentWeapon: Weapon | null = null;
 
+  /** Inventaire des armes */
+  private weapons: Weapon[] = [];
+  /** Index de l'arme actuellement équipée */
+  private currentWeaponIndex: number = 0;
+
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
@@ -22,6 +33,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     D: Phaser.Input.Keyboard.Key;
   };
   private spaceKey!: Phaser.Input.Keyboard.Key;
+  /** Touches pour changer d'arme (1, 2, 3, 4) */
+  private weaponKeys!: Phaser.Input.Keyboard.Key[];
+  /** Touche R pour recharger manuellement */
+  private reloadKey!: Phaser.Input.Keyboard.Key;
 
   private isDashing: boolean = false;
   private canDash: boolean = true;
@@ -46,8 +61,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Configuration de l'input
     this.setupInput();
 
-    // Équiper l'arme de départ
-    this.equipWeapon(new Pistol(scene, this));
+    // Ajouter les armes de départ
+    this.addWeapon(new Pistol(scene, this));
+    this.addWeapon(new Shotgun(scene, this));
+    this.addWeapon(new SMG(scene, this));
+    this.addWeapon(new SniperRifle(scene, this));
   }
 
   /**
@@ -64,6 +82,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       D: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
     this.spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.reloadKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+
+    // Touches 1-4 pour changer d'arme
+    this.weaponKeys = [
+      this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
+      this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
+      this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
+      this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
+    ];
+
+    // Molette de souris pour cycler les armes
+    this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gx: number[], _gy: number[], deltaY: number) => {
+      if (deltaY > 0) {
+        this.cycleWeapon(1);
+      } else if (deltaY < 0) {
+        this.cycleWeapon(-1);
+      }
+    });
   }
 
   /**
@@ -82,6 +118,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleRotation();
     this.handleDash();
     this.handleShooting();
+    this.handleWeaponSwitch();
+    this.handleReload();
 
     // Mise à jour de l'arme
     this.currentWeapon?.update();
@@ -214,7 +252,99 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
-   * Équipe une arme
+   * Gère le changement d'arme via les touches 1-4
+   */
+  private handleWeaponSwitch(): void {
+    for (let i = 0; i < this.weaponKeys.length; i++) {
+      if (Phaser.Input.Keyboard.JustDown(this.weaponKeys[i])) {
+        this.switchWeapon(i);
+        break;
+      }
+    }
+  }
+
+  /**
+   * Gère le rechargement manuel via touche R
+   */
+  private handleReload(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.reloadKey)) {
+      this.currentWeapon?.reload();
+    }
+  }
+
+  /**
+   * Ajoute une arme à l'inventaire
+   * @returns true si l'arme a été ajoutée, false si l'inventaire est plein
+   */
+  public addWeapon(weapon: Weapon): boolean {
+    if (this.weapons.length >= MAX_WEAPONS) {
+      return false;
+    }
+
+    this.weapons.push(weapon);
+
+    // Si c'est la première arme, l'équiper automatiquement
+    if (this.weapons.length === 1) {
+      this.currentWeapon = weapon;
+      this.currentWeaponIndex = 0;
+    }
+
+    // Émettre un événement pour le HUD
+    (this.scene as GameScene).events.emit('weaponInventoryChanged', this.weapons, this.currentWeaponIndex);
+
+    return true;
+  }
+
+  /**
+   * Change d'arme par index
+   */
+  public switchWeapon(index: number): void {
+    if (index < 0 || index >= this.weapons.length) return;
+    if (index === this.currentWeaponIndex) return;
+
+    this.currentWeaponIndex = index;
+    this.currentWeapon = this.weapons[index];
+
+    // Émettre un événement pour le HUD
+    (this.scene as GameScene).events.emit('weaponChanged', this.currentWeaponIndex, this.currentWeapon);
+  }
+
+  /**
+   * Cycle entre les armes (molette de souris)
+   * @param direction 1 pour suivant, -1 pour précédent
+   */
+  public cycleWeapon(direction: 1 | -1): void {
+    if (this.weapons.length <= 1) return;
+
+    let newIndex = this.currentWeaponIndex + direction;
+
+    // Wrap around
+    if (newIndex < 0) {
+      newIndex = this.weapons.length - 1;
+    } else if (newIndex >= this.weapons.length) {
+      newIndex = 0;
+    }
+
+    this.switchWeapon(newIndex);
+  }
+
+  /**
+   * Récupère l'inventaire des armes
+   */
+  public getWeapons(): Weapon[] {
+    return this.weapons;
+  }
+
+  /**
+   * Récupère l'index de l'arme actuelle
+   */
+  public getCurrentWeaponIndex(): number {
+    return this.currentWeaponIndex;
+  }
+
+  /**
+   * Équipe une arme (ancienne méthode pour compatibilité)
+   * @deprecated Utiliser addWeapon() et switchWeapon() à la place
    */
   public equipWeapon(weapon: Weapon): void {
     this.currentWeapon = weapon;
