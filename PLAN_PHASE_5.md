@@ -37,9 +37,13 @@ src/arena/
 ├── ElectricZone.ts       # ✅ CRÉÉ - Zones électrifiées
 ├── FireZone.ts           # ✅ CRÉÉ - Zones de feu (refactoré depuis entities/effects)
 ├── AcidZone.ts           # ✅ CRÉÉ - Zones d'acide (Spitter)
-├── Interactive.ts        # À FAIRE - Éléments interactifs
-├── BarrelExplosive.ts    # À FAIRE - Baril explosif
-├── TrapTrigger.ts        # À FAIRE - Piège activable
+├── Interactive.ts        # ✅ CRÉÉ - Classe de base éléments interactifs
+├── BarrelExplosive.ts    # ✅ CRÉÉ - Baril explosif
+├── BarrelFire.ts         # ✅ CRÉÉ - Baril incendiaire
+├── Switch.ts             # ✅ CRÉÉ - Interrupteur
+├── Generator.ts          # ✅ CRÉÉ - Générateur électrique
+├── FlameTrap.ts          # ✅ CRÉÉ - Piège à flammes
+├── BladeTrap.ts          # ✅ CRÉÉ - Piège à lames
 └── LevelLoader.ts        # À FAIRE - Chargement tilemaps Tiled
 ```
 
@@ -253,49 +257,49 @@ enum TriggerType {
 
 ### Tâches
 
-- [ ] **5.3.1** Créer `Interactive.ts` avec classe de base
+- [x] **5.3.1** Créer `Interactive.ts` avec classe de base
   - `trigger()` : Déclenche l'effet
   - `canTrigger()` : Vérifie cooldown/charges
   - Event `interactive:trigger`
 
-- [ ] **5.3.2** Implémenter `BarrelExplosive.ts`
+- [x] **5.3.2** Implémenter `BarrelExplosive.ts`
   - Déclenché quand touché par projectile ou explosion
   - Explosion : 100 dégâts, rayon 128px
   - Réaction en chaîne avec autres barils
   - Affecte joueur ET zombies
   - Particules + screen shake
 
-- [ ] **5.3.3** Implémenter baril incendiaire
+- [x] **5.3.3** Implémenter baril incendiaire (`BarrelFire.ts`)
   - Comme explosif mais crée une `FireZone` au lieu d'explosion
   - Zone de feu : rayon 96px, durée 5s
 
-- [ ] **5.3.4** Implémenter `Switch.ts`
+- [x] **5.3.4** Implémenter `Switch.ts`
   - Déclenché par interaction (touche E) ou projectile
   - Lie à un ou plusieurs éléments (portes, pièges, générateurs)
   - États : ON/OFF avec feedback visuel
   - Cooldown entre activations
 
-- [ ] **5.3.5** Implémenter `Generator.ts`
-  - Peut être saboté (tiré dessus = destruction)
-  - Crée une zone électrifiée permanente autour
-  - Ou : contrôle une zone électrifiée à distance
-  - Peut être réparé par le joueur (si Mécano)?
+- [x] **5.3.5** Implémenter `Generator.ts`
+  - Peut être saboté (tiré dessus = panne)
+  - Contrôle des zones électrifiées à distance
+  - Peut être réparé par le joueur
+  - États visuels : actif, inactif, en panne
 
-- [ ] **5.3.6** Implémenter `FlameTrap.ts`
+- [x] **5.3.6** Implémenter `FlameTrap.ts`
   - Activé par interrupteur
   - Jet de flamme dans une direction pendant X secondes
   - Crée une ligne de `FireZone` temporaire
   - Dégâts importants (30 DPS)
 
-- [ ] **5.3.7** Implémenter `BladeTrap.ts`
+- [x] **5.3.7** Implémenter `BladeTrap.ts`
   - Lames rotatives au sol
   - Activé par interrupteur ou permanent
   - Dégâts au contact (50 par hit)
   - Zone de danger visuelle
 
-- [ ] **5.3.8** Système d'interaction joueur
+- [x] **5.3.8** Système d'interaction joueur
   - Touche E pour interagir
-  - Indicateur visuel quand proche d'un interactable
+  - Feedback visuel lors de l'interaction
   - Cooldown global d'interaction (éviter spam)
 
 ### Balance Suggérée
@@ -562,16 +566,17 @@ describe('Interactive', () => {
 
 | Fichier | Modifications | État |
 |---------|---------------|------|
-| `Arena.ts` | Refactor pour utiliser Cover, TerrainZone, Interactive | ✅ Cover + TerrainZone intégrés |
+| `Arena.ts` | Refactor pour utiliser Cover, TerrainZone, Interactive | ✅ Cover + TerrainZone + Interactive intégrés |
 | `Pathfinder.ts` | Mise à jour dynamique des obstacles | ✅ Déjà supporté (`invalidateArea`) |
-| `GameScene.ts` | Intégration nouvelles classes, collisions | ✅ TerrainZone effects + covers |
+| `GameScene.ts` | Intégration nouvelles classes, collisions | ✅ TerrainZone + covers + interactive |
 | `TeslaCannon.ts` | Intégration propagation via flaques | ✅ Propagation + bonus dégâts |
 | `FlamePool.ts` | Utilisation nouveau FireZone | ✅ Import mis à jour |
 | `CombatSystem.ts` | Gestion dégâts environnementaux | À faire |
 | `TelemetryManager.ts` | Nouveaux events | À faire |
 | `PreloadScene.ts` | Chargement tilemaps et tilesets | À faire |
 | `constants.ts` | Enum ArenaType, nouvelles constantes | À faire |
-| `balance.ts` | Stats covers, terrains, interactifs | ✅ Stats covers + terrainZones + tesla ajoutées |
+| `balance.ts` | Stats covers, terrains, interactifs | ✅ Stats covers + terrainZones + interactive ajoutées |
+| `events.ts` | Nouveaux events interactive | ✅ Events interactive ajoutés |
 
 ### Assets Nécessaires (Priorité)
 
@@ -597,8 +602,10 @@ Aucune — Phaser gère tout nativement (tilemaps, collision, etc.)
 - [x] Flaques ralentissent joueur et zombies
 - [x] Zones électriques infligent des dégâts
 - [x] TeslaCannon se propage via les flaques (+50% dégâts)
-- [ ] Barils explosifs chain react
-- [ ] Interrupteurs activent les pièges
+- [x] Barils explosifs chain react
+- [x] Interrupteurs activent les pièges (switches, générateurs)
+- [x] Pièges à flammes et lames fonctionnels
+- [x] Système d'interaction joueur (touche E)
 - [ ] Tilemaps chargent correctement
 - [ ] Portes peuvent être barricadées
 

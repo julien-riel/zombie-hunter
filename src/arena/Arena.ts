@@ -7,6 +7,13 @@ import { TerrainZone, TerrainType } from './TerrainZone';
 import { PuddleZone, type PuddleConfig } from './PuddleZone';
 import { DebrisZone, type DebrisConfig } from './DebrisZone';
 import { ElectricZone, type ElectricZoneConfig } from './ElectricZone';
+import { Interactive } from './Interactive';
+import { BarrelExplosive, type BarrelExplosiveConfig } from './BarrelExplosive';
+import { BarrelFire, type BarrelFireConfig } from './BarrelFire';
+import { Switch, type SwitchConfig } from './Switch';
+import { Generator, type GeneratorConfig } from './Generator';
+import { FlameTrap, FlameDirection, type FlameTrapConfig } from './FlameTrap';
+import { BladeTrap, type BladeTrapConfig } from './BladeTrap';
 
 /**
  * Représente un obstacle pour le pathfinding
@@ -27,11 +34,13 @@ export class Arena {
   private walls: Phaser.Physics.Arcade.StaticGroup;
   private coverGroup: Phaser.GameObjects.Group;
   private terrainZoneGroup: Phaser.GameObjects.Group;
+  private interactiveGroup: Phaser.GameObjects.Group;
   private floor: Phaser.GameObjects.TileSprite;
   private doors: Door[] = [];
   private obstacles: ObstacleData[] = [];
   private covers: Cover[] = [];
   private terrainZones: TerrainZone[] = [];
+  private interactiveElements: Interactive[] = [];
 
   constructor(scene: GameScene) {
     this.scene = scene;
@@ -52,11 +61,18 @@ export class Arena {
     this.terrainZoneGroup = scene.add.group();
     this.createTerrainZones();
 
+    // Créer le groupe pour les éléments interactifs
+    this.interactiveGroup = scene.add.group();
+    this.createInteractiveElements();
+
     // Écouter les événements de destruction de covers
     this.scene.events.on('cover:destroy', this.onCoverDestroyed, this);
 
     // Écouter les événements de destruction de terrain zones
     this.scene.events.on('terrain:destroy', this.onTerrainZoneDestroyed, this);
+
+    // Écouter les événements de destruction d'éléments interactifs
+    this.scene.events.on('interactive:destroy', this.onInteractiveDestroyed, this);
   }
 
   /**
@@ -563,14 +579,196 @@ export class Arena {
     );
   }
 
+  // ===========================================================================
+  // ÉLÉMENTS INTERACTIFS
+  // ===========================================================================
+
   /**
-   * Met à jour les zones de terrain
+   * Crée les éléments interactifs dans l'arène
+   */
+  private createInteractiveElements(): void {
+    // Barils explosifs près des portes (risque/récompense)
+    this.createBarrelExplosive({ x: GAME_WIDTH * 0.25 + 50, y: 80 });
+    this.createBarrelExplosive({ x: GAME_WIDTH - 150, y: GAME_HEIGHT * 0.33 - 30 });
+
+    // Baril incendiaire
+    this.createBarrelFire({ x: 150, y: GAME_HEIGHT * 0.67 + 30 });
+
+    // Générateur au centre (contrôle la zone électrique)
+    const generator = this.createGenerator({
+      x: GAME_WIDTH / 2 + 80,
+      y: GAME_HEIGHT / 2 + 50,
+      defaultActive: false,
+      linkedZoneIds: ['electric_zone_center'],
+    });
+
+    // Mettre à jour la zone électrique existante pour la lier au générateur
+    const electricZone = this.terrainZones.find(
+      (z) => z.terrainType === TerrainType.ELECTRIC
+    ) as ElectricZone | undefined;
+    if (electricZone) {
+      // La zone écoute déjà l'événement generator:toggle
+    }
+
+    // Interrupteur pour activer le générateur
+    this.createSwitch({
+      x: GAME_WIDTH / 2 - 100,
+      y: GAME_HEIGHT / 2 - 100,
+      linkedTargetIds: [generator.id],
+      defaultState: false,
+    });
+
+    // Piège à flammes (lié à un switch séparé)
+    const flameTrapSwitch = this.createSwitch({
+      x: 100,
+      y: 100,
+      defaultState: false,
+    });
+
+    this.createFlameTrap({
+      x: 200,
+      y: 150,
+      direction: FlameDirection.RIGHT,
+      linkedSwitchId: flameTrapSwitch.id,
+    });
+
+    // Piège à lames (toujours actif)
+    this.createBladeTrap({
+      x: GAME_WIDTH - 200,
+      y: GAME_HEIGHT - 200,
+      alwaysActive: true,
+    });
+  }
+
+  /**
+   * Crée un baril explosif
+   */
+  public createBarrelExplosive(config: BarrelExplosiveConfig): BarrelExplosive {
+    const barrel = new BarrelExplosive(this.scene, config);
+    this.interactiveElements.push(barrel);
+    this.interactiveGroup.add(barrel);
+    return barrel;
+  }
+
+  /**
+   * Crée un baril incendiaire
+   */
+  public createBarrelFire(config: BarrelFireConfig): BarrelFire {
+    const barrel = new BarrelFire(this.scene, config);
+    this.interactiveElements.push(barrel);
+    this.interactiveGroup.add(barrel);
+    return barrel;
+  }
+
+  /**
+   * Crée un interrupteur
+   */
+  public createSwitch(config: SwitchConfig): Switch {
+    const switchObj = new Switch(this.scene, config);
+    this.interactiveElements.push(switchObj);
+    this.interactiveGroup.add(switchObj);
+    return switchObj;
+  }
+
+  /**
+   * Crée un générateur
+   */
+  public createGenerator(config: GeneratorConfig): Generator {
+    const generator = new Generator(this.scene, config);
+    this.interactiveElements.push(generator);
+    this.interactiveGroup.add(generator);
+    return generator;
+  }
+
+  /**
+   * Crée un piège à flammes
+   */
+  public createFlameTrap(config: FlameTrapConfig): FlameTrap {
+    const trap = new FlameTrap(this.scene, config);
+    this.interactiveElements.push(trap);
+    this.interactiveGroup.add(trap);
+    return trap;
+  }
+
+  /**
+   * Crée un piège à lames
+   */
+  public createBladeTrap(config: BladeTrapConfig): BladeTrap {
+    const trap = new BladeTrap(this.scene, config);
+    this.interactiveElements.push(trap);
+    this.interactiveGroup.add(trap);
+    return trap;
+  }
+
+  /**
+   * Gère la destruction d'un élément interactif
+   */
+  private onInteractiveDestroyed(event: { elementId: string }): void {
+    const index = this.interactiveElements.findIndex(
+      (elem) => elem.id === event.elementId
+    );
+    if (index !== -1) {
+      this.interactiveElements.splice(index, 1);
+    }
+  }
+
+  /**
+   * Retourne le groupe d'éléments interactifs
+   */
+  public getInteractiveGroup(): Phaser.GameObjects.Group {
+    return this.interactiveGroup;
+  }
+
+  /**
+   * Retourne tous les éléments interactifs
+   */
+  public getInteractiveElements(): Interactive[] {
+    return this.interactiveElements;
+  }
+
+  /**
+   * Retourne les éléments interactifs actifs (non détruits)
+   */
+  public getActiveInteractiveElements(): Interactive[] {
+    return this.interactiveElements.filter((elem) => !elem.isDestroyed());
+  }
+
+  /**
+   * Retourne l'élément interactif à une position donnée
+   */
+  public getInteractiveAt(x: number, y: number, radius: number = 50): Interactive | null {
+    for (const elem of this.interactiveElements) {
+      if (elem.isDestroyed()) continue;
+
+      const distance = Phaser.Math.Distance.Between(x, y, elem.x, elem.y);
+      if (distance <= radius) {
+        return elem;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Retourne les éléments interactifs interactables par le joueur
+   */
+  public getInteractableElements(): Interactive[] {
+    return this.interactiveElements.filter((elem) => elem.isInteractable());
+  }
+
+  /**
+   * Met à jour les zones de terrain et éléments interactifs
    * Doit être appelé depuis GameScene.update()
    */
   public update(): void {
     for (const zone of this.terrainZones) {
       if (zone.isActive()) {
         zone.update();
+      }
+    }
+
+    for (const elem of this.interactiveElements) {
+      if (!elem.isDestroyed()) {
+        elem.update();
       }
     }
   }
@@ -581,6 +779,7 @@ export class Arena {
   public destroy(): void {
     this.scene.events.off('cover:destroy', this.onCoverDestroyed, this);
     this.scene.events.off('terrain:destroy', this.onTerrainZoneDestroyed, this);
+    this.scene.events.off('interactive:destroy', this.onInteractiveDestroyed, this);
 
     for (const cover of this.covers) {
       cover.destroy();
@@ -591,6 +790,11 @@ export class Arena {
       zone.destroy();
     }
     this.terrainZones = [];
+
+    for (const elem of this.interactiveElements) {
+      elem.destroy();
+    }
+    this.interactiveElements = [];
 
     for (const door of this.doors) {
       door.destroy();

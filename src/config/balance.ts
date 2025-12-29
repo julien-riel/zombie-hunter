@@ -384,6 +384,41 @@ export const BALANCE = {
     puddleChainRadius: 80, // Rayon de propagation dans les flaques
   },
 
+  interactive: {
+    barrel: {
+      health: 50,
+      explosionDamage: 100,
+      explosionRadius: 128,
+    },
+    barrelFire: {
+      health: 40,
+      fireRadius: 96,
+      fireDuration: 5000,
+      fireDamage: 20,
+    },
+    switch: {
+      health: Infinity,
+      cooldown: 500,
+    },
+    generator: {
+      health: 100,
+      cooldown: 1000,
+    },
+    flameTrap: {
+      health: Infinity,
+      cooldown: 10000,
+      flameLength: 150,
+      flameDuration: 3000,
+      damagePerSecond: 30,
+    },
+    bladeTrap: {
+      health: Infinity,
+      damagePerHit: 50,
+      hitCooldown: 500,
+      rotationSpeed: 5,
+    },
+  },
+
   // Calculs de référence pour validation de l'équilibrage
   reference: {
     // Temps pour tuer un Shambler avec Pistol : 30 HP / 40 DPS = 0.75 secondes

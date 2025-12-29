@@ -4,6 +4,8 @@ import { Player } from '@entities/Player';
 import { Arena } from '@arena/Arena';
 import { Cover } from '@arena/Cover';
 import type { TerrainZone } from '@arena/TerrainZone';
+import { Interactive } from '@arena/Interactive';
+import { BladeTrap } from '@arena/BladeTrap';
 import type { Entity } from '@entities/Entity';
 import { BulletPool } from '@entities/projectiles/BulletPool';
 import { AcidSpitPool } from '@entities/projectiles/AcidSpitPool';
@@ -228,11 +230,17 @@ export class GameScene extends Phaser.Scene {
     // Mettre à jour le joueur
     this.player.update(time, delta);
 
-    // Mettre à jour l'arène (terrain zones)
+    // Mettre à jour l'arène (terrain zones + interactive elements)
     this.arena.update();
 
     // Vérifier les effets de terrain sur les entités
     this.checkTerrainZoneEffects();
+
+    // Vérifier les dégâts des pièges à lames
+    this.checkBladeTrapDamage();
+
+    // Vérifier les interactions joueur (touche E)
+    this.checkPlayerInteraction();
 
     // Mettre à jour les pools de projectiles
     this.bulletPool.update();
@@ -270,12 +278,16 @@ export class GameScene extends Phaser.Scene {
    */
   private setupCollisions(): void {
     const coverGroup = this.arena.getCoverGroup();
+    const interactiveGroup = this.arena.getInteractiveGroup();
 
     // Collision joueur avec les murs
     this.physics.add.collider(this.player, this.walls);
 
     // Collision joueur avec les covers
     this.physics.add.collider(this.player, coverGroup);
+
+    // Collision joueur avec les éléments interactifs
+    this.physics.add.collider(this.player, interactiveGroup);
 
     // Collision projectiles avec les murs (simple release)
     this.physics.add.collider(
@@ -317,12 +329,41 @@ export class GameScene extends Phaser.Scene {
       this
     );
 
+    // Collision projectiles avec les éléments interactifs (avec dégâts)
+    this.physics.add.collider(
+      this.bulletPool.getGroup(),
+      interactiveGroup,
+      (obj1, obj2) => {
+        let bullet: Phaser.Physics.Arcade.Sprite;
+        let interactive: Interactive;
+
+        if (obj1 instanceof Interactive) {
+          interactive = obj1;
+          bullet = obj2 as Phaser.Physics.Arcade.Sprite;
+        } else {
+          bullet = obj1 as Phaser.Physics.Arcade.Sprite;
+          interactive = obj2 as Interactive;
+        }
+
+        // Infliger des dégâts
+        const damage = this.bulletPool.getDamage(bullet);
+        interactive.takeDamage(damage, 'bullet');
+
+        this.bulletPool.release(bullet);
+      },
+      undefined,
+      this
+    );
+
     // Collision zombies avec les murs
     for (const group of this.poolManager.getAllZombieGroups()) {
       this.physics.add.collider(group, this.walls);
 
       // Collision zombies avec les covers
       this.physics.add.collider(group, coverGroup);
+
+      // Collision zombies avec les éléments interactifs
+      this.physics.add.collider(group, interactiveGroup);
 
       // Collision zombies entre eux
       this.physics.add.collider(group, group);
@@ -449,6 +490,84 @@ export class GameScene extends Phaser.Scene {
     if (inZone && !wasInZone) {
       zone.onEntityEnter(entity as Entity);
     }
+  }
+
+  /**
+   * Vérifie les dégâts des pièges à lames sur les entités
+   */
+  private checkBladeTrapDamage(): void {
+    const interactives = this.arena.getActiveInteractiveElements();
+
+    for (const elem of interactives) {
+      if (elem instanceof BladeTrap && elem.isTrapActive()) {
+        // Vérifier le joueur
+        elem.checkDamage(this.player);
+
+        // Vérifier les zombies
+        const activeZombies = this.poolManager.getActiveZombies();
+        for (const zombie of activeZombies) {
+          if (zombie.active) {
+            elem.checkDamage(zombie);
+          }
+        }
+      }
+    }
+  }
+
+  /** Touche E pressée pour interaction */
+  private interactKeyE: Phaser.Input.Keyboard.Key | null = null;
+  private lastInteractTime: number = 0;
+  private interactCooldown: number = 300; // ms
+
+  /**
+   * Vérifie si le joueur interagit avec un élément (touche E)
+   */
+  private checkPlayerInteraction(): void {
+    // Initialiser la touche E si pas encore fait
+    if (!this.interactKeyE && this.input.keyboard) {
+      this.interactKeyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    }
+
+    if (!this.interactKeyE) return;
+
+    // Vérifier si la touche E est pressée
+    if (Phaser.Input.Keyboard.JustDown(this.interactKeyE)) {
+      const now = this.time.now;
+      if (now - this.lastInteractTime < this.interactCooldown) return;
+
+      this.lastInteractTime = now;
+
+      // Chercher l'élément interactable le plus proche
+      const interactionRadius = 60;
+      const nearestInteractable = this.arena.getInteractiveAt(
+        this.player.x,
+        this.player.y,
+        interactionRadius
+      );
+
+      if (nearestInteractable && nearestInteractable.isInteractable()) {
+        nearestInteractable.onPlayerInteract();
+
+        // Effet visuel d'interaction
+        this.createInteractionFeedback(nearestInteractable.x, nearestInteractable.y);
+      }
+    }
+  }
+
+  /**
+   * Crée un feedback visuel pour l'interaction
+   */
+  private createInteractionFeedback(x: number, y: number): void {
+    const feedback = this.add.circle(x, y, 20, 0x00ff00, 0.5);
+    feedback.setDepth(100);
+
+    this.tweens.add({
+      targets: feedback,
+      scale: 1.5,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => feedback.destroy(),
+    });
   }
 
   /**

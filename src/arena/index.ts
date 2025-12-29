@@ -18,3 +18,19 @@ export { FireZone } from './FireZone';
 export type { FireZoneConfig } from './FireZone';
 export { AcidZone } from './AcidZone';
 export type { AcidZoneConfig } from './AcidZone';
+
+// Interactive Elements (Phase 5.3)
+export { Interactive, InteractiveType, TriggerType } from './Interactive';
+export type { InteractiveConfig, InteractiveData } from './Interactive';
+export { BarrelExplosive } from './BarrelExplosive';
+export type { BarrelExplosiveConfig } from './BarrelExplosive';
+export { BarrelFire } from './BarrelFire';
+export type { BarrelFireConfig } from './BarrelFire';
+export { Switch } from './Switch';
+export type { SwitchConfig } from './Switch';
+export { Generator } from './Generator';
+export type { GeneratorConfig } from './Generator';
+export { FlameTrap, FlameDirection } from './FlameTrap';
+export type { FlameTrapConfig } from './FlameTrap';
+export { BladeTrap } from './BladeTrap';
+export type { BladeTrapConfig } from './BladeTrap';

@@ -65,7 +65,7 @@ export type ProgressionEvent =
 // ============================================================================
 
 /**
- * Événements liés aux éléments de l'environnement (portes, couvertures)
+ * Événements liés aux éléments de l'environnement (portes, couvertures, interactifs)
  */
 export type EnvironmentEvent =
   | 'door:activate'
@@ -73,7 +73,16 @@ export type EnvironmentEvent =
   | 'door:destroy'
   | 'cover:damage'
   | 'cover:destroy'
-  | 'interactive:trigger';
+  | 'interactive:trigger'
+  | 'interactive:damage'
+  | 'interactive:destroy'
+  | 'interactive:explosion'
+  | 'interactive:fire_created'
+  | 'interactive:blade_hit'
+  | 'switch:activated'
+  | 'generator:toggle'
+  | 'generator:breakdown'
+  | 'generator:repaired';
 
 /**
  * Union de tous les types d'événements du jeu
@@ -166,8 +175,69 @@ export interface GameEventPayloads {
   'cover:damage': { coverId: string; damage: number; remainingHealth: number };
   /** Émis quand une couverture est détruite */
   'cover:destroy': { coverId: string; position: { x: number; y: number } };
+
+  // --- Interactive Events ---
   /** Émis quand un élément interactif est déclenché */
-  'interactive:trigger': { elementId: string; elementType: string; effect?: string };
+  'interactive:trigger': {
+    elementId: string;
+    elementType: string;
+    source?: string;
+    position: { x: number; y: number };
+  };
+  /** Émis quand un élément interactif subit des dégâts */
+  'interactive:damage': {
+    elementId: string;
+    elementType: string;
+    damage: number;
+    source?: string;
+    remainingHealth: number;
+  };
+  /** Émis quand un élément interactif est détruit */
+  'interactive:destroy': {
+    elementId: string;
+    elementType: string;
+    position: { x: number; y: number };
+  };
+  /** Émis quand un baril explose */
+  'interactive:explosion': {
+    elementId: string;
+    position: { x: number; y: number };
+    damage: number;
+    radius: number;
+    kills: number;
+  };
+  /** Émis quand un baril de feu crée une zone */
+  'interactive:fire_created': {
+    elementId: string;
+    position: { x: number; y: number };
+    radius: number;
+    duration: number;
+  };
+  /** Émis quand un piège à lames touche une entité */
+  'interactive:blade_hit': {
+    elementId: string;
+    entityId?: string;
+    damage: number;
+  };
+  /** Émis quand un switch est activé */
+  'switch:activated': {
+    switchId: string;
+    isOn: boolean;
+    linkedTargetIds: string[];
+  };
+  /** Émis quand un générateur change d'état */
+  'generator:toggle': {
+    generatorId: string;
+    active: boolean;
+  };
+  /** Émis quand un générateur tombe en panne */
+  'generator:breakdown': {
+    generatorId: string;
+  };
+  /** Émis quand un générateur est réparé */
+  'generator:repaired': {
+    generatorId: string;
+  };
 }
 
 // ============================================================================
