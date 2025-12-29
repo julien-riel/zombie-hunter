@@ -67,13 +67,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       D: this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
     this.spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-
-    // Tir à la souris
-    this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.leftButtonDown()) {
-        this.shoot();
-      }
-    });
   }
 
   /**
@@ -85,6 +78,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleMovement();
     this.handleRotation();
     this.handleDash();
+    this.handleShooting();
 
     // Mise à jour de l'arme
     this.currentWeapon?.update();
@@ -139,6 +133,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private handleDash(): void {
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey) && this.canDash && !this.isDashing) {
       this.performDash();
+    }
+  }
+
+  /**
+   * Gère le tir du joueur
+   */
+  private handleShooting(): void {
+    const pointer = this.scene.input.activePointer;
+    if (pointer.isDown && pointer.leftButtonDown()) {
+      this.shoot();
     }
   }
 
