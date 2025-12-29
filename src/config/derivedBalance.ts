@@ -7,7 +7,12 @@
  * la difficulté adaptative (DDASystem).
  */
 
-import { BALANCE, ZombieBalanceType, WeaponBalanceType } from './balance';
+import { BALANCE, ZombieBalanceType } from './balance';
+
+/**
+ * Types d'armes à feu (supportées par le système de métriques dérivées)
+ */
+export type FirearmBalanceType = 'pistol' | 'shotgun' | 'smg' | 'sniper';
 
 /**
  * Distances de référence pour les calculs de TTC (Time-to-Contact)
@@ -43,8 +48,8 @@ export interface DerivedWeaponStats {
  * Statistiques dérivées pour un zombie
  */
 export interface DerivedZombieStats {
-  /** TTK par arme (en secondes) */
-  TTKByWeapon: Record<WeaponBalanceType, number>;
+  /** TTK par arme à feu (en secondes) */
+  TTKByWeapon: Record<FirearmBalanceType, number>;
   /** TTC par distance de référence (en secondes) */
   TTC: Record<ReferenceDistance, number>;
   /** DPS reçu si contact maintenu: damage / (attackCooldown / 1000) */
@@ -93,9 +98,9 @@ export const ZOMBIE_ROLES: Record<ZombieBalanceType, 'fodder' | 'rusher' | 'tank
 };
 
 /**
- * Calcule les statistiques dérivées d'une arme
+ * Calcule les statistiques dérivées d'une arme à feu
  */
-export function calculateWeaponDerivedStats(weaponType: WeaponBalanceType): DerivedWeaponStats {
+export function calculateWeaponDerivedStats(weaponType: FirearmBalanceType): DerivedWeaponStats {
   const stats = BALANCE.weapons[weaponType];
   const fireRateSeconds = stats.fireRate / 1000;
 
@@ -129,10 +134,10 @@ export function calculateWeaponDerivedStats(weaponType: WeaponBalanceType): Deri
 }
 
 /**
- * Calcule le TTK (Time-to-Kill) d'un zombie avec une arme spécifique
+ * Calcule le TTK (Time-to-Kill) d'un zombie avec une arme à feu spécifique
  * @returns Temps en secondes pour tuer le zombie
  */
-export function calculateTTK(zombieType: ZombieBalanceType, weaponType: WeaponBalanceType): number {
+export function calculateTTK(zombieType: ZombieBalanceType, weaponType: FirearmBalanceType): number {
   const zombieStats = BALANCE.zombies[zombieType];
   const weaponDerived = calculateWeaponDerivedStats(weaponType);
 
@@ -160,15 +165,18 @@ export function calculateTTC(zombieType: ZombieBalanceType, distance: number): n
   return distance / effectiveSpeed;
 }
 
+/** Liste des armes à feu */
+const FIREARMS: FirearmBalanceType[] = ['pistol', 'shotgun', 'smg', 'sniper'];
+
 /**
  * Calcule les statistiques dérivées d'un zombie
  */
 export function calculateZombieDerivedStats(zombieType: ZombieBalanceType): DerivedZombieStats {
   const stats = BALANCE.zombies[zombieType];
 
-  // Calculer le TTK pour chaque arme
-  const TTKByWeapon: Record<WeaponBalanceType, number> = {} as Record<WeaponBalanceType, number>;
-  for (const weapon of Object.keys(BALANCE.weapons) as WeaponBalanceType[]) {
+  // Calculer le TTK pour chaque arme à feu
+  const TTKByWeapon: Record<FirearmBalanceType, number> = {} as Record<FirearmBalanceType, number>;
+  for (const weapon of FIREARMS) {
     TTKByWeapon[weapon] = calculateTTK(zombieType, weapon);
   }
 
@@ -213,13 +221,13 @@ function calculateShamblerBaseThreatScore(): number {
 /**
  * Cache des statistiques dérivées pour éviter les recalculs
  */
-const weaponStatsCache = new Map<WeaponBalanceType, DerivedWeaponStats>();
+const weaponStatsCache = new Map<FirearmBalanceType, DerivedWeaponStats>();
 const zombieStatsCache = new Map<ZombieBalanceType, DerivedZombieStats>();
 
 /**
- * Récupère les stats dérivées d'une arme (avec cache)
+ * Récupère les stats dérivées d'une arme à feu (avec cache)
  */
-export function getDerivedWeaponStats(weaponType: WeaponBalanceType): DerivedWeaponStats {
+export function getDerivedWeaponStats(weaponType: FirearmBalanceType): DerivedWeaponStats {
   if (!weaponStatsCache.has(weaponType)) {
     weaponStatsCache.set(weaponType, calculateWeaponDerivedStats(weaponType));
   }
@@ -368,9 +376,9 @@ export function generateBalanceReport(): string {
   const lines: string[] = [];
   lines.push('=== RAPPORT D\'ÉQUILIBRAGE ===\n');
 
-  // Armes
-  lines.push('--- ARMES ---');
-  for (const weapon of Object.keys(BALANCE.weapons) as WeaponBalanceType[]) {
+  // Armes à feu
+  lines.push('--- ARMES A FEU ---');
+  for (const weapon of FIREARMS) {
     const stats = getDerivedWeaponStats(weapon);
     lines.push(`${weapon.toUpperCase()}:`);
     lines.push(`  DPS brut: ${stats.rawDPS.toFixed(1)}`);

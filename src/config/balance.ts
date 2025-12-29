@@ -128,6 +128,7 @@ export const BALANCE = {
   },
 
   weapons: {
+    // === ARMES A FEU ===
     pistol: {
       damage: 10,
       fireRate: 250,
@@ -164,6 +165,91 @@ export const BALANCE = {
       bulletSpeed: 900,
       spread: 0,
       // DPS théorique : 66.7
+    },
+
+    // === ARMES DE MELEE ===
+    baseballBat: {
+      damage: 25,
+      range: 60,
+      swingSpeed: 400,
+      knockback: 200,
+      arcAngle: 90,
+      stunChance: 0.2,
+      stunDuration: 500,
+      // DPS théorique : 62.5 (25 dmg / 0.4s)
+    },
+    machete: {
+      damage: 30,
+      range: 45,
+      swingSpeed: 250,
+      knockback: 0,
+      arcAngle: 60,
+      // DPS théorique : 120 (30 dmg / 0.25s)
+    },
+    chainsaw: {
+      damage: 8,
+      range: 50,
+      tickRate: 100,
+      fuelConsumption: 2,
+      maxFuel: 100,
+      slowdown: 0.5,
+      // DPS théorique : 80 (8 dmg * 10 ticks/s)
+    },
+
+    // === ARMES SPECIALES ===
+    flamethrower: {
+      damage: 5,
+      range: 150,
+      fireRate: 50,
+      magazineSize: 100,
+      reloadTime: 2000,
+      flameSpeed: 300,
+      dotDamage: 3,
+      dotDuration: 2000,
+      dotTickRate: 500,
+      fireZoneDuration: 3000,
+      fireZoneDamage: 5,
+      // DPS théorique : 100+ avec DoT
+    },
+    teslaCannon: {
+      damage: 15,
+      range: 250,
+      fireRate: 600,
+      magazineSize: 20,
+      reloadTime: 1500,
+      chainCount: 4,
+      chainRange: 100,
+      chainDamageFalloff: 0.7,
+      // DPS théorique : variable selon chaînes
+    },
+    nailGun: {
+      damage: 12,
+      fireRate: 200,
+      magazineSize: 40,
+      reloadTime: 1200,
+      bulletSpeed: 500,
+      pinDuration: 2000,
+      // DPS théorique : 60 + effet de contrôle
+    },
+    compositeBow: {
+      damageMin: 20,
+      damageMax: 80,
+      chargeTime: 1500,
+      magazineSize: 15,
+      reloadTime: 800,
+      bulletSpeed: 700,
+      silent: true,
+      // DPS théorique : variable selon charge
+    },
+    microwaveCannon: {
+      damage: 60,
+      range: 200,
+      fireRate: 2000,
+      magazineSize: 10,
+      reloadTime: 2500,
+      chargeTime: 500,
+      coneAngle: 45,
+      // DPS théorique : 30 (faible mais dégâts de zone)
     },
   },
 

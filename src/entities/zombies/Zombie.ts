@@ -94,6 +94,22 @@ export abstract class Zombie extends Entity {
   }
 
   /**
+   * Immobilise le zombie (cloué au sol par le NailGun)
+   * @param duration Durée de l'immobilisation en ms
+   */
+  public setPinned(duration: number): void {
+    this.stateMachine.setPinned(duration);
+  }
+
+  /**
+   * Étourdit le zombie
+   * @param duration Durée de l'étourdissement en ms
+   */
+  public setStunned(duration: number): void {
+    this.stateMachine.setStunned(duration);
+  }
+
+  /**
    * Réinitialise le zombie pour réutilisation
    */
   public reset(x: number, y: number): void {

@@ -4,6 +4,7 @@ import { Player } from '@entities/Player';
 import { Arena } from '@arena/Arena';
 import { BulletPool } from '@entities/projectiles/BulletPool';
 import { AcidSpitPool } from '@entities/projectiles/AcidSpitPool';
+import { FlamePool } from '@entities/projectiles/FlamePool';
 import { PoolManager } from '@managers/PoolManager';
 import { TelemetryManager } from '@managers/TelemetryManager';
 import { CorpseManager } from '@managers/CorpseManager';
@@ -25,6 +26,7 @@ export class GameScene extends Phaser.Scene {
   public arena!: Arena;
   public bulletPool!: BulletPool;
   public acidSpitPool!: AcidSpitPool;
+  public flamePool!: FlamePool;
   public walls!: Phaser.Physics.Arcade.StaticGroup;
   public corpseManager!: CorpseManager;
 
@@ -63,6 +65,9 @@ export class GameScene extends Phaser.Scene {
 
     // Créer le pool de projectiles acides (pour les Spitters)
     this.acidSpitPool = new AcidSpitPool(this);
+
+    // Créer le pool de flammes (pour le Flamethrower)
+    this.flamePool = new FlamePool(this);
 
     // Créer le gestionnaire de cadavres (pour les Necromancers)
     this.corpseManager = new CorpseManager(this);
@@ -198,6 +203,7 @@ export class GameScene extends Phaser.Scene {
     // Mettre à jour les pools de projectiles
     this.bulletPool.update();
     this.acidSpitPool.update();
+    this.flamePool.update(delta);
 
     // Mettre à jour tous les zombies actifs
     const activeZombies = this.poolManager.getActiveZombies();
@@ -319,6 +325,7 @@ export class GameScene extends Phaser.Scene {
     this.poolManager?.destroy();
     this.ddaSystem?.reset();
     this.acidSpitPool?.destroy();
+    this.flamePool?.destroy();
     this.corpseManager?.destroy();
     this.events.off('miniZombieSpawned', this.onMiniZombieSpawned, this);
   }

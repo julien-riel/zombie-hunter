@@ -99,6 +99,15 @@ export class CombatSystem {
     // Infliger les dégâts au zombie
     zombie.takeDamage(damage);
 
+    // Vérifier si c'est un clou (NailGun)
+    if (bullet.getData('isNail')) {
+      const pinDuration = bullet.getData('pinDuration') || 2000;
+      zombie.setPinned(pinDuration);
+
+      // Effet visuel de clouage
+      this.createNailEffect(zombie.x, zombie.y);
+    }
+
     // Effet d'impact
     this.createImpactEffect(bullet.x, bullet.y);
 
@@ -149,6 +158,35 @@ export class CombatSystem {
       duration: 100,
       onComplete: () => {
         flash.destroy();
+      },
+    });
+  }
+
+  /**
+   * Crée un effet visuel de clouage
+   */
+  private createNailEffect(x: number, y: number): void {
+    // Croix de clouage
+    const graphics = this.scene.add.graphics();
+    graphics.lineStyle(3, 0x888888, 1);
+
+    // Croix
+    graphics.beginPath();
+    graphics.moveTo(x - 10, y);
+    graphics.lineTo(x + 10, y);
+    graphics.moveTo(x, y - 10);
+    graphics.lineTo(x, y + 10);
+    graphics.strokePath();
+
+    // Cercle
+    graphics.strokeCircle(x, y, 15);
+
+    this.scene.tweens.add({
+      targets: graphics,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => {
+        graphics.destroy();
       },
     });
   }

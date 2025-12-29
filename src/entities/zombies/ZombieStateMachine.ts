@@ -10,6 +10,8 @@ export enum ZombieState {
   CHASE = 'chase',
   ATTACK = 'attack',
   DEAD = 'dead',
+  PINNED = 'pinned',
+  STUNNED = 'stunned',
 }
 
 /** Intervalle minimum entre deux calculs de chemin (ms) */
@@ -51,6 +53,12 @@ export class ZombieStateMachine {
    */
   public update(time: number): void {
     if (this.currentState === ZombieState.DEAD) return;
+
+    // Les états PINNED et STUNNED bloquent toute action
+    if (this.currentState === ZombieState.PINNED || this.currentState === ZombieState.STUNNED) {
+      this.zombie.movementComponent.stop();
+      return;
+    }
 
     // Mettre à jour la cible
     this.updateTarget();
@@ -273,6 +281,38 @@ export class ZombieStateMachine {
    */
   public setDead(): void {
     this.transitionTo(ZombieState.DEAD);
+  }
+
+  /**
+   * Immobilise le zombie (cloué au sol)
+   * @param duration Durée de l'immobilisation en ms
+   */
+  public setPinned(duration: number): void {
+    const previousState = this.currentState;
+    this.transitionTo(ZombieState.PINNED);
+
+    // Revenir à l'état précédent après la durée
+    this.zombie.scene.time.delayedCall(duration, () => {
+      if (this.currentState === ZombieState.PINNED && this.zombie.active) {
+        this.transitionTo(previousState === ZombieState.DEAD ? ZombieState.IDLE : previousState);
+      }
+    });
+  }
+
+  /**
+   * Étourdit le zombie
+   * @param duration Durée de l'étourdissement en ms
+   */
+  public setStunned(duration: number): void {
+    const previousState = this.currentState;
+    this.transitionTo(ZombieState.STUNNED);
+
+    // Revenir à l'état précédent après la durée
+    this.zombie.scene.time.delayedCall(duration, () => {
+      if (this.currentState === ZombieState.STUNNED && this.zombie.active) {
+        this.transitionTo(previousState === ZombieState.DEAD ? ZombieState.IDLE : previousState);
+      }
+    });
   }
 
   /**
