@@ -226,6 +226,98 @@ Des **événements aléatoires** peuvent se déclencher pour pimenter une vague 
 
 ---
 
+## Philosophie d'Équilibrage
+
+### Piliers d'Expérience (Framework MDA)
+
+Le game design suit le framework MDA (Mechanics → Dynamics → Aesthetics) : les paramètres créent des dynamiques qui produisent l'expérience ressentie. Trois piliers guident l'équilibrage :
+
+**Rythme Arcade** — Vagues rapides, décisions fréquentes, combos récompensés. Le joueur doit rester actif ; la passivité casse le combo et réduit les récompenses.
+
+**Tension Lisible** — On "voit venir" le danger (télégraphie des attaques, audio cues, wind-up animations). Le jeu peut être difficile tout en restant perçu comme fair. Un ennemi juste est un ennemi prévisible.
+
+**Variété Tactique** — Chaque type de zombie impose un micro-problème distinct. Le joueur doit adapter sa stratégie selon la composition de la vague.
+
+### Métriques Dérivées
+
+Les stats brutes (HP, speed, damage) sont insuffisantes pour l'équilibrage. Le jeu calcule des indicateurs dérivés :
+
+**Armes :**
+- **DPS brut** : `damage / fireRate` — Dégâts par seconde en tir continu
+- **DPS soutenu** : Prend en compte le temps de rechargement et la taille du chargeur. C'est la métrique réelle de puissance.
+- **Temps pour vider** : `magazineSize × fireRate`
+- **Cycle complet** : `tempsVider + reloadTime`
+
+**Zombies :**
+- **TTK (Time-to-Kill)** : `zombieHP / sustainedDPS(arme)` — Temps pour éliminer un zombie avec une arme donnée
+- **TTC (Time-to-Contact)** : `distance / zombieSpeed` — Temps avant que le zombie atteigne le joueur
+- **DPS reçu** : `zombieDamage / attackCooldown` — Dégâts par seconde si contact maintenu
+- **Score de Menace** : `(DPS_reçu) × (1 / TTC)` — Ajusté par la difficulté d'esquive
+
+**Joueur :**
+- **EHP (Effective Health)** : Santé ajustée par invuln frames, dash, mobilité
+- **Survivabilité** : Compare les dégâts entrants vs capacité d'évitement
+
+### Système de Budget de Menace
+
+Au lieu de compter simplement les zombies par vague, le système utilise un **budget de menace** :
+
+1. Chaque zombie a un **coût** basé sur son TTK, TTC et score de menace
+2. Chaque vague dispose d'un **budget** qui augmente progressivement
+3. Le système "dépense" ce budget via spawn pondéré
+
+**Contraintes de composition :**
+- Maximum simultané par rôle (ex: max 1 tank, max 2 spitters actifs)
+- Pacing (éviter 5 runners simultanés)
+- Alternance "pic" / "respiration" pour le rythme
+
+### Difficulté Adaptative (DDA)
+
+Le jeu implémente une DDA légère pour maintenir le joueur en zone de flow (ni ennui, ni frustration).
+
+**Métriques observées (fenêtre glissante 30-60s) :**
+- `accuracy` : hits / shots
+- `damageTakenPerMin` : dégâts subis
+- `timeToClearWave` : efficacité de clear
+- `nearDeaths` : passages sous 15% HP
+- `dashUsage` : trop = panique, trop peu = trivial
+
+**Leviers d'ajustement (safe) :**
+- `spawnDelay` — Levier principal
+- Composition (weights par type)
+- Drop rate (munitions/soins) si applicable
+
+**Règles de stabilité :**
+- **Hysteresis** : Pas de changement toutes les 2 secondes
+- **Bornes** : `spawnDelay ∈ [300..1300]` — Jamais hors limites
+- **Transparence** : Option "Difficulté adaptative : ON/OFF" pour le joueur
+
+### Règles de Fairness
+
+**Lisibilité > Réalisme** — Chaque menace doit être visuellement et auditivement identifiable. Un joueur ne doit jamais mourir sans comprendre pourquoi.
+
+**Éviter les Spikes Injustes** — Les pics de difficulté viennent souvent de combos (runner + spitter + invisible simultanés). Le budget de menace et les caps par rôle préviennent ces situations.
+
+**Contrôle du Joueur** — Le dash est le "contrat" avec le joueur :
+- Trop court → Pas de sauvetage possible
+- Trop long → Trivialise le danger
+- Cooldown trop long → Sentiment d'injustice
+
+### Instrumentation et Télémétrie
+
+Chaque run collecte des données pour affiner l'équilibrage :
+
+- TTK moyen par type de zombie
+- Dégâts reçus par minute
+- Temps moyen par vague
+- Cause de mort (type de zombie, distance, projectile)
+- Distribution des armes utilisées
+- Accuracy et usage des capacités
+
+Ces données permettent d'itérer objectivement sur les paramètres.
+
+---
+
 ## Modes de Jeu
 
 ### Survie

@@ -27,7 +27,9 @@ zombie-hunter/
 │   ├── config/
 │   │   ├── game.config.ts      # Configuration Phaser
 │   │   ├── constants.ts        # Constantes globales
-│   │   └── assets.manifest.ts  # Liste des assets
+│   │   ├── assets.manifest.ts  # Liste des assets
+│   │   ├── balance.ts          # Stats brutes (HP, speed, damage...)
+│   │   └── derivedBalance.ts   # Métriques calculées (DPS, TTK, TTC, threat)
 │   │
 │   ├── scenes/
 │   │   ├── BootScene.ts        # Chargement initial
@@ -82,7 +84,9 @@ zombie-hunter/
 │   │   ├── DropSystem.ts       # Loot et drops
 │   │   ├── UpgradeSystem.ts    # Améliorations roguelite
 │   │   ├── DoorSystem.ts       # Gestion des portes
-│   │   └── EnvironmentSystem.ts # Zones de terrain
+│   │   ├── EnvironmentSystem.ts # Zones de terrain
+│   │   ├── ThreatSystem.ts     # Budget de menace et coûts zombies
+│   │   └── DDASystem.ts        # Difficulté adaptative
 │   │
 │   ├── weapons/
 │   │   ├── Weapon.ts           # Classe de base
@@ -147,7 +151,8 @@ zombie-hunter/
 │   │   ├── AudioManager.ts     # Sons et musique
 │   │   ├── ProgressionManager.ts # Progression permanente
 │   │   ├── SaveManager.ts      # Sauvegarde locale
-│   │   └── PoolManager.ts      # Object pooling
+│   │   ├── PoolManager.ts      # Object pooling
+│   │   └── TelemetryManager.ts # Collecte de métriques gameplay
 │   │
 │   ├── utils/
 │   │   ├── math.ts             # Fonctions mathématiques
@@ -519,6 +524,263 @@ class UpgradeSystem {
 3. **Mobilité** : Vitesse, dash cooldown, esquive
 4. **Utilitaire** : Portée de ramassage, durée power-ups
 5. **Spécial** : Effets uniques (balles rebondissantes, etc.)
+
+---
+
+## Système de Balance Dérivée
+
+Le fichier `derivedBalance.ts` calcule automatiquement les métriques dérivées à partir des stats brutes de `balance.ts`.
+
+```typescript
+interface DerivedWeaponStats {
+  rawDPS: number;           // damage / (fireRate / 1000)
+  sustainedDPS: number;     // Avec reload pris en compte
+  timeToEmpty: number;      // magazineSize * fireRate
+  cycleTime: number;        // timeToEmpty + reloadTime
+  damagePerCycle: number;   // magazineSize * damage (pellets inclus)
+}
+
+interface DerivedZombieStats {
+  TTKByWeapon: Record<WeaponType, number>;  // HP / sustainedDPS
+  TTC: Record<Distance, number>;            // distance / speed
+  receivedDPS: number;                      // damage / attackCooldown
+  threatScore: number;                      // (receivedDPS) * (1 / TTC_standard)
+  cost: number;                             // Score pour le budget de menace
+}
+
+// Distances de référence pour les calculs
+const REFERENCE_DISTANCES = {
+  close: 150,
+  medium: 300,
+  door: 500,    // Distance typique porte → centre
+  far: 640,     // Distance maximale arène
+};
+
+// Table de vérité pour validation
+const BALANCE_VALIDATION = {
+  // TTK cibles (en secondes)
+  shamblerWithPistol: { min: 0.5, max: 1.5 },
+  tankWithPistol: { min: 4, max: 7 },
+  runnerWithSMG: { min: 0.2, max: 0.5 },
+
+  // TTC cibles (en secondes)
+  shamblerFromDoor: { min: 8, max: 12 },
+  runnerFromDoor: { min: 3, max: 5 },
+};
+```
+
+---
+
+## Système de Budget de Menace (ThreatSystem)
+
+Remplace le système de comptage fixe par une gestion dynamique basée sur le coût.
+
+```typescript
+interface ThreatConfig {
+  baseBudget: number;          // Budget initial (wave 1)
+  budgetPerWave: number;       // Augmentation par vague
+  budgetCurve: 'linear' | 'exponential' | 'logarithmic';
+
+  // Caps par rôle (maximum simultané)
+  roleCaps: {
+    tank: number;       // ex: 1
+    spitter: number;    // ex: 2
+    runner: number;     // ex: 4
+    special: number;    // ex: 2 (invisible, necro, screamer)
+  };
+
+  // Pacing
+  minSpawnGap: number;         // Délai min entre spawns
+  breathingRatio: number;      // Ratio pic/respiration (ex: 0.3)
+}
+
+class ThreatSystem {
+  private currentBudget: number;
+  private spentBudget: number;
+  private activeByRole: Map<string, number>;
+
+  // Calcule le coût d'un zombie
+  calculateCost(type: ZombieType): number {
+    const derived = getDerivedZombieStats(type);
+    // Formule : TTK inverse × TTC inverse × difficulté
+    return derived.threatScore * DIFFICULTY_MULTIPLIER[type];
+  }
+
+  // Génère la composition d'une vague
+  generateWaveComposition(waveNumber: number): SpawnPlan[] {
+    const budget = this.getBudget(waveNumber);
+    const plan: SpawnPlan[] = [];
+
+    while (this.spentBudget < budget) {
+      const available = this.getAvailableTypes(); // Respecte les caps
+      const type = this.weightedRandom(available);
+      const cost = this.calculateCost(type);
+
+      if (this.spentBudget + cost <= budget) {
+        plan.push({ type, delay: this.calculateDelay(plan) });
+        this.spentBudget += cost;
+      }
+    }
+
+    return this.applyPacing(plan); // Alternance pic/respiration
+  }
+}
+```
+
+---
+
+## Système de Difficulté Adaptative (DDASystem)
+
+Ajuste dynamiquement la difficulté sans que le joueur ne perçoive de "rubber banding".
+
+```typescript
+interface DDAMetrics {
+  accuracy: number;           // hits / shots (fenêtre glissante)
+  damageTakenPerMin: number;
+  timeToClearWave: number;
+  nearDeaths: number;         // Passages sous 15% HP
+  dashUsage: number;          // Actions par minute
+  survivalTime: number;
+}
+
+interface DDAConfig {
+  enabled: boolean;
+  windowSize: number;         // Fenêtre d'observation (ms)
+
+  // Seuils de performance
+  performanceThresholds: {
+    struggling: { accuracy: number; damagePerMin: number };
+    dominating: { accuracy: number; damagePerMin: number };
+  };
+
+  // Bornes strictes
+  bounds: {
+    spawnDelay: { min: 300; max: 1300 };
+    compositionWeight: { min: 0.5; max: 1.5 };
+  };
+
+  // Hysteresis
+  cooldown: number;           // Temps min entre ajustements
+  adjustmentStep: number;     // Taille des ajustements
+}
+
+class DDASystem {
+  private metrics: DDAMetrics;
+  private lastAdjustment: number;
+  private currentModifiers: DDAModifiers;
+
+  update(delta: number): void {
+    this.updateMetrics(delta);
+
+    if (this.canAdjust()) {
+      const performance = this.evaluatePerformance();
+
+      if (performance === 'struggling') {
+        this.easeUp();  // Augmente spawnDelay, réduit weights agressifs
+      } else if (performance === 'dominating') {
+        this.rampUp();  // Réduit spawnDelay, augmente weights
+      }
+    }
+  }
+
+  // Retourne les modificateurs pour le WaveSystem
+  getModifiers(): DDAModifiers {
+    return {
+      spawnDelayMultiplier: this.currentModifiers.spawnDelay,
+      weightMultipliers: this.currentModifiers.weights,
+    };
+  }
+}
+```
+
+### Flux DDA
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ TelemetryMgr│────▶│  DDASystem  │────▶│ WaveSystem  │
+└─────────────┘     └─────────────┘     └─────────────┘
+      │                   │                   │
+      │ Métriques         │ Évaluation        │ Modificateurs
+      │ brutes            │ performance       │ appliqués
+      ▼                   ▼                   ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  accuracy   │     │ struggling? │     │ spawnDelay  │
+│  damage/min │     │ dominating? │     │ weights     │
+│  nearDeaths │     │ neutral?    │     │ composition │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+---
+
+## Télémétrie (TelemetryManager)
+
+Collecte les données de gameplay pour l'analyse et le fine-tuning.
+
+```typescript
+interface TelemetryEvent {
+  timestamp: number;
+  type: TelemetryEventType;
+  data: Record<string, unknown>;
+}
+
+type TelemetryEventType =
+  | 'zombie:killed'
+  | 'player:hit'
+  | 'player:death'
+  | 'wave:start'
+  | 'wave:clear'
+  | 'weapon:fired'
+  | 'weapon:hit'
+  | 'dash:used'
+  | 'powerup:collected';
+
+interface RunSummary {
+  duration: number;
+  wavesCleared: number;
+  zombiesKilled: Record<ZombieType, number>;
+  damageDealt: number;
+  damageTaken: number;
+  accuracy: number;
+  weaponUsage: Record<WeaponType, number>;
+  causeOfDeath: { type: ZombieType; distance: number } | null;
+
+  // Métriques dérivées
+  avgTTKByType: Record<ZombieType, number>;
+  damagePerMinute: number;
+  avgWaveClearTime: number;
+}
+
+class TelemetryManager {
+  private events: TelemetryEvent[] = [];
+  private windowMetrics: SlidingWindowMetrics;
+
+  log(type: TelemetryEventType, data: Record<string, unknown>): void;
+
+  // Métriques temps réel (pour DDA)
+  getRealtimeMetrics(): DDAMetrics;
+
+  // Résumé de fin de run (pour analyse)
+  generateRunSummary(): RunSummary;
+
+  // Export pour analyse externe
+  exportToJSON(): string;
+}
+```
+
+### Events de Télémétrie
+
+```typescript
+// Ajout aux events existants
+interface GameEventMap {
+  // ... events existants ...
+
+  // Télémétrie
+  'telemetry:zombie_killed': { type: ZombieType; ttk: number; weapon: WeaponType };
+  'telemetry:damage_taken': { amount: number; source: ZombieType; distance: number };
+  'telemetry:shot_fired': { weapon: WeaponType; hit: boolean };
+  'telemetry:wave_metrics': { wave: number; clearTime: number; damageReceived: number };
+}
+```
 
 ---
 
