@@ -1,0 +1,475 @@
+# Zombie Hunter — Plan de Réalisation
+
+## Vue d'Ensemble
+
+Le développement est organisé en **7 phases** progressives. Chaque phase produit une version jouable et testable, permettant des itérations rapides et des ajustements basés sur le feedback.
+
+---
+
+## Phase 1 : Fondations
+
+### Objectif
+Mettre en place l'infrastructure technique et produire un prototype minimal : un joueur qui se déplace et tire dans une arène vide.
+
+### Tâches
+
+#### 1.1 Setup du Projet
+- [ ] Initialiser le projet avec Vite + TypeScript
+- [ ] Configurer Phaser 3
+- [ ] Configurer ESLint + Prettier
+- [ ] Configurer Vitest pour les tests
+- [ ] Créer la structure de dossiers
+- [ ] Configurer les alias de paths TypeScript
+
+#### 1.2 Scènes de Base
+- [ ] Créer `BootScene` (initialisation)
+- [ ] Créer `PreloadScene` (chargement assets)
+- [ ] Créer `GameScene` (scène principale vide)
+- [ ] Implémenter les transitions entre scènes
+
+#### 1.3 Placeholders
+- [ ] Créer le script de génération de placeholders
+- [ ] Générer les sprites basiques (carrés colorés)
+- [ ] Générer une tilemap de test
+
+#### 1.4 Joueur - Mouvement
+- [ ] Créer la classe `Player`
+- [ ] Implémenter le mouvement WASD/flèches
+- [ ] Implémenter la rotation vers la souris
+- [ ] Ajouter le dash/esquive
+- [ ] Gérer les collisions avec les murs
+
+#### 1.5 Joueur - Tir
+- [ ] Créer la classe de base `Weapon`
+- [ ] Créer la classe `Pistol`
+- [ ] Implémenter le tir à la souris
+- [ ] Créer la classe `Bullet` avec object pooling
+- [ ] Gérer les collisions projectiles/murs
+
+#### 1.6 Arène de Base
+- [ ] Créer la classe `Arena`
+- [ ] Implémenter le chargement de tilemap Tiled
+- [ ] Créer une arène de test rectangulaire
+- [ ] Ajouter quelques murs/obstacles statiques
+
+### Livrable
+Un joueur qui se déplace dans une arène et tire des projectiles qui s'arrêtent aux murs.
+
+---
+
+## Phase 2 : Zombies de Base
+
+### Objectif
+Introduire les premiers ennemis avec IA simple et le système de combat.
+
+### Tâches
+
+#### 2.1 Système d'Entités
+- [ ] Créer la classe de base `Entity`
+- [ ] Implémenter `HealthComponent`
+- [ ] Implémenter `MovementComponent`
+- [ ] Créer le `PoolManager` pour les zombies
+
+#### 2.2 Zombies Basiques
+- [ ] Créer la classe de base `Zombie`
+- [ ] Implémenter `Shambler` (lent, direct)
+- [ ] Implémenter `Runner` (rapide, charge)
+- [ ] Créer `ZombieFactory`
+
+#### 2.3 IA Simple
+- [ ] Créer `ZombieStateMachine`
+- [ ] Implémenter états : Idle, Chase, Attack
+- [ ] Pathfinding basique (ligne droite + contournement obstacles)
+
+#### 2.4 Combat
+- [ ] Créer `CombatSystem`
+- [ ] Implémenter dégâts projectiles → zombies
+- [ ] Implémenter dégâts zombies → joueur
+- [ ] Ajouter feedback visuel (flash de dégâts)
+- [ ] Implémenter la mort des zombies (animation + suppression)
+
+#### 2.5 Spawning Manuel
+- [ ] Créer des points de spawn de test
+- [ ] Spawner des zombies à intervalles réguliers
+- [ ] Tester les combats basiques
+
+### Livrable
+Le joueur peut tirer et tuer des zombies qui le poursuivent et l'attaquent.
+
+---
+
+## Phase 3 : Système de Vagues
+
+### Objectif
+Implémenter le système de vagues et les portes de spawn.
+
+### Tâches
+
+#### 3.1 Portes
+- [ ] Créer la classe `Door`
+- [ ] États : inactive, active, ouverte
+- [ ] Animation visuelle (pulse rougeâtre)
+- [ ] Spawn de zombies depuis les portes
+
+#### 3.2 Gestion des Vagues
+- [ ] Créer `WaveSystem`
+- [ ] Créer `SpawnSystem`
+- [ ] Définir le format `WaveConfig`
+- [ ] Implémenter la détection de fin de vague
+- [ ] Transition entre vagues (pause courte)
+
+#### 3.3 Progression de Difficulté
+- [ ] Système d'activation progressive des portes
+- [ ] Augmentation du nombre de zombies par vague
+- [ ] Introduction progressive des types de zombies
+- [ ] Courbe de difficulté configurable
+
+#### 3.4 HUD Basique
+- [ ] Créer `HUDScene` (overlay)
+- [ ] Afficher la santé du joueur
+- [ ] Afficher le numéro de vague
+- [ ] Afficher le compteur de munitions
+
+### Livrable
+Vagues successives de zombies avec difficulté croissante.
+
+---
+
+## Phase 4 : Arsenal et Zombies Complets
+
+### Objectif
+Implémenter toutes les armes et tous les types de zombies.
+
+### Tâches
+
+#### 4.1 Armes à Feu
+- [ ] Implémenter `Shotgun` (spread)
+- [ ] Implémenter `SMG` (rafale)
+- [ ] Implémenter `SniperRifle` (précision)
+- [ ] Système de changement d'arme (molette/touches)
+- [ ] Gestion des munitions par arme
+
+#### 4.2 Armes Spéciales
+- [ ] Implémenter `Flamethrower` (zone de feu persistante)
+- [ ] Implémenter `TeslaCannon` (arc électrique chaîné)
+- [ ] Implémenter `NailGun` (immobilisation)
+- [ ] Implémenter `CompositeBow` (silencieux)
+- [ ] Implémenter `MicrowaveCannon` (charge + cône)
+
+#### 4.3 Armes de Mêlée
+- [ ] Créer classe de base `MeleeWeapon`
+- [ ] Implémenter `BaseballBat`
+- [ ] Implémenter `Machete`
+- [ ] Implémenter `Chainsaw` (consomme carburant)
+
+#### 4.4 Zombies Spécialisés
+- [ ] Implémenter `Crawler` (au sol, angle mort)
+- [ ] Implémenter `Tank` (résistant, pousse)
+- [ ] Implémenter `Spitter` (attaque à distance)
+- [ ] Implémenter `Bomber` (explose à la mort)
+- [ ] Implémenter `Screamer` (buff alliés)
+- [ ] Implémenter `Splitter` (se divise)
+- [ ] Implémenter `Invisible` (distorsion visuelle)
+- [ ] Implémenter `Necromancer` (ressuscite les morts)
+
+#### 4.5 IA Avancée
+- [ ] Améliorer le pathfinding (A*)
+- [ ] Comportements spécifiques par type
+- [ ] IA de groupe (hordes)
+
+### Livrable
+Arsenal complet et bestiaire complet avec comportements distincts.
+
+---
+
+## Phase 5 : Environnement et Terrain
+
+### Objectif
+Enrichir l'arène avec des éléments interactifs et des zones de terrain.
+
+### Tâches
+
+#### 5.1 Couvertures
+- [ ] Créer classe `Cover`
+- [ ] Colonnes/piliers (indestructibles)
+- [ ] Murets (destructibles, contournables)
+- [ ] Mobilier (destructible, peut contenir loot)
+
+#### 5.2 Zones de Terrain
+- [ ] Créer classe `TerrainZone`
+- [ ] Flaques (ralentissement)
+- [ ] Gravats (ralentissement)
+- [ ] Zones électrifiées (dégâts périodiques)
+- [ ] Appliquer effets au joueur ET aux zombies
+
+#### 5.3 Éléments Interactifs
+- [ ] Barils explosifs
+- [ ] Interrupteurs (pièges)
+- [ ] Générateurs (zones électrifiées)
+- [ ] Jets de flammes activables
+
+#### 5.4 Environnements
+- [ ] Créer tileset pour hôpital abandonné
+- [ ] Créer tileset pour centre commercial
+- [ ] Créer tileset pour station de métro
+- [ ] Créer tileset pour laboratoire
+- [ ] Créer tileset pour prison
+- [ ] Designer les layouts de chaque arène
+
+#### 5.5 Portes Avancées
+- [ ] Système de barricade (coût en points)
+- [ ] Pièges sur portes
+- [ ] Destruction de porte par les boss
+
+### Livrable
+Arènes riches avec terrain tactique et éléments interactifs.
+
+---
+
+## Phase 6 : Progression et Meta-Jeu
+
+### Objectif
+Implémenter les systèmes de progression pendant et entre les parties.
+
+### Tâches
+
+#### 6.1 Système de Combo
+- [ ] Créer `ComboSystem`
+- [ ] Multiplicateur basé sur kills enchaînés
+- [ ] Affichage HUD du combo
+- [ ] Bonus de points et qualité de loot
+
+#### 6.2 Drops et Items
+- [ ] Créer `DropSystem`
+- [ ] Drops de munitions
+- [ ] Drops de soins
+- [ ] Table de loot par type de zombie
+
+#### 6.3 Power-ups
+- [ ] Implémenter `Rage` (double dégâts)
+- [ ] Implémenter `Freeze` (ralentit ennemis)
+- [ ] Implémenter `Ghost` (intangibilité)
+- [ ] Implémenter `Magnet` (attire drops)
+- [ ] Implémenter `Nuke` (tue tout)
+
+#### 6.4 Objets Actifs
+- [ ] Implémenter `PortableTurret`
+- [ ] Implémenter `ProximityMine`
+- [ ] Implémenter `AttackDrone`
+- [ ] Implémenter `HolographicDecoy`
+- [ ] Implémenter `DiscoBallGrenade`
+
+#### 6.5 Upgrades Roguelite
+- [ ] Créer `UpgradeSystem`
+- [ ] Créer `UpgradeScene` (entre les vagues)
+- [ ] Pool d'améliorations par catégorie
+- [ ] Système de rareté et pondération
+- [ ] UI de sélection (3 cartes)
+
+#### 6.6 Menu Tactique
+- [ ] Interface d'achat entre vagues
+- [ ] Barricader les portes
+- [ ] Poser des pièges
+- [ ] Acheter munitions/soins
+
+#### 6.7 Progression Permanente
+- [ ] Créer `ProgressionManager`
+- [ ] Arbre d'améliorations permanentes
+- [ ] Déblocage de personnages
+- [ ] Déblocage d'armes de départ
+- [ ] Système de sauvegarde (localStorage)
+
+### Livrable
+Boucle de gameplay complète avec progression court et long terme.
+
+---
+
+## Phase 7 : Personnages et Boss
+
+### Objectif
+Implémenter les personnages jouables et les boss.
+
+### Tâches
+
+#### 7.1 Système de Personnages
+- [ ] Créer classe de base `Character`
+- [ ] Système de stats par personnage
+- [ ] Compétences actives
+
+#### 7.2 Personnages
+- [ ] Implémenter Le Flic (Marcus Webb)
+  - Bonus précision, tir critique
+  - Compétence : Concentration (ralenti temps)
+- [ ] Implémenter La Médecin (Elena Vasquez)
+  - Régénération passive, soins améliorés
+  - Compétence : Vaccination (immunité statuts)
+- [ ] Implémenter Le Mécano (Frank Morrison)
+  - Tourelles, bonus explosifs
+  - Compétence : Poser tourelle
+- [ ] Implémenter L'Athlète (Jade Chen)
+  - Vitesse, dash amélioré
+  - Compétence : Sprint (vitesse + intangibilité)
+- [ ] Implémenter Le Pyromane (Victor Ash)
+  - Résistance feu, bonus incendiaire
+  - Compétence : Nova (explosion de flammes)
+- [ ] Implémenter La Gamine (Lily + Max)
+  - Hitbox réduite, chien compagnon
+  - Compétence : Flair (révèle ennemis)
+
+#### 7.3 Boss
+- [ ] Créer classe de base `Boss`
+- [ ] Cinématique d'entrée
+- [ ] Implémenter Abomination
+  - Charge destructrice, libère parasites
+  - Points faibles : têtes
+- [ ] Implémenter Patient Zéro
+  - Esquive, utilise couvertures, commande horde
+- [ ] Implémenter Colosse Blindé
+  - Armure à détruire, points faibles révélés
+
+#### 7.4 Événements Spéciaux
+- [ ] Implémenter Blackout (obscurité)
+- [ ] Implémenter Horde (triple spawns)
+- [ ] Implémenter Porte Surchauffée
+- [ ] Implémenter Boss Rush
+
+### Livrable
+6 personnages jouables avec styles distincts, 3 boss, événements spéciaux.
+
+---
+
+## Phase 8 : Polish et Modes de Jeu
+
+### Objectif
+Finaliser l'expérience avec les menus, modes de jeu, et polish.
+
+### Tâches
+
+#### 8.1 Menus
+- [ ] Menu principal
+- [ ] Sélection de personnage
+- [ ] Sélection de niveau/mode
+- [ ] Options (audio, contrôles)
+- [ ] Écran de pause
+- [ ] Écran de game over (stats, high score)
+
+#### 8.2 Modes de Jeu
+- [ ] Mode Survie (classique, score infini)
+- [ ] Mode Campagne (niveaux avec objectifs)
+- [ ] Mode Challenge Quotidien (seed fixe)
+- [ ] Classements en ligne (optionnel)
+
+#### 8.3 Audio
+- [ ] Intégrer musique de fond
+- [ ] Sons d'armes
+- [ ] Sons de zombies
+- [ ] Sons d'ambiance
+- [ ] Feedback audio (hit, pickup, etc.)
+- [ ] Créer `AudioManager`
+
+#### 8.4 Effets Visuels
+- [ ] Particules de sang
+- [ ] Effets de tir
+- [ ] Explosions
+- [ ] Effets de statut (feu, électricité)
+- [ ] Screen shake
+- [ ] Flash de dégâts
+
+#### 8.5 Tutoriel
+- [ ] Tutoriel interactif première partie
+- [ ] Tooltips pour nouveaux éléments
+- [ ] Introduction des types de zombies
+
+#### 8.6 Optimisation
+- [ ] Profiling et optimisation
+- [ ] Tests sur différentes configurations
+- [ ] Réduction de la taille du bundle
+
+#### 8.7 Tests
+- [ ] Tests unitaires systèmes critiques
+- [ ] Tests d'intégration
+- [ ] Playtesting et équilibrage
+
+### Livrable
+Jeu complet, poli, prêt pour la release.
+
+---
+
+## Dépendances entre Phases
+
+```
+Phase 1 ──► Phase 2 ──► Phase 3 ──┬──► Phase 4
+                                  │
+                                  ├──► Phase 5
+                                  │
+                                  └──► Phase 6 ──► Phase 7 ──► Phase 8
+```
+
+- Phases 4, 5, 6 peuvent être développées en parallèle après Phase 3
+- Phase 7 nécessite Phase 6 (compétences utilisent upgrades)
+- Phase 8 finalise tout
+
+---
+
+## Jalons Clés
+
+| Jalon | Phase | Description |
+|-------|-------|-------------|
+| **Prototype jouable** | 1 | Mouvement + tir fonctionnels |
+| **First Playable** | 2 | Combat zombie basique |
+| **Core Loop** | 3 | Vagues complètes |
+| **Feature Complete** | 7 | Tous les systèmes implémentés |
+| **Content Complete** | 7 | Tous les personnages, armes, zombies |
+| **Release Candidate** | 8 | Polish terminé, prêt pour tests |
+
+---
+
+## Risques Identifiés
+
+| Risque | Impact | Mitigation |
+|--------|--------|------------|
+| Performance avec beaucoup de zombies | Élevé | Object pooling, spatial hashing, throttling IA |
+| Équilibrage difficile | Moyen | Playtests fréquents, valeurs configurables |
+| Pathfinding coûteux | Moyen | Flow fields, caching, mise à jour partielle |
+| Scope creep | Élevé | MVP strict par phase, features optionnelles clairement marquées |
+
+---
+
+## Notes pour le Designer
+
+### Assets Prioritaires (par phase)
+
+**Phase 1-3 (MVP):**
+- Sprite joueur (8 directions, idle, walk, shoot)
+- Sprite Shambler (idle, walk, attack, death)
+- Sprite Runner (idle, run, attack, death)
+- Tileset murs/sol basique
+- Icône porte
+
+**Phase 4:**
+- Sprites tous les zombies
+- Sprites toutes les armes
+- Effets de projectiles
+
+**Phase 5:**
+- Tilesets 5 environnements
+- Props interactifs (barils, interrupteurs)
+- Effets de terrain
+
+**Phase 6-7:**
+- Sprites 6 personnages
+- Sprites 3 boss (animations complexes)
+- UI power-ups et upgrades
+
+**Phase 8:**
+- UI menus complets
+- Effets visuels polish
+- Icônes et logos
+
+### Spécifications Sprites
+
+- Format : PNG avec transparence
+- Taille de base : 32x32 pixels (personnages, zombies standards)
+- Tanks/Boss : 48x48 à 128x128 selon la taille
+- Animation : sprite sheets horizontales
+- Framerate cible : 8-12 fps pour les animations
