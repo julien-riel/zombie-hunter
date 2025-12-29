@@ -21,6 +21,7 @@ import { DDASystem } from '@systems/DDASystem';
 import { Pathfinder } from '@utils/pathfinding';
 import { HordeManager } from '@ai/HordeManager';
 import { TacticalBehaviors } from '@ai/TacticalBehaviors';
+import { FlowFieldManager } from '@ai/FlowFieldManager';
 import type { Zombie } from '@entities/zombies/Zombie';
 import type { MiniZombie } from '@entities/zombies/MiniZombie';
 
@@ -47,6 +48,7 @@ export class GameScene extends Phaser.Scene {
   private ddaSystem!: DDASystem;
   private hordeManager!: HordeManager;
   private tacticalBehaviors!: TacticalBehaviors;
+  private flowFieldManager!: FlowFieldManager;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -63,6 +65,15 @@ export class GameScene extends Phaser.Scene {
     // Initialiser le pathfinder avec les obstacles de l'arène
     this.pathfinder = new Pathfinder();
     this.pathfinder.buildGrid(this.arena.getObstacles());
+
+    // Initialiser le flow field manager pour le pathfinding de masse
+    this.flowFieldManager = new FlowFieldManager({
+      targetMoveThreshold: 32,
+      minUpdateInterval: 200,
+      maxIterationsPerFrame: 150,
+      minZombiesForFlowField: 5, // Seuil bas pour activer le flow field rapidement
+    });
+    this.flowFieldManager.initialize(this.pathfinder.getGrid());
 
     // Écouter les changements d'obstacles pour mettre à jour le pathfinder
     this.events.on('arena:obstacleRemoved', this.onObstacleRemoved, this);
@@ -100,6 +111,13 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(1000, () => {
       this.waveSystem.start();
     });
+
+    // Debug: touche F3 pour afficher le flow field
+    if (this.input.keyboard) {
+      this.debugFlowFieldKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F3);
+      this.debugFlowFieldGraphics = this.add.graphics();
+      this.debugFlowFieldGraphics.setDepth(1000);
+    }
   }
 
   /**
@@ -250,6 +268,10 @@ export class GameScene extends Phaser.Scene {
     // Mettre à jour tous les zombies actifs
     const activeZombies = this.poolManager.getActiveZombies();
 
+    // Mettre à jour le flow field manager (pour le pathfinding de masse)
+    this.flowFieldManager.setActiveZombieCount(activeZombies.length);
+    this.flowFieldManager.update(this.player.x, this.player.y);
+
     // Mettre à jour le gestionnaire de horde (Phase 4.4)
     this.hordeManager.update(activeZombies, time);
 
@@ -271,6 +293,73 @@ export class GameScene extends Phaser.Scene {
       this.player.getHealth(),
       this.player.getMaxHealth()
     );
+
+    // Debug flow field (F3)
+    this.updateFlowFieldDebug();
+  }
+
+  /**
+   * Met à jour l'affichage de debug du flow field
+   */
+  private updateFlowFieldDebug(): void {
+    if (!this.debugFlowFieldKey || !this.debugFlowFieldGraphics) return;
+
+    // Toggle avec F3
+    if (Phaser.Input.Keyboard.JustDown(this.debugFlowFieldKey)) {
+      this.showFlowFieldDebug = !this.showFlowFieldDebug;
+      if (!this.showFlowFieldDebug) {
+        this.debugFlowFieldGraphics.clear();
+      }
+    }
+
+    if (!this.showFlowFieldDebug) return;
+
+    this.debugFlowFieldGraphics.clear();
+
+    const flowField = this.flowFieldManager.getFlowField();
+    if (!flowField || !flowField.isFieldValid()) {
+      // Afficher un message si le flow field n'est pas prêt
+      this.debugFlowFieldGraphics.lineStyle(2, 0xff0000);
+      this.debugFlowFieldGraphics.strokeRect(10, 10, 200, 30);
+      return;
+    }
+
+    const flowMap = flowField.getFlowMap();
+    const gridSize = flowField.getGridSize();
+    const tileSize = 32;
+
+    // Dessiner les directions
+    for (let y = 0; y < gridSize.height; y++) {
+      for (let x = 0; x < gridSize.width; x++) {
+        const dir = flowMap[y][x];
+        if (dir.x === 0 && dir.y === 0) continue;
+
+        const worldX = x * tileSize + tileSize / 2;
+        const worldY = y * tileSize + tileSize / 2;
+
+        // Ligne de direction
+        const lineLength = 12;
+        const endX = worldX + dir.x * lineLength;
+        const endY = worldY + dir.y * lineLength;
+
+        // Couleur basée sur la direction (vert = vers joueur)
+        this.debugFlowFieldGraphics.lineStyle(1, 0x00ff00, 0.6);
+        this.debugFlowFieldGraphics.beginPath();
+        this.debugFlowFieldGraphics.moveTo(worldX, worldY);
+        this.debugFlowFieldGraphics.lineTo(endX, endY);
+        this.debugFlowFieldGraphics.strokePath();
+
+        // Petit point au centre
+        this.debugFlowFieldGraphics.fillStyle(0x00ff00, 0.4);
+        this.debugFlowFieldGraphics.fillCircle(worldX, worldY, 2);
+      }
+    }
+
+    // Indicateur que le flow field est actif (rectangle vert en haut à gauche)
+    this.debugFlowFieldGraphics.lineStyle(2, 0x00ff00);
+    this.debugFlowFieldGraphics.strokeRect(10, 10, 20, 20);
+    this.debugFlowFieldGraphics.fillStyle(0x00ff00, 0.5);
+    this.debugFlowFieldGraphics.fillRect(10, 10, 20, 20);
   }
 
   /**
@@ -448,6 +537,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le gestionnaire de flow field (pour le pathfinding de masse)
+   */
+  public getFlowFieldManager(): FlowFieldManager {
+    return this.flowFieldManager;
+  }
+
+  /**
    * Récupère l'arène
    */
   public getArena(): Arena {
@@ -519,6 +615,11 @@ export class GameScene extends Phaser.Scene {
   private lastInteractTime: number = 0;
   private interactCooldown: number = 300; // ms
 
+  /** Debug flow field */
+  private debugFlowFieldKey: Phaser.Input.Keyboard.Key | null = null;
+  private debugFlowFieldGraphics: Phaser.GameObjects.Graphics | null = null;
+  private showFlowFieldDebug: boolean = false;
+
   /**
    * Vérifie si le joueur interagit avec un élément (touche E)
    */
@@ -572,10 +673,11 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Gère la suppression d'un obstacle (cover détruit)
-   * Met à jour le pathfinder pour que les zombies puissent passer
+   * Met à jour le pathfinder et le flow field pour que les zombies puissent passer
    */
   private onObstacleRemoved(event: { x: number; y: number; width: number; height: number }): void {
     this.pathfinder.invalidateArea(event.x, event.y, event.width, event.height);
+    this.flowFieldManager.updateGridArea(event.x, event.y, event.width, event.height, true);
   }
 
   /**
@@ -592,6 +694,7 @@ export class GameScene extends Phaser.Scene {
     this.corpseManager?.destroy();
     this.hordeManager?.destroy();
     this.tacticalBehaviors?.reset();
+    this.flowFieldManager?.destroy();
     this.arena?.destroy();
     this.events.off('miniZombieSpawned', this.onMiniZombieSpawned, this);
     this.events.off('arena:obstacleRemoved', this.onObstacleRemoved, this);

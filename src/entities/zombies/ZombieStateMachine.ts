@@ -4,6 +4,7 @@ import type { Player } from '@entities/Player';
 import type { Pathfinder } from '@utils/pathfinding';
 import type { HordeManager } from '@ai/HordeManager';
 import type { TacticalBehaviors, TacticalTarget } from '@ai/TacticalBehaviors';
+import type { FlowFieldManager } from '@ai/FlowFieldManager';
 import { SteeringBehaviors } from '@ai/SteeringBehaviors';
 
 /**
@@ -382,22 +383,49 @@ export class ZombieStateMachine {
 
   /**
    * Applique le mouvement de horde
+   * Utilise le flow field si disponible, sinon A* individuel
    */
   private applyHordeMovement(targetX: number, targetY: number, _time: number): void {
-    const now = Date.now();
+    const flowFieldManager = this.getFlowFieldManager();
 
-    // Recalculer le chemin moins souvent en mode horde
-    if (now - this.lastPathTime >= PATH_UPDATE_INTERVAL * 1.5) {
-      this.lastPathTime = now;
+    // Utiliser le flow field si disponible
+    if (flowFieldManager && flowFieldManager.isReady()) {
+      // Récupérer la direction depuis le flow field
+      const direction = flowFieldManager.getDirectionSmooth(this.zombie.x, this.zombie.y);
 
-      const pathfinder = this.getPathfinder();
-      if (pathfinder) {
-        // Calculer le chemin vers la cible tactique
-        const path = pathfinder.findPath(this.zombie.x, this.zombie.y, targetX, targetY);
+      if (direction.x !== 0 || direction.y !== 0) {
+        // Appliquer directement la direction du flow field
+        this.zombie.movementComponent.moveInDirection(direction.x, direction.y);
 
-        if (path.length > 0) {
-          this.zombie.movementComponent.setPath(path);
+        // Mettre à jour la rotation
+        const angle = Math.atan2(direction.y, direction.x);
+        this.zombie.setRotation(angle);
+      } else {
+        // Fallback sur la cible tactique directe
+        this.zombie.movementComponent.setTarget(targetX, targetY);
+      }
+    } else {
+      // Fallback sur A* individuel
+      const now = Date.now();
+
+      // Recalculer le chemin moins souvent en mode horde
+      if (now - this.lastPathTime >= PATH_UPDATE_INTERVAL * 1.5) {
+        this.lastPathTime = now;
+
+        const pathfinder = this.getPathfinder();
+        if (pathfinder) {
+          // Calculer le chemin vers la cible tactique
+          const path = pathfinder.findPath(this.zombie.x, this.zombie.y, targetX, targetY);
+
+          if (path.length > 0) {
+            this.zombie.movementComponent.setPath(path);
+          }
         }
+      }
+
+      // Fallback si pas de chemin
+      if (!this.zombie.movementComponent.hasPath()) {
+        this.zombie.movementComponent.setTarget(targetX, targetY);
       }
     }
 
@@ -422,11 +450,6 @@ export class ZombieStateMachine {
         }
       }
     }
-
-    // Fallback si pas de chemin
-    if (!this.zombie.movementComponent.hasPath()) {
-      this.zombie.movementComponent.setTarget(targetX, targetY);
-    }
   }
 
   /**
@@ -442,10 +465,21 @@ export class ZombieStateMachine {
 
   /**
    * Poursuit la cible en utilisant le pathfinding
+   * Utilise le flow field si disponible (beaucoup de zombies),
+   * sinon fallback sur A* individuel
    */
   private chaseWithPathfinding(): void {
     if (!this.target) return;
 
+    const flowFieldManager = this.getFlowFieldManager();
+
+    // Utiliser le flow field si disponible (plus efficace avec beaucoup de zombies)
+    if (flowFieldManager && flowFieldManager.isReady()) {
+      this.chaseWithFlowField(flowFieldManager);
+      return;
+    }
+
+    // Fallback sur A* individuel
     const now = Date.now();
     const pathfinder = this.getPathfinder();
 
@@ -472,6 +506,31 @@ export class ZombieStateMachine {
   }
 
   /**
+   * Poursuit la cible en utilisant le flow field
+   * Méthode optimisée pour le pathfinding de masse
+   */
+  private chaseWithFlowField(flowFieldManager: FlowFieldManager): void {
+    if (!this.target) return;
+
+    // Récupérer la direction depuis le flow field (interpolation smooth)
+    const direction = flowFieldManager.getDirectionSmooth(this.zombie.x, this.zombie.y);
+
+    // Si pas de direction valide, fallback sur mouvement direct
+    if (direction.x === 0 && direction.y === 0) {
+      this.zombie.movementComponent.setTarget(this.target.x, this.target.y);
+      return;
+    }
+
+    // Appliquer directement la direction du flow field
+    // moveInDirection applique la vélocité dans la direction donnée
+    this.zombie.movementComponent.moveInDirection(direction.x, direction.y);
+
+    // Mettre à jour la rotation pour regarder dans la direction du mouvement
+    const angle = Math.atan2(direction.y, direction.x);
+    this.zombie.setRotation(angle);
+  }
+
+  /**
    * Récupère le pathfinder depuis la scène
    */
   private getPathfinder(): Pathfinder | null {
@@ -481,6 +540,20 @@ export class ZombieStateMachine {
       typeof (scene as { getPathfinder?: () => Pathfinder }).getPathfinder === 'function'
     ) {
       return (scene as { getPathfinder: () => Pathfinder }).getPathfinder();
+    }
+    return null;
+  }
+
+  /**
+   * Récupère le flow field manager depuis la scène
+   */
+  private getFlowFieldManager(): FlowFieldManager | null {
+    const scene = this.zombie.scene;
+    if (
+      scene &&
+      typeof (scene as { getFlowFieldManager?: () => FlowFieldManager }).getFlowFieldManager === 'function'
+    ) {
+      return (scene as { getFlowFieldManager: () => FlowFieldManager }).getFlowFieldManager();
     }
     return null;
   }
