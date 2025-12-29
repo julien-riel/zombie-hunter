@@ -1,5 +1,6 @@
 import type { Zombie } from './Zombie';
 import type { Player } from '@entities/Player';
+import type { Pathfinder } from '@utils/pathfinding';
 
 /**
  * États possibles d'un zombie
@@ -11,9 +12,13 @@ export enum ZombieState {
   DEAD = 'dead',
 }
 
+/** Intervalle minimum entre deux calculs de chemin (ms) */
+const PATH_UPDATE_INTERVAL = 500;
+
 /**
  * Machine à états pour l'IA des zombies
  * Gère les transitions entre les états et les comportements associés
+ * Utilise le pathfinding A* pour contourner les obstacles
  */
 export class ZombieStateMachine {
   private zombie: Zombie;
@@ -24,6 +29,9 @@ export class ZombieStateMachine {
   private attackRange: number;
   private attackCooldown: number;
   private lastAttackTime: number = 0;
+
+  /** Dernière fois qu'un chemin a été calculé */
+  private lastPathTime: number = 0;
 
   constructor(
     zombie: Zombie,
@@ -110,8 +118,53 @@ export class ZombieStateMachine {
       return;
     }
 
-    // Poursuivre le joueur
-    this.zombie.movementComponent.setTarget(this.target.x, this.target.y);
+    // Poursuivre le joueur avec pathfinding
+    this.chaseWithPathfinding();
+  }
+
+  /**
+   * Poursuit la cible en utilisant le pathfinding
+   */
+  private chaseWithPathfinding(): void {
+    if (!this.target) return;
+
+    const now = Date.now();
+    const pathfinder = this.getPathfinder();
+
+    // Recalculer le chemin périodiquement ou si on n'en a pas
+    if (!pathfinder || now - this.lastPathTime < PATH_UPDATE_INTERVAL) {
+      // Pas de pathfinder ou trop tôt pour recalculer
+      // Continuer à suivre le chemin actuel ou aller en ligne droite
+      if (!this.zombie.movementComponent.hasPath()) {
+        this.zombie.movementComponent.setTarget(this.target.x, this.target.y);
+      }
+      return;
+    }
+
+    // Calculer un nouveau chemin
+    this.lastPathTime = now;
+    const path = pathfinder.findPath(this.zombie.x, this.zombie.y, this.target.x, this.target.y);
+
+    if (path.length > 0) {
+      this.zombie.movementComponent.setPath(path);
+    } else {
+      // Fallback: aller en ligne droite
+      this.zombie.movementComponent.setTarget(this.target.x, this.target.y);
+    }
+  }
+
+  /**
+   * Récupère le pathfinder depuis la scène
+   */
+  private getPathfinder(): Pathfinder | null {
+    const scene = this.zombie.scene;
+    if (
+      scene &&
+      typeof (scene as { getPathfinder?: () => Pathfinder }).getPathfinder === 'function'
+    ) {
+      return (scene as { getPathfinder: () => Pathfinder }).getPathfinder();
+    }
+    return null;
   }
 
   /**
@@ -229,6 +282,7 @@ export class ZombieStateMachine {
     this.currentState = ZombieState.IDLE;
     this.target = null;
     this.lastAttackTime = 0;
+    this.lastPathTime = 0;
   }
 
   /**

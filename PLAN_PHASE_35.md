@@ -189,57 +189,53 @@ export type WeaponType = keyof typeof BALANCE.weapons;
 
 ### 3.5.2 Pathfinding A* Basique
 
-**Priorité : Haute**
+**Priorité : Haute** ✅ TERMINÉ
 
 Le gameplay tactique décrit dans le GDD (colonnes, murets, goulots d'étranglement) nécessite que les zombies contournent les obstacles.
 
-**Fichier à créer : `src/utils/pathfinding.ts`**
+**Fichier créé : `src/utils/pathfinding.ts`**
 
-**Spécifications :**
+**Implémentation réalisée :**
 - Grille de navigation basée sur TILE_SIZE (32px)
-- Précalcul de la grille walkable au chargement de l'arène
-- Algorithme A* avec heuristique Manhattan
-- Cache des chemins avec invalidation si obstacle détruit
+- Précalcul de la grille walkable au chargement de l'arène via `buildGrid(obstacles)`
+- Algorithme A* avec heuristique octile (mouvement diagonal supporté)
+- Invalidation de zone pour obstacles détruits via `invalidateArea()`
 - Fallback sur ligne droite si pas de chemin trouvé
+- Lissage automatique des chemins (suppression des waypoints intermédiaires inutiles)
+- Vérification de ligne de vue avec algorithme de Bresenham
+- Évitement des coins (corner-cutting) pour mouvements diagonaux
 
-**Architecture suggérée :**
+**Architecture implémentée :**
 
 ```typescript
-interface PathNode {
-  x: number;
-  y: number;
-  g: number;  // Coût depuis départ
-  h: number;  // Heuristique vers arrivée
-  f: number;  // g + h
-  parent: PathNode | null;
-}
-
 class Pathfinder {
   private grid: boolean[][];  // true = walkable
-  private width: number;
-  private height: number;
+  private gridWidth: number;
+  private gridHeight: number;
 
-  constructor(arena: Arena) {
-    this.buildGrid(arena);
-  }
-
-  findPath(start: Vector2, end: Vector2): Vector2[];
-  private buildGrid(arena: Arena): void;
-  private getNeighbors(node: PathNode): PathNode[];
-  private heuristic(a: PathNode, b: PathNode): number;
-
-  // Invalider une zone (obstacle détruit)
-  invalidateArea(x: number, y: number, width: number, height: number): void;
+  buildGrid(obstacles: ObstacleData[]): void;
+  findPath(startX, startY, endX, endY): PathPoint[];
+  invalidateArea(x, y, width, height): void;
+  worldToGrid(worldX, worldY): PathPoint;
+  gridToWorld(gridX, gridY): PathPoint;
+  isWalkable(gridX, gridY): boolean;
 }
 ```
 
+**Intégrations réalisées :**
+- `Arena.ts` expose `getObstacles()` pour fournir les données de collision
+- `MovementComponent.ts` supporte `setPath(waypoints)` pour navigation par waypoints
+- `GameScene.ts` initialise le Pathfinder et l'expose via `getPathfinder()`
+- `ZombieStateMachine.ts` utilise le pathfinding avec mise à jour périodique (500ms)
+
 **Actions :**
-- [ ] Créer `src/utils/pathfinding.ts` avec classe `Pathfinder`
-- [ ] Implémenter A* avec grille précalculée
-- [ ] Modifier `Arena.ts` pour exposer les données de collision à Pathfinder
-- [ ] Modifier `MovementComponent.ts` pour utiliser Pathfinder
-- [ ] Ajouter méthode `setPath(waypoints: Vector2[])` à MovementComponent
-- [ ] Tester avec obstacles dans l'arène
+- [x] Créer `src/utils/pathfinding.ts` avec classe `Pathfinder`
+- [x] Implémenter A* avec grille précalculée
+- [x] Modifier `Arena.ts` pour exposer les données de collision à Pathfinder
+- [x] Modifier `MovementComponent.ts` pour utiliser Pathfinder
+- [x] Ajouter méthode `setPath(waypoints: PathPoint[])` à MovementComponent
+- [x] Intégrer le Pathfinder dans `GameScene.ts`
+- [x] Mettre à jour `ZombieStateMachine.ts` pour utiliser le pathfinding
 
 **Optimisations futures (hors scope 3.5) :**
 - Flow field pour les hordes (> 20 zombies)
@@ -350,7 +346,7 @@ Nettoyage de code pour faciliter la Phase 4.
 ## Critères de Validation Phase 3.5
 
 - [x] Fichier `balance.ts` créé et utilisé par tous les systèmes
-- [ ] Pathfinding A* fonctionnel — zombies contournent les piliers
+- [x] Pathfinding A* fonctionnel — zombies contournent les piliers
 - [ ] Crawler implémenté et intégré aux vagues
 - [ ] Tests unitaires passent avec coverage > 80% sur systèmes ciblés
 - [ ] Aucune régression sur le gameplay existant
@@ -362,7 +358,7 @@ Nettoyage de code pour faciliter la Phase 4.
 | Tâche | Complexité | Fichiers impactés | Statut |
 |-------|------------|-------------------|--------|
 | 3.5.1 Balance | Faible | 8 fichiers (migration) | ✅ Terminé |
-| 3.5.2 Pathfinding | Haute | 3 fichiers (nouveau + intégration) | ⏳ En attente |
+| 3.5.2 Pathfinding | Haute | 5 fichiers (nouveau + intégration) | ✅ Terminé |
 | 3.5.3 Crawler | Moyenne | 4 fichiers | ⏳ En attente |
 | 3.5.4 Tests | Moyenne | 3 fichiers nouveaux | ⏳ En attente |
 | 3.5.5 Refactoring | Faible | Plusieurs fichiers | ⏳ En attente |
@@ -373,8 +369,8 @@ Nettoyage de code pour faciliter la Phase 4.
 
 ### Priorité d'Implémentation Recommandée
 
-1. **balance.ts** — Fondation pour tout le reste
-2. **Pathfinding** — Bloquant pour le gameplay tactique
+1. ~~**balance.ts** — Fondation pour tout le reste~~ ✅
+2. ~~**Pathfinding** — Bloquant pour le gameplay tactique~~ ✅
 3. **Crawler** — Validation design + nouveau contenu
 4. **Tests** — Peuvent être écrits en parallèle
 5. **Refactoring** — À faire en continu

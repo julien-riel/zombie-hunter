@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import type { Entity } from '@entities/Entity';
+import type { PathPoint } from '@utils/pathfinding';
 
 /**
  * Composant de gestion du mouvement
  * Gère la vélocité, la direction et les effets de statut affectant le mouvement
+ * Supporte la navigation par waypoints pour le pathfinding
  */
 export class MovementComponent {
   private entity: Entity;
@@ -12,6 +14,13 @@ export class MovementComponent {
   private direction: Phaser.Math.Vector2;
   private target: Phaser.Math.Vector2 | null = null;
   private slowMultiplier: number = 1;
+
+  /** Liste des waypoints à suivre */
+  private path: PathPoint[] = [];
+  /** Index du waypoint actuel */
+  private currentWaypointIndex: number = 0;
+  /** Distance pour considérer un waypoint comme atteint */
+  private waypointThreshold: number = 16;
 
   constructor(entity: Entity, speed: number) {
     this.entity = entity;
@@ -24,13 +33,55 @@ export class MovementComponent {
    * Met à jour le mouvement à chaque frame
    */
   public update(_delta: number): void {
-    if (this.target) {
+    // Priorité au chemin si défini
+    if (this.path.length > 0) {
+      this.followPath();
+    } else if (this.target) {
       this.moveTowardsTarget();
     }
   }
 
   /**
+   * Suit le chemin de waypoints
+   */
+  private followPath(): void {
+    if (this.currentWaypointIndex >= this.path.length) {
+      // Chemin terminé
+      this.clearPath();
+      return;
+    }
+
+    const waypoint = this.path[this.currentWaypointIndex];
+    const dx = waypoint.x - this.entity.x;
+    const dy = waypoint.y - this.entity.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    // Waypoint atteint, passer au suivant
+    if (distance < this.waypointThreshold) {
+      this.currentWaypointIndex++;
+
+      // Vérifier si c'était le dernier waypoint
+      if (this.currentWaypointIndex >= this.path.length) {
+        this.clearPath();
+        return;
+      }
+    }
+
+    // Se déplacer vers le waypoint actuel
+    if (distance > 0) {
+      this.direction.set(dx / distance, dy / distance);
+      const speed = this.currentSpeed * this.slowMultiplier;
+      this.entity.setVelocity(this.direction.x * speed, this.direction.y * speed);
+
+      // Faire tourner l'entité vers le waypoint
+      const angle = Math.atan2(dy, dx);
+      this.entity.setRotation(angle);
+    }
+  }
+
+  /**
    * Définit une cible vers laquelle se déplacer
+   * Note: Si un chemin est défini, il sera suivi en priorité
    */
   public setTarget(x: number, y: number): void {
     if (!this.target) {
@@ -38,6 +89,32 @@ export class MovementComponent {
     } else {
       this.target.set(x, y);
     }
+  }
+
+  /**
+   * Définit un chemin de waypoints à suivre
+   * @param waypoints - Liste de points {x, y} à suivre dans l'ordre
+   */
+  public setPath(waypoints: PathPoint[]): void {
+    this.path = [...waypoints];
+    this.currentWaypointIndex = 0;
+    // Effacer la cible simple car le chemin prend la priorité
+    this.target = null;
+  }
+
+  /**
+   * Efface le chemin actuel
+   */
+  public clearPath(): void {
+    this.path = [];
+    this.currentWaypointIndex = 0;
+  }
+
+  /**
+   * Vérifie si l'entité suit actuellement un chemin
+   */
+  public hasPath(): boolean {
+    return this.path.length > 0 && this.currentWaypointIndex < this.path.length;
   }
 
   /**
@@ -158,6 +235,7 @@ export class MovementComponent {
   public stop(): void {
     this.entity.setVelocity(0, 0);
     this.target = null;
+    this.clearPath();
   }
 
   /**
@@ -177,5 +255,6 @@ export class MovementComponent {
     this.slowMultiplier = 1;
     this.target = null;
     this.direction.set(0, 0);
+    this.clearPath();
   }
 }

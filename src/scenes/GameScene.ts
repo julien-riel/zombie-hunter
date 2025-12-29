@@ -8,6 +8,7 @@ import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
 import { SpawnSystem } from '@systems/SpawnSystem';
 import { WaveSystem } from '@systems/WaveSystem';
+import { Pathfinder } from '@utils/pathfinding';
 import type { Zombie } from '@entities/zombies/Zombie';
 
 /**
@@ -25,6 +26,7 @@ export class GameScene extends Phaser.Scene {
   private combatSystem!: CombatSystem;
   private spawnSystem!: SpawnSystem;
   private waveSystem!: WaveSystem;
+  private pathfinder!: Pathfinder;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -37,6 +39,10 @@ export class GameScene extends Phaser.Scene {
     // Créer l'arène
     this.arena = new Arena(this);
     this.walls = this.arena.getWalls();
+
+    // Initialiser le pathfinder avec les obstacles de l'arène
+    this.pathfinder = new Pathfinder();
+    this.pathfinder.buildGrid(this.arena.getObstacles());
 
     // Créer le pool de projectiles
     this.bulletPool = new BulletPool(this);
@@ -170,6 +176,13 @@ export class GameScene extends Phaser.Scene {
    */
   public getWaveSystem(): WaveSystem {
     return this.waveSystem;
+  }
+
+  /**
+   * Récupère le pathfinder pour la navigation des zombies
+   */
+  public getPathfinder(): Pathfinder {
+    return this.pathfinder;
   }
 
   /**

@@ -4,6 +4,16 @@ import type { GameScene } from '@scenes/GameScene';
 import { Door, type DoorConfig } from './Door';
 
 /**
+ * Représente un obstacle pour le pathfinding
+ */
+export interface ObstacleData {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
  * Gestionnaire de l'arène de jeu
  * Crée et gère le terrain, les murs, les obstacles et les portes
  */
@@ -12,6 +22,7 @@ export class Arena {
   private walls: Phaser.Physics.Arcade.StaticGroup;
   private floor: Phaser.GameObjects.TileSprite;
   private doors: Door[] = [];
+  private obstacles: ObstacleData[] = [];
 
   constructor(scene: GameScene) {
     this.scene = scene;
@@ -170,12 +181,14 @@ export class Arena {
 
   /**
    * Crée un segment de mur
+   * @param trackAsObstacle - Si true, ajoute l'obstacle à la liste pour le pathfinding
    */
   private createWallSegment(
     x: number,
     y: number,
     width: number,
-    height: number
+    height: number,
+    trackAsObstacle: boolean = false
   ): Phaser.Physics.Arcade.Sprite {
     // Créer une texture pour ce segment de mur
     const graphics = this.scene.add.graphics();
@@ -191,6 +204,11 @@ export class Arena {
     const wall = this.walls.create(x, y, textureKey) as Phaser.Physics.Arcade.Sprite;
     wall.setImmovable(true);
     wall.refreshBody();
+
+    // Enregistrer comme obstacle pour le pathfinding
+    if (trackAsObstacle) {
+      this.obstacles.push({ x, y, width, height });
+    }
 
     return wall;
   }
@@ -213,9 +231,9 @@ export class Arena {
       this.createPillar(pos.x, pos.y);
     });
 
-    // Murets horizontaux
-    this.createWallSegment(400, GAME_HEIGHT / 2, TILE_SIZE * 3, TILE_SIZE);
-    this.createWallSegment(GAME_WIDTH - 400, GAME_HEIGHT / 2, TILE_SIZE * 3, TILE_SIZE);
+    // Murets horizontaux (trackés comme obstacles pour le pathfinding)
+    this.createWallSegment(400, GAME_HEIGHT / 2, TILE_SIZE * 3, TILE_SIZE, true);
+    this.createWallSegment(GAME_WIDTH - 400, GAME_HEIGHT / 2, TILE_SIZE * 3, TILE_SIZE, true);
   }
 
   /**
@@ -238,6 +256,9 @@ export class Arena {
     const pillar = this.walls.create(x, y, textureKey) as Phaser.Physics.Arcade.Sprite;
     pillar.setImmovable(true);
     pillar.refreshBody();
+
+    // Enregistrer comme obstacle pour le pathfinding
+    this.obstacles.push({ x, y, width: size, height: size });
   }
 
   /**
@@ -288,5 +309,13 @@ export class Arena {
     for (const door of this.doors) {
       door.deactivate();
     }
+  }
+
+  /**
+   * Retourne les données d'obstacles pour le pathfinding
+   * Utilisé par le Pathfinder pour construire sa grille de navigation
+   */
+  public getObstacles(): ObstacleData[] {
+    return this.obstacles;
   }
 }
