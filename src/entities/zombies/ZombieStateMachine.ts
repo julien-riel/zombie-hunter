@@ -234,11 +234,7 @@ export class ZombieStateMachine {
   /**
    * Configure les paramètres de l'IA
    */
-  public configure(
-    detectionRange: number,
-    attackRange: number,
-    attackCooldown: number
-  ): void {
+  public configure(detectionRange: number, attackRange: number, attackCooldown: number): void {
     this.detectionRange = detectionRange;
     this.attackRange = attackRange;
     this.attackCooldown = attackCooldown;

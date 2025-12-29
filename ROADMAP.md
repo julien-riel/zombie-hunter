@@ -106,29 +106,31 @@ Implémenter le système de vagues et les portes de spawn.
 ### Tâches
 
 #### 3.1 Portes
-- [ ] Créer la classe `Door`
-- [ ] États : inactive, active, ouverte
-- [ ] Animation visuelle (pulse rougeâtre)
-- [ ] Spawn de zombies depuis les portes
+- [x] Créer la classe `Door`
+- [x] États : inactive, active, ouverte
+- [x] Animation visuelle (pulse rougeâtre)
+- [x] Spawn de zombies depuis les portes
 
 #### 3.2 Gestion des Vagues
-- [ ] Créer `WaveSystem`
-- [ ] Créer `SpawnSystem`
-- [ ] Définir le format `WaveConfig`
-- [ ] Implémenter la détection de fin de vague
-- [ ] Transition entre vagues (pause courte)
+- [x] Créer `WaveSystem`
+- [x] Améliorer `SpawnSystem` pour spawn depuis les portes
+- [x] Définir le format `WaveConfig`
+- [x] Implémenter la détection de fin de vague
+- [x] Transition entre vagues (pause courte)
 
 #### 3.3 Progression de Difficulté
-- [ ] Système d'activation progressive des portes
-- [ ] Augmentation du nombre de zombies par vague
-- [ ] Introduction progressive des types de zombies
-- [ ] Courbe de difficulté configurable
+- [x] Système d'activation progressive des portes
+- [x] Augmentation du nombre de zombies par vague
+- [x] Introduction progressive des types de zombies
+- [x] Courbe de difficulté configurable
 
 #### 3.4 HUD Basique
-- [ ] Créer `HUDScene` (overlay)
-- [ ] Afficher la santé du joueur
-- [ ] Afficher le numéro de vague
-- [ ] Afficher le compteur de munitions
+- [x] Améliorer `HUDScene` (overlay)
+- [x] Afficher la santé du joueur
+- [x] Afficher le numéro de vague
+- [x] Afficher le compteur de munitions
+- [x] Afficher l'annonce de vague avec animation
+- [x] Afficher la progression de la vague
 
 ### Livrable
 Vagues successives de zombies avec difficulté croissante.

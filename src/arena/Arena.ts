@@ -1,15 +1,17 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@config/constants';
 import type { GameScene } from '@scenes/GameScene';
+import { Door, type DoorConfig } from './Door';
 
 /**
  * Gestionnaire de l'arène de jeu
- * Crée et gère le terrain, les murs et les obstacles
+ * Crée et gère le terrain, les murs, les obstacles et les portes
  */
 export class Arena {
   private scene: GameScene;
   private walls: Phaser.Physics.Arcade.StaticGroup;
   private floor: Phaser.GameObjects.TileSprite;
+  private doors: Door[] = [];
 
   constructor(scene: GameScene) {
     this.scene = scene;
@@ -20,6 +22,7 @@ export class Arena {
     // Créer les murs
     this.walls = scene.physics.add.staticGroup();
     this.createWalls();
+    this.createDoors();
     this.createObstacles();
   }
 
@@ -39,32 +42,130 @@ export class Arena {
   }
 
   /**
-   * Crée les murs périphériques
+   * Crée les murs périphériques avec des ouvertures pour les portes
    */
   private createWalls(): void {
     const wallThickness = TILE_SIZE;
+    const doorWidth = TILE_SIZE * 2;
 
-    // Mur du haut
-    this.createWallSegment(GAME_WIDTH / 2, wallThickness / 2, GAME_WIDTH, wallThickness);
+    // Positions des portes sur chaque mur
+    const topDoorPositions = [GAME_WIDTH * 0.25, GAME_WIDTH * 0.75];
+    const bottomDoorPositions = [GAME_WIDTH * 0.25, GAME_WIDTH * 0.75];
+    const leftDoorPositions = [GAME_HEIGHT * 0.33, GAME_HEIGHT * 0.67];
+    const rightDoorPositions = [GAME_HEIGHT * 0.33, GAME_HEIGHT * 0.67];
 
-    // Mur du bas
-    this.createWallSegment(
-      GAME_WIDTH / 2,
+    // Mur du haut (avec ouvertures pour les portes)
+    this.createWallWithGaps(
+      wallThickness / 2,
+      GAME_WIDTH,
+      wallThickness,
+      'horizontal',
+      topDoorPositions,
+      doorWidth
+    );
+
+    // Mur du bas (avec ouvertures pour les portes)
+    this.createWallWithGaps(
       GAME_HEIGHT - wallThickness / 2,
       GAME_WIDTH,
-      wallThickness
-    );
-
-    // Mur de gauche
-    this.createWallSegment(wallThickness / 2, GAME_HEIGHT / 2, wallThickness, GAME_HEIGHT);
-
-    // Mur de droite
-    this.createWallSegment(
-      GAME_WIDTH - wallThickness / 2,
-      GAME_HEIGHT / 2,
       wallThickness,
-      GAME_HEIGHT
+      'horizontal',
+      bottomDoorPositions,
+      doorWidth
     );
+
+    // Mur de gauche (avec ouvertures pour les portes)
+    this.createWallWithGaps(
+      wallThickness / 2,
+      GAME_HEIGHT,
+      wallThickness,
+      'vertical',
+      leftDoorPositions,
+      doorWidth
+    );
+
+    // Mur de droite (avec ouvertures pour les portes)
+    this.createWallWithGaps(
+      GAME_WIDTH - wallThickness / 2,
+      GAME_HEIGHT,
+      wallThickness,
+      'vertical',
+      rightDoorPositions,
+      doorWidth
+    );
+  }
+
+  /**
+   * Crée un mur avec des ouvertures pour les portes
+   */
+  private createWallWithGaps(
+    position: number,
+    length: number,
+    thickness: number,
+    orientation: 'horizontal' | 'vertical',
+    gapPositions: number[],
+    gapSize: number
+  ): void {
+    // Trier les positions des ouvertures
+    const sortedGaps = [...gapPositions].sort((a, b) => a - b);
+
+    let currentPos = 0;
+
+    for (const gapPos of sortedGaps) {
+      const gapStart = gapPos - gapSize / 2;
+      const segmentLength = gapStart - currentPos;
+
+      if (segmentLength > 0) {
+        if (orientation === 'horizontal') {
+          const segmentCenter = currentPos + segmentLength / 2;
+          this.createWallSegment(segmentCenter, position, segmentLength, thickness);
+        } else {
+          const segmentCenter = currentPos + segmentLength / 2;
+          this.createWallSegment(position, segmentCenter, thickness, segmentLength);
+        }
+      }
+
+      currentPos = gapPos + gapSize / 2;
+    }
+
+    // Segment final après la dernière ouverture
+    const finalLength = length - currentPos;
+    if (finalLength > 0) {
+      if (orientation === 'horizontal') {
+        const segmentCenter = currentPos + finalLength / 2;
+        this.createWallSegment(segmentCenter, position, finalLength, thickness);
+      } else {
+        const segmentCenter = currentPos + finalLength / 2;
+        this.createWallSegment(position, segmentCenter, thickness, finalLength);
+      }
+    }
+  }
+
+  /**
+   * Crée les portes aux emplacements prédéfinis
+   */
+  private createDoors(): void {
+    const wallThickness = TILE_SIZE;
+
+    const doorConfigs: DoorConfig[] = [
+      // Portes du haut
+      { x: GAME_WIDTH * 0.25, y: wallThickness / 2, side: 'top' },
+      { x: GAME_WIDTH * 0.75, y: wallThickness / 2, side: 'top' },
+      // Portes du bas
+      { x: GAME_WIDTH * 0.25, y: GAME_HEIGHT - wallThickness / 2, side: 'bottom' },
+      { x: GAME_WIDTH * 0.75, y: GAME_HEIGHT - wallThickness / 2, side: 'bottom' },
+      // Portes de gauche
+      { x: wallThickness / 2, y: GAME_HEIGHT * 0.33, side: 'left' },
+      { x: wallThickness / 2, y: GAME_HEIGHT * 0.67, side: 'left' },
+      // Portes de droite
+      { x: GAME_WIDTH - wallThickness / 2, y: GAME_HEIGHT * 0.33, side: 'right' },
+      { x: GAME_WIDTH - wallThickness / 2, y: GAME_HEIGHT * 0.67, side: 'right' },
+    ];
+
+    for (const config of doorConfigs) {
+      const door = new Door(this.scene, config);
+      this.doors.push(door);
+    }
   }
 
   /**
@@ -151,5 +252,41 @@ export class Arena {
    */
   public getFloor(): Phaser.GameObjects.TileSprite {
     return this.floor;
+  }
+
+  /**
+   * Retourne toutes les portes
+   */
+  public getDoors(): Door[] {
+    return this.doors;
+  }
+
+  /**
+   * Retourne les portes actives
+   */
+  public getActiveDoors(): Door[] {
+    return this.doors.filter((door) => door.isActive());
+  }
+
+  /**
+   * Active un nombre spécifique de portes aléatoirement
+   */
+  public activateRandomDoors(count: number): void {
+    const inactiveDoors = this.doors.filter((door) => !door.isActive());
+    const toActivate = Math.min(count, inactiveDoors.length);
+
+    const shuffled = Phaser.Utils.Array.Shuffle([...inactiveDoors]);
+    for (let i = 0; i < toActivate; i++) {
+      shuffled[i].activate();
+    }
+  }
+
+  /**
+   * Désactive toutes les portes
+   */
+  public deactivateAllDoors(): void {
+    for (const door of this.doors) {
+      door.deactivate();
+    }
   }
 }

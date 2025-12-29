@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import type { GameScene } from '@scenes/GameScene';
 import type { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import type { ZombieType } from '@/types/entities';
-import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@config/constants';
+import type { Door } from '@arena/Door';
+import type { WaveConfig } from './WaveSystem';
+import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, BASE_SPAWN_DELAY } from '@config/constants';
 
 /**
- * Point de spawn
+ * Point de spawn (utilisé en mode legacy sans portes)
  */
 interface SpawnPoint {
   x: number;
@@ -27,6 +29,11 @@ export class SpawnSystem {
   private minSpawnInterval: number = 500;
   private spawnDecrement: number = 50;
 
+  // Configuration de vague actuelle
+  private currentWaveConfig: WaveConfig | null = null;
+  private spawnQueue: { type: ZombieType; door: Door | null }[] = [];
+  private spawnIndex: number = 0;
+
   constructor(scene: GameScene, zombieFactory: ZombieFactory) {
     this.scene = scene;
     this.zombieFactory = zombieFactory;
@@ -35,7 +42,7 @@ export class SpawnSystem {
   }
 
   /**
-   * Initialise les points de spawn aux bords de la carte
+   * Initialise les points de spawn aux bords de la carte (mode legacy)
    */
   private initializeSpawnPoints(): void {
     const margin = TILE_SIZE * 2;
@@ -63,7 +70,107 @@ export class SpawnSystem {
   }
 
   /**
-   * Démarre le spawn automatique
+   * Démarre le spawn pour une vague spécifique
+   */
+  public startWaveSpawning(waveConfig: WaveConfig): void {
+    this.currentWaveConfig = waveConfig;
+    this.spawnQueue = this.buildSpawnQueue(waveConfig);
+    this.spawnIndex = 0;
+
+    this.isSpawning = true;
+    this.scheduleNextWaveSpawn();
+  }
+
+  /**
+   * Construit la queue de spawn pour une vague
+   */
+  private buildSpawnQueue(waveConfig: WaveConfig): { type: ZombieType; door: Door | null }[] {
+    const queue: { type: ZombieType; door: Door | null }[] = [];
+    const activeDoors = this.getActiveDoors();
+
+    // Créer les entrées de spawn pour chaque groupe
+    for (const group of waveConfig.spawnGroups) {
+      for (let i = 0; i < group.count; i++) {
+        // Assigner une porte aléatoire parmi les actives
+        const door =
+          activeDoors.length > 0
+            ? activeDoors[Math.floor(Math.random() * activeDoors.length)]
+            : null;
+
+        queue.push({ type: group.zombieType, door });
+      }
+    }
+
+    // Mélanger la queue pour un spawn plus naturel
+    return Phaser.Utils.Array.Shuffle(queue);
+  }
+
+  /**
+   * Récupère les portes actives
+   */
+  private getActiveDoors(): Door[] {
+    if (!this.scene.arena) return [];
+    return this.scene.arena.getDoors().filter((door) => door.isActive());
+  }
+
+  /**
+   * Planifie le prochain spawn de vague
+   */
+  private scheduleNextWaveSpawn(): void {
+    if (!this.isSpawning || this.spawnIndex >= this.spawnQueue.length) {
+      return;
+    }
+
+    // Calculer le délai entre les spawns
+    const baseDelay = BASE_SPAWN_DELAY;
+    const waveMultiplier = Math.max(0.5, 1 - (this.currentWaveConfig?.waveNumber || 1) * 0.02);
+    const delay = baseDelay * waveMultiplier + Math.random() * 500;
+
+    this.spawnTimer = this.scene.time.delayedCall(
+      delay,
+      () => {
+        this.spawnFromQueue();
+        this.scheduleNextWaveSpawn();
+      },
+      [],
+      this
+    );
+  }
+
+  /**
+   * Spawn un zombie depuis la queue
+   */
+  private spawnFromQueue(): void {
+    if (this.spawnIndex >= this.spawnQueue.length) return;
+
+    const spawnEntry = this.spawnQueue[this.spawnIndex];
+    this.spawnIndex++;
+
+    let x: number;
+    let y: number;
+
+    if (spawnEntry.door) {
+      // Spawn depuis une porte
+      spawnEntry.door.open();
+      const spawnPos = spawnEntry.door.getSpawnPosition();
+      x = spawnPos.x;
+      y = spawnPos.y;
+    } else {
+      // Fallback: spawn depuis un point aléatoire
+      const point = this.getRandomSpawnPoint();
+      if (!point) return;
+      x = point.x;
+      y = point.y;
+    }
+
+    this.zombieFactory.create(spawnEntry.type, x, y);
+
+    // Notifier le WaveSystem
+    this.scene.getWaveSystem()?.onZombieSpawned();
+  }
+
+  /**
+   * Démarre le spawn automatique (mode legacy)
    */
   public startSpawning(): void {
     if (this.isSpawning) return;
@@ -84,7 +191,7 @@ export class SpawnSystem {
   }
 
   /**
-   * Planifie le prochain spawn
+   * Planifie le prochain spawn (mode legacy)
    */
   private scheduleNextSpawn(): void {
     if (!this.isSpawning) return;
@@ -101,22 +208,37 @@ export class SpawnSystem {
   }
 
   /**
-   * Spawn un zombie à un point aléatoire
+   * Spawn un zombie à un point aléatoire (mode legacy ou fallback)
    */
-  public spawnZombie(): void {
-    const spawnPoint = this.getRandomSpawnPoint();
-    if (!spawnPoint) return;
+  public spawnZombie(type?: ZombieType): void {
+    const activeDoors = this.getActiveDoors();
 
-    // Choisir un type de zombie aléatoire
-    const types: ZombieType[] = ['shambler', 'runner'];
-    const weights = [0.7, 0.3]; // 70% shambler, 30% runner
-    const type = this.weightedRandom(types, weights);
+    let x: number;
+    let y: number;
 
-    this.zombieFactory.create(type, spawnPoint.x, spawnPoint.y);
+    if (activeDoors.length > 0) {
+      // Spawn depuis une porte active
+      const door = activeDoors[Math.floor(Math.random() * activeDoors.length)];
+      door.open();
+      const spawnPos = door.getSpawnPosition();
+      x = spawnPos.x;
+      y = spawnPos.y;
+    } else {
+      // Fallback vers les points de spawn
+      const spawnPoint = this.getRandomSpawnPoint();
+      if (!spawnPoint) return;
+      x = spawnPoint.x;
+      y = spawnPoint.y;
+    }
+
+    // Choisir un type de zombie
+    const zombieType = type || this.getRandomZombieType();
+
+    this.zombieFactory.create(zombieType, x, y);
   }
 
   /**
-   * Spawn plusieurs zombies
+   * Spawn plusieurs zombies (mode legacy)
    */
   public spawnWave(count: number): void {
     for (let i = 0; i < count; i++) {
@@ -130,6 +252,15 @@ export class SpawnSystem {
         this
       );
     }
+  }
+
+  /**
+   * Récupère un type de zombie aléatoire
+   */
+  private getRandomZombieType(): ZombieType {
+    const types: ZombieType[] = ['shambler', 'runner'];
+    const weights = [0.7, 0.3];
+    return this.weightedRandom(types, weights);
   }
 
   /**
@@ -172,13 +303,10 @@ export class SpawnSystem {
   }
 
   /**
-   * Accélère le spawn (pour les vagues)
+   * Accélère le spawn (pour les vagues - mode legacy)
    */
   public increaseSpawnRate(): void {
-    this.spawnInterval = Math.max(
-      this.minSpawnInterval,
-      this.spawnInterval - this.spawnDecrement
-    );
+    this.spawnInterval = Math.max(this.minSpawnInterval, this.spawnInterval - this.spawnDecrement);
   }
 
   /**
@@ -201,6 +329,9 @@ export class SpawnSystem {
   public reset(): void {
     this.stopSpawning();
     this.spawnInterval = 2000;
+    this.currentWaveConfig = null;
+    this.spawnQueue = [];
+    this.spawnIndex = 0;
     this.zombieFactory.releaseAll();
   }
 

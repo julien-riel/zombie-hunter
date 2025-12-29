@@ -7,6 +7,7 @@ import { PoolManager } from '@managers/PoolManager';
 import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
 import { SpawnSystem } from '@systems/SpawnSystem';
+import { WaveSystem } from '@systems/WaveSystem';
 import type { Zombie } from '@entities/zombies/Zombie';
 
 /**
@@ -23,6 +24,7 @@ export class GameScene extends Phaser.Scene {
   private zombieFactory!: ZombieFactory;
   private combatSystem!: CombatSystem;
   private spawnSystem!: SpawnSystem;
+  private waveSystem!: WaveSystem;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -56,9 +58,9 @@ export class GameScene extends Phaser.Scene {
     // Configuration de la caméra
     this.cameras.main.setBackgroundColor('#1a1a2e');
 
-    // Démarrer le spawn après un court délai
+    // Démarrer le système de vagues après un court délai
     this.time.delayedCall(1000, () => {
-      this.spawnSystem.startSpawning();
+      this.waveSystem.start();
     });
   }
 
@@ -82,6 +84,9 @@ export class GameScene extends Phaser.Scene {
 
     // Système de spawn
     this.spawnSystem = new SpawnSystem(this, this.zombieFactory);
+
+    // Système de vagues
+    this.waveSystem = new WaveSystem(this);
   }
 
   /**
@@ -161,6 +166,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le système de vagues
+   */
+  public getWaveSystem(): WaveSystem {
+    return this.waveSystem;
+  }
+
+  /**
    * Récupère tous les zombies actifs
    */
   public getActiveZombies(): Zombie[] {
@@ -171,6 +183,7 @@ export class GameScene extends Phaser.Scene {
    * Nettoie la scène
    */
   shutdown(): void {
+    this.waveSystem?.destroy();
     this.spawnSystem?.destroy();
     this.combatSystem?.destroy();
     this.poolManager?.destroy();

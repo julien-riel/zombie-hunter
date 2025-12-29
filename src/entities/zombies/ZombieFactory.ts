@@ -38,11 +38,7 @@ export class ZombieFactory {
   private initializePools(): void {
     for (const [type, classType] of Object.entries(ZOMBIE_CLASSES)) {
       if (classType) {
-        this.poolManager.registerZombiePool(
-          type as ZombieType,
-          classType,
-          10
-        );
+        this.poolManager.registerZombiePool(type as ZombieType, classType, 10);
       }
     }
   }
