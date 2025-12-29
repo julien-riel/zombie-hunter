@@ -4,6 +4,7 @@ import type { Player } from '@entities/Player';
 import type { Pathfinder } from '@utils/pathfinding';
 import type { HordeManager } from '@ai/HordeManager';
 import type { TacticalBehaviors, TacticalTarget } from '@ai/TacticalBehaviors';
+import { SteeringBehaviors } from '@ai/SteeringBehaviors';
 
 /**
  * États possibles d'un zombie
@@ -23,6 +24,9 @@ const PATH_UPDATE_INTERVAL = 500;
 
 /** Intervalle de mise à jour du steering (ms) */
 const STEERING_UPDATE_INTERVAL = 50;
+
+/** Intervalle entre chaque nouvelle destination en IDLE (ms) */
+const IDLE_WANDER_INTERVAL = 2000;
 
 /** Nombre minimum de voisins pour activer le mode groupe */
 const MIN_NEIGHBORS_FOR_GROUP = 2;
@@ -64,6 +68,12 @@ export class ZombieStateMachine {
   /** Indique si le zombie utilise le mode horde */
   private useHordeMode: boolean = false;
 
+  /** Comportements de steering locaux pour le wander */
+  private steeringBehaviors: SteeringBehaviors;
+
+  /** Dernière mise à jour du wander en IDLE */
+  private lastIdleWanderTime: number = 0;
+
   constructor(
     zombie: Zombie,
     detectionRange: number = 400,
@@ -75,6 +85,13 @@ export class ZombieStateMachine {
     this.detectionRange = detectionRange;
     this.attackRange = attackRange;
     this.attackCooldown = attackCooldown;
+
+    // Initialiser les comportements de steering pour le wander
+    // Utiliser une vitesse par défaut si getSpeed() retourne 0
+    const baseSpeed = zombie.movementComponent.getSpeed() || 60;
+    this.steeringBehaviors = new SteeringBehaviors(baseSpeed, 50);
+    this.steeringBehaviors.setWanderParams(50, 80, 0.3);
+    this.steeringBehaviors.resetWanderAngle();
   }
 
   /**
@@ -143,22 +160,84 @@ export class ZombieStateMachine {
   }
 
   /**
-   * Gère l'état IDLE
+   * Gère l'état IDLE - vagabondage et détection du joueur
    */
   private handleIdleState(): void {
-    if (!this.target) return;
+    // Vérifier si le joueur est détecté
+    if (this.target) {
+      const distance = this.getDistanceToTarget();
 
-    const distance = this.getDistanceToTarget();
-
-    // Détecter le joueur
-    if (distance <= this.detectionRange) {
-      // Vérifier si on doit passer en mode groupe
-      if (this.shouldUseGroupChase()) {
-        this.transitionTo(ZombieState.GROUP_CHASE);
-      } else {
-        this.transitionTo(ZombieState.CHASE);
+      if (distance <= this.detectionRange) {
+        // Vérifier si on doit passer en mode groupe
+        if (this.shouldUseGroupChase()) {
+          this.transitionTo(ZombieState.GROUP_CHASE);
+        } else {
+          this.transitionTo(ZombieState.CHASE);
+        }
+        return;
       }
     }
+
+    // Comportement de vagabondage quand pas de cible détectée
+    this.performIdleWander();
+  }
+
+  /**
+   * Effectue le vagabondage en état IDLE
+   * Définit une cible aléatoire à atteindre périodiquement
+   */
+  private performIdleWander(): void {
+    const now = Date.now();
+
+    // Vérifier si on doit choisir une nouvelle destination
+    if (now - this.lastIdleWanderTime < IDLE_WANDER_INTERVAL) {
+      return;
+    }
+
+    // Mettre à jour l'angle de wander
+    this.steeringBehaviors.resetWanderAngle();
+    this.lastIdleWanderTime = now;
+
+    // Générer une direction aléatoire
+    const angle = Math.random() * Math.PI * 2;
+    const wanderDistance = 50 + Math.random() * 100; // 50-150 pixels
+
+    // Calculer la position cible
+    let targetX = this.zombie.x + Math.cos(angle) * wanderDistance;
+    let targetY = this.zombie.y + Math.sin(angle) * wanderDistance;
+
+    // Ajouter la séparation des voisins si on a un HordeManager
+    if (this.hordeManager) {
+      const neighbors = this.hordeManager.getNeighbors(this.zombie);
+      if (neighbors.length > 0) {
+        // S'éloigner du centre des voisins
+        let avgX = 0, avgY = 0;
+        for (const neighbor of neighbors) {
+          avgX += neighbor.x;
+          avgY += neighbor.y;
+        }
+        avgX /= neighbors.length;
+        avgY /= neighbors.length;
+
+        // Direction opposée aux voisins
+        const awayX = this.zombie.x - avgX;
+        const awayY = this.zombie.y - avgY;
+        const awayDist = Math.sqrt(awayX * awayX + awayY * awayY);
+
+        if (awayDist > 0) {
+          targetX += (awayX / awayDist) * 50;
+          targetY += (awayY / awayDist) * 50;
+        }
+      }
+    }
+
+    // Limiter aux bounds du monde
+    const bounds = this.zombie.scene.physics.world.bounds;
+    targetX = Math.max(bounds.x + 50, Math.min(bounds.width - 50, targetX));
+    targetY = Math.max(bounds.y + 50, Math.min(bounds.height - 50, targetY));
+
+    // Définir la cible pour le MovementComponent
+    this.zombie.movementComponent.setTarget(targetX, targetY);
   }
 
   /**
@@ -498,7 +577,9 @@ export class ZombieStateMachine {
   private onEnterState(state: ZombieState): void {
     switch (state) {
       case ZombieState.IDLE:
-        this.zombie.movementComponent.stop();
+        // Réinitialiser l'angle de wander pour un nouveau comportement aléatoire
+        this.steeringBehaviors.resetWanderAngle();
+        // Ne pas arrêter le mouvement - le zombie va vagabonder
         break;
       case ZombieState.DEAD:
         this.zombie.movementComponent.stop();
@@ -561,8 +642,10 @@ export class ZombieStateMachine {
     this.lastAttackTime = 0;
     this.lastPathTime = 0;
     this.lastSteeringTime = 0;
+    this.lastIdleWanderTime = 0; // Force le vagabondage immédiat
     this.tacticalTarget = null;
     this.steeringForce.set(0, 0);
+    this.steeringBehaviors.resetWanderAngle();
 
     // Nettoyer les assignations tactiques
     if (this.tacticalBehaviors) {

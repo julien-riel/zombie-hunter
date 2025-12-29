@@ -52,6 +52,12 @@ export class SteeringBehaviors {
   private tempVec: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
   private steeringForce: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
 
+  // Variables pour le comportement de wander
+  private wanderAngle: number = 0;
+  private wanderRadius: number = 50;
+  private wanderDistance: number = 80;
+  private wanderJitter: number = 0.5;
+
   constructor(maxSpeed: number = 100, maxForce: number = 50) {
     this.maxSpeed = maxSpeed;
     this.maxForce = maxForce;
@@ -134,6 +140,81 @@ export class SteeringBehaviors {
     }
 
     return this.steeringForce.clone();
+  }
+
+  /**
+   * Comportement WANDER - Vagabondage aléatoire
+   * Crée un mouvement naturel et organique sans destination précise
+   * Utilise un cercle projeté devant l'entité avec un point cible qui se déplace
+   * @param entity L'entité qui vagabonde
+   * @param wanderStrength Force du vagabondage (0-1), affecte la vitesse
+   * @returns Vecteur de force de steering
+   */
+  public wander(entity: SteerableEntity, wanderStrength: number = 0.5): Phaser.Math.Vector2 {
+    // Ajouter du jitter à l'angle de wander
+    this.wanderAngle += (Math.random() - 0.5) * this.wanderJitter * Math.PI * 2;
+
+    // Obtenir la direction actuelle de l'entité
+    const body = entity.body as Phaser.Physics.Arcade.Body | null;
+    let headingX = 1;
+    let headingY = 0;
+
+    if (body && (body.velocity.x !== 0 || body.velocity.y !== 0)) {
+      const speed = Math.sqrt(body.velocity.x * body.velocity.x + body.velocity.y * body.velocity.y);
+      headingX = body.velocity.x / speed;
+      headingY = body.velocity.y / speed;
+    } else {
+      // Si l'entité est immobile, utiliser l'angle de wander comme direction
+      headingX = Math.cos(this.wanderAngle);
+      headingY = Math.sin(this.wanderAngle);
+    }
+
+    // Calculer le centre du cercle de wander (devant l'entité)
+    const circleCenterX = entity.x + headingX * this.wanderDistance;
+    const circleCenterY = entity.y + headingY * this.wanderDistance;
+
+    // Calculer le point cible sur le cercle
+    const targetX = circleCenterX + Math.cos(this.wanderAngle) * this.wanderRadius;
+    const targetY = circleCenterY + Math.sin(this.wanderAngle) * this.wanderRadius;
+
+    // Calculer la force de steering vers le point cible
+    const desired = this.tempVec.set(targetX - entity.x, targetY - entity.y);
+
+    if (desired.length() > 0) {
+      desired.normalize().scale(this.maxSpeed * wanderStrength);
+    }
+
+    const currentVelX = body?.velocity.x ?? 0;
+    const currentVelY = body?.velocity.y ?? 0;
+
+    this.steeringForce.set(desired.x - currentVelX, desired.y - currentVelY);
+
+    // Limiter la force
+    const maxWanderForce = this.maxForce * wanderStrength;
+    if (this.steeringForce.length() > maxWanderForce) {
+      this.steeringForce.normalize().scale(maxWanderForce);
+    }
+
+    return this.steeringForce.clone();
+  }
+
+  /**
+   * Configure les paramètres de wander
+   * @param radius Rayon du cercle de wander
+   * @param distance Distance du cercle devant l'entité
+   * @param jitter Quantité de variation aléatoire (0-1)
+   */
+  public setWanderParams(radius: number, distance: number, jitter: number): void {
+    this.wanderRadius = radius;
+    this.wanderDistance = distance;
+    this.wanderJitter = jitter;
+  }
+
+  /**
+   * Réinitialise l'angle de wander (utile quand une entité change d'état)
+   */
+  public resetWanderAngle(): void {
+    this.wanderAngle = Math.random() * Math.PI * 2;
   }
 
   /**

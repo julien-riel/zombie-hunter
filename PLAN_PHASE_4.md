@@ -379,6 +379,7 @@ class SteeringBehaviors {
 - [x] Implémenter `arrive()` - ralentir à l'approche
 - [x] Implémenter `flee()` - pour Necromancer/Spitter
 - [x] Implémenter `seek()` - se diriger vers une cible
+- [x] Implémenter `wander()` - vagabondage aléatoire naturel
 - [x] Méthode `flock()` pour combiner les trois comportements de flocking
 - [x] Méthode `calculateCombinedForce()` pour pondérer tous les comportements
 
@@ -419,6 +420,8 @@ class HordeManager {
 - [x] Évitement de collision entre zombies (via separation force)
 - [x] Transitions fluides solo ↔ groupe (basé sur nombre de voisins)
 - [x] Méthode `chaseWithHordeBehavior()` pour combiner pathfinding et steering
+- [x] État IDLE avec vagabondage (`wander`) pour éviter les chevauchements au spawn
+- [x] Séparation automatique en IDLE pour disperser les zombies
 
 #### 4.4.5 Optimisations ✅
 - [x] Spatial hashing pour requêtes de voisinage (grille cellSize=64)
@@ -431,10 +434,11 @@ class HordeManager {
 Zombies coordonnés avec comportements de horde réalistes.
 
 **Implémenté le 29/12/2025** - Système d'IA de horde complet :
-- SteeringBehaviors : 6 comportements (seek, flee, arrive, separation, alignment, cohesion)
+- SteeringBehaviors : 7 comportements (seek, flee, arrive, separation, alignment, cohesion, wander)
 - HordeManager : spatial hashing avec grille 64px, cache de voisins, throttling
 - TacticalBehaviors : 5 rôles tactiques, encerclement par slots d'angle, flanking
 - ZombieStateMachine : état GROUP_CHASE avec transition automatique basée sur voisinage
+- État IDLE : vagabondage naturel avec séparation pour éviter les chevauchements au spawn
 - Optimisations : LOD comportemental, mise à jour throttlée, priorité écran
 
 ---
@@ -585,6 +589,7 @@ MODIFIÉ:
 - [x] Zombies ne se chevauchent pas (separation behavior avec force pondérée à 2.0)
 - [x] Zombies encerclent le joueur (TacticalRole.ENCIRCLE avec slots d'angle 45°)
 - [x] Performance stable avec 50+ zombies (spatial hashing + throttling 25 updates/frame)
+- [x] Zombies vagabondent en IDLE (wander + separation évite chevauchement au spawn)
 
 ---
 
