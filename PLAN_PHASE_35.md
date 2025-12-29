@@ -285,57 +285,49 @@ Le Crawler valide un concept clé du GDD : les ennemis au sol dans les angles mo
 
 ### 3.5.4 Tests Unitaires Systèmes Critiques
 
-**Priorité : Moyenne**
+**Priorité : Moyenne** ✅ TERMINÉ
 
 Les systèmes de vagues et de combat sont critiques. Des régressions ici casseraient le core loop.
 
-**Fichiers à créer dans `tests/unit/` :**
+**Fichiers créés dans `tests/unit/` :**
 
-**`tests/unit/WaveSystem.test.ts`**
-```typescript
-describe('WaveSystem', () => {
-  describe('generateNextWave', () => {
-    it('should increase zombie count each wave');
-    it('should cap zombie count at maxZombiesPerWave');
-    it('should add doors every N waves');
-    it('should cap doors at maxDoors');
-    it('should introduce new zombie types at correct waves');
-  });
+**`tests/unit/WaveSystem.test.ts`** (25 tests)
+- Tests de génération de configuration de vague (zombie count, doors)
+- Tests de progression des types de zombies (unlocks par vague)
+- Tests de distribution des spawns selon les poids
+- Tests de scénarios de progression (early/mid/late game)
 
-  describe('state transitions', () => {
-    it('should transition IDLE -> PREPARING -> ACTIVE');
-    it('should transition ACTIVE -> CLEARING when all zombies dead');
-    it('should transition CLEARING -> IDLE after delay');
-  });
-});
-```
+**`tests/unit/PoolManager.test.ts`** (24 tests)
+- Tests de registration et création de pools
+- Tests de récupération et réutilisation de zombies
+- Tests de limites de pool (maxPoolSize)
+- Tests de comptage et release de zombies
+- Tests de performance (cycles rapides get/release)
 
-**`tests/unit/PoolManager.test.ts`**
-```typescript
-describe('PoolManager', () => {
-  it('should return inactive zombie from pool');
-  it('should create new zombie if pool empty');
-  it('should not exceed max pool size');
-  it('should properly reset zombie state on reuse');
-});
-```
+**`tests/unit/Pathfinder.test.ts`** (37 tests)
+- Tests d'initialisation et configuration
+- Tests de buildGrid avec obstacles multiples
+- Tests de invalidateArea (destruction d'obstacles)
+- Tests de conversion coordonnées (world/grid)
+- Tests de pathfinding basique et contournement d'obstacles
+- Tests de fallback et cas limites
+- Tests de performance
 
-**`tests/unit/Pathfinder.test.ts`**
-```typescript
-describe('Pathfinder', () => {
-  it('should find direct path with no obstacles');
-  it('should find path around single obstacle');
-  it('should return empty array if no path exists');
-  it('should invalidate cache when obstacle destroyed');
-});
-```
+**Scripts npm ajoutés :**
+- `test:unit` : Exécute les tests unitaires
+- `test:unit:watch` : Mode watch pour développement
+- `test:unit:coverage` : Tests avec rapport de couverture
+
+**Résultats de couverture :**
+- `pathfinding.ts` : 98.75% statements, 99.3% lines
+- Total : **97.63% statements, 93.33% branches** (objectif 80% atteint)
 
 **Actions :**
-- [ ] Créer `tests/unit/WaveSystem.test.ts`
-- [ ] Créer `tests/unit/PoolManager.test.ts`
-- [ ] Créer `tests/unit/Pathfinder.test.ts` (après 3.5.2)
-- [ ] Configurer script npm `test:unit` dans package.json
-- [ ] Atteindre 80% coverage sur ces 3 fichiers
+- [x] Créer `tests/unit/WaveSystem.test.ts`
+- [x] Créer `tests/unit/PoolManager.test.ts`
+- [x] Créer `tests/unit/Pathfinder.test.ts`
+- [x] Configurer script npm `test:unit` dans package.json
+- [x] Atteindre 80% coverage sur ces 3 fichiers
 
 ---
 
@@ -358,7 +350,7 @@ Nettoyage de code pour faciliter la Phase 4.
 - [x] Fichier `balance.ts` créé et utilisé par tous les systèmes
 - [x] Pathfinding A* fonctionnel — zombies contournent les piliers
 - [x] Crawler implémenté et intégré aux vagues
-- [ ] Tests unitaires passent avec coverage > 80% sur systèmes ciblés
+- [x] Tests unitaires passent avec coverage > 80% sur systèmes ciblés (86 tests, 97.63% coverage)
 - [ ] Aucune régression sur le gameplay existant
 
 ---
@@ -370,7 +362,7 @@ Nettoyage de code pour faciliter la Phase 4.
 | 3.5.1 Balance | Faible | 8 fichiers (migration) | ✅ Terminé |
 | 3.5.2 Pathfinding | Haute | 5 fichiers (nouveau + intégration) | ✅ Terminé |
 | 3.5.3 Crawler | Moyenne | 4 fichiers (Crawler.ts, Player.ts, ZombieFactory.ts, index.ts) | ✅ Terminé |
-| 3.5.4 Tests | Moyenne | 3 fichiers nouveaux | ⏳ En attente |
+| 3.5.4 Tests | Moyenne | 3 fichiers nouveaux (86 tests, 97.63% coverage) | ✅ Terminé |
 | 3.5.5 Refactoring | Faible | Plusieurs fichiers | ⏳ En attente |
 
 ---
@@ -382,7 +374,7 @@ Nettoyage de code pour faciliter la Phase 4.
 1. ~~**balance.ts** — Fondation pour tout le reste~~ ✅
 2. ~~**Pathfinding** — Bloquant pour le gameplay tactique~~ ✅
 3. ~~**Crawler** — Validation design + nouveau contenu~~ ✅
-4. **Tests** — Peuvent être écrits en parallèle
+4. ~~**Tests** — Peuvent être écrits en parallèle~~ ✅
 5. **Refactoring** — À faire en continu
 
 ### Points d'Attention
