@@ -65,33 +65,33 @@ Introduire les premiers ennemis avec IA simple et le système de combat.
 ### Tâches
 
 #### 2.1 Système d'Entités
-- [ ] Créer la classe de base `Entity`
-- [ ] Implémenter `HealthComponent`
-- [ ] Implémenter `MovementComponent`
-- [ ] Créer le `PoolManager` pour les zombies
+- [x] Créer la classe de base `Entity`
+- [x] Implémenter `HealthComponent`
+- [x] Implémenter `MovementComponent`
+- [x] Créer le `PoolManager` pour les zombies
 
 #### 2.2 Zombies Basiques
-- [ ] Créer la classe de base `Zombie`
-- [ ] Implémenter `Shambler` (lent, direct)
-- [ ] Implémenter `Runner` (rapide, charge)
-- [ ] Créer `ZombieFactory`
+- [x] Créer la classe de base `Zombie`
+- [x] Implémenter `Shambler` (lent, direct)
+- [x] Implémenter `Runner` (rapide, charge)
+- [x] Créer `ZombieFactory`
 
 #### 2.3 IA Simple
-- [ ] Créer `ZombieStateMachine`
-- [ ] Implémenter états : Idle, Chase, Attack
-- [ ] Pathfinding basique (ligne droite + contournement obstacles)
+- [x] Créer `ZombieStateMachine`
+- [x] Implémenter états : Idle, Chase, Attack
+- [x] Pathfinding basique (ligne droite + contournement obstacles)
 
 #### 2.4 Combat
-- [ ] Créer `CombatSystem`
-- [ ] Implémenter dégâts projectiles → zombies
-- [ ] Implémenter dégâts zombies → joueur
-- [ ] Ajouter feedback visuel (flash de dégâts)
-- [ ] Implémenter la mort des zombies (animation + suppression)
+- [x] Créer `CombatSystem`
+- [x] Implémenter dégâts projectiles → zombies
+- [x] Implémenter dégâts zombies → joueur
+- [x] Ajouter feedback visuel (flash de dégâts)
+- [x] Implémenter la mort des zombies (animation + suppression)
 
 #### 2.5 Spawning Manuel
-- [ ] Créer des points de spawn de test
-- [ ] Spawner des zombies à intervalles réguliers
-- [ ] Tester les combats basiques
+- [x] Créer des points de spawn de test
+- [x] Spawner des zombies à intervalles réguliers
+- [x] Tester les combats basiques
 
 ### Livrable
 Le joueur peut tirer et tuer des zombies qui le poursuivent et l'attaquent.

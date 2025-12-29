@@ -12,6 +12,8 @@ export class HUDScene extends Phaser.Scene {
   private ammoText!: Phaser.GameObjects.Text;
   private healthBar!: Phaser.GameObjects.Rectangle;
   private healthBarBg!: Phaser.GameObjects.Rectangle;
+  private scoreText!: Phaser.GameObjects.Text;
+  private killsText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: SCENE_KEYS.HUD });
@@ -30,7 +32,11 @@ export class HUDScene extends Phaser.Scene {
   create(): void {
     this.createHealthBar();
     this.createAmmoCounter();
+    this.createScoreDisplay();
     this.createControls();
+
+    // Écouter les événements de score
+    this.gameScene.events.on('scoreUpdate', this.onScoreUpdate, this);
   }
 
   /**
@@ -81,6 +87,22 @@ export class HUDScene extends Phaser.Scene {
   }
 
   /**
+   * Crée l'affichage du score et des kills
+   */
+  private createScoreDisplay(): void {
+    this.scoreText = this.add.text(20, 80, 'Score: 0', {
+      fontSize: '20px',
+      color: '#ffff00',
+      fontStyle: 'bold',
+    });
+
+    this.killsText = this.add.text(20, 105, 'Kills: 0', {
+      fontSize: '16px',
+      color: '#ff6666',
+    });
+  }
+
+  /**
    * Crée l'affichage des contrôles
    */
   private createControls(): void {
@@ -99,6 +121,14 @@ export class HUDScene extends Phaser.Scene {
         align: 'right',
       })
       .setOrigin(1, 0);
+  }
+
+  /**
+   * Gère la mise à jour du score
+   */
+  private onScoreUpdate(score: number, kills: number): void {
+    this.scoreText.setText(`Score: ${score}`);
+    this.killsText.setText(`Kills: ${kills}`);
   }
 
   /**
