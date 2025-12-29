@@ -3,6 +3,7 @@ import type { ZombieType } from '@/types/entities';
 import type { Zombie } from './Zombie';
 import { Shambler } from './Shambler';
 import { Runner } from './Runner';
+import { Crawler } from './Crawler';
 import { PoolManager } from '@managers/PoolManager';
 
 /**
@@ -16,6 +17,7 @@ type ZombieConstructor = new (scene: GameScene, x: number, y: number) => Zombie;
 const ZOMBIE_CLASSES: Partial<Record<ZombieType, ZombieConstructor>> = {
   shambler: Shambler,
   runner: Runner,
+  crawler: Crawler,
 };
 
 /**
@@ -69,6 +71,13 @@ export class ZombieFactory {
    */
   public createRunner(x: number, y: number): Runner | null {
     return this.create('runner', x, y) as Runner | null;
+  }
+
+  /**
+   * Crée un Crawler
+   */
+  public createCrawler(x: number, y: number): Crawler | null {
+    return this.create('crawler', x, y) as Crawler | null;
   }
 
   /**

@@ -27,6 +27,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private canDash: boolean = true;
   private dashDirection: Phaser.Math.Vector2 = new Phaser.Math.Vector2();
 
+  /** Indique si le joueur est étourdi (stun) */
+  private isStunned: boolean = false;
+
   constructor(scene: GameScene, x: number, y: number) {
     super(scene, x, y, ASSET_KEYS.PLAYER);
     this.maxHealth = BALANCE.player.maxHealth;
@@ -68,6 +71,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    */
   update(_time: number, _delta: number): void {
     if (!this.active) return;
+
+    // Si étourdi, arrêter le mouvement et ignorer les inputs
+    if (this.isStunned) {
+      this.setVelocity(0, 0);
+      return;
+    }
 
     this.handleMovement();
     this.handleRotation();
@@ -242,5 +251,35 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setActive(false);
     this.setVisible(false);
     // TODO: Déclencher l'écran de game over
+  }
+
+  /**
+   * Applique un effet de stun au joueur
+   * Désactive les inputs pendant la durée spécifiée
+   * @param duration Durée du stun en millisecondes
+   */
+  public applyStun(duration: number): void {
+    if (this.isStunned) return;
+
+    this.isStunned = true;
+
+    // Arrêter le mouvement immédiatement
+    this.setVelocity(0, 0);
+
+    // Effet visuel de stun (teinte jaune/or)
+    this.setTint(0xffcc00);
+
+    // Fin du stun après la durée
+    this.scene.time.delayedCall(duration, () => {
+      this.isStunned = false;
+      this.clearTint();
+    });
+  }
+
+  /**
+   * Vérifie si le joueur est actuellement étourdi
+   */
+  public getIsStunned(): boolean {
+    return this.isStunned;
   }
 }

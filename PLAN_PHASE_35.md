@@ -245,31 +245,41 @@ class Pathfinder {
 
 ### 3.5.3 Zombie Crawler (Validation Concept Angle Mort)
 
-**Priorité : Moyenne**
+**Priorité : Moyenne** ✅ TERMINÉ
 
 Le Crawler valide un concept clé du GDD : les ennemis au sol dans les angles morts. Important à tester avant d'ajouter les 7 autres types.
 
-**Fichier à créer : `src/entities/zombies/Crawler.ts`**
+**Fichier créé : `src/entities/zombies/Crawler.ts`**
 
 **Spécifications (depuis GDD) :**
 - Rampe au sol, difficile à repérer
 - Surgit des angles morts
 - Attaque surprise : dégâts + effet de sursaut (désorientation brève)
 
-**Implémentation :**
-- Sprite plus petit (24x24 vs 32x32)
-- Hitbox réduite en hauteur
-- État HIDDEN avant détection (sprite semi-transparent)
-- Attaque applique un debuff "stun" de 300ms au joueur
+**Implémentation réalisée :**
+- Sprite placeholder 24x16 (déjà généré dans PreloadScene)
+- Hitbox réduite en hauteur (24x16 avec offset)
+- État HIDDEN avant détection (alpha 0.3)
+- Animation de révélation fade-in (300ms)
+- Effet stun ajouté au Player (désactive inputs, teinte jaune)
+- Intégré au ZombieFactory avec méthode `createCrawler()`
+- Apparition automatique vague 6+ (déjà configuré dans balance.ts)
+
+**Comportement du Crawler :**
+1. Spawn en mode HIDDEN (semi-transparent, alpha 0.3)
+2. Reste invisible jusqu'à détection du joueur (detectionRange: 250)
+3. Se révèle avec effet de fade-in + flash jaune
+4. Passe en mode CHASE après révélation (utilise state machine standard)
+5. Attaque applique stun au joueur (300ms, teinte jaune, inputs désactivés)
 
 **Actions :**
-- [ ] Créer `src/entities/zombies/Crawler.ts`
-- [ ] Ajouter sprite placeholder (rectangle vert foncé 24x24)
-- [ ] Implémenter état HIDDEN avec transition vers CHASE
-- [ ] Ajouter effet visuel de révélation (fade in)
-- [ ] Implémenter effet "stun" sur le joueur (désactive input 300ms)
-- [ ] Ajouter à `ZombieFactory` et `ZOMBIE_CONFIGS`
-- [ ] Tester l'intégration dans les vagues (apparition vague 6+)
+- [x] Créer `src/entities/zombies/Crawler.ts`
+- [x] Ajouter sprite placeholder (rectangle vert foncé 24x16) — déjà existant
+- [x] Implémenter état HIDDEN avec transition vers CHASE
+- [x] Ajouter effet visuel de révélation (fade in)
+- [x] Implémenter effet "stun" sur le joueur (désactive input 300ms)
+- [x] Ajouter à `ZombieFactory` et `ZOMBIE_CONFIGS`
+- [x] Tester l'intégration dans les vagues (apparition vague 6+) — config existante
 
 ---
 
@@ -347,7 +357,7 @@ Nettoyage de code pour faciliter la Phase 4.
 
 - [x] Fichier `balance.ts` créé et utilisé par tous les systèmes
 - [x] Pathfinding A* fonctionnel — zombies contournent les piliers
-- [ ] Crawler implémenté et intégré aux vagues
+- [x] Crawler implémenté et intégré aux vagues
 - [ ] Tests unitaires passent avec coverage > 80% sur systèmes ciblés
 - [ ] Aucune régression sur le gameplay existant
 
@@ -359,7 +369,7 @@ Nettoyage de code pour faciliter la Phase 4.
 |-------|------------|-------------------|--------|
 | 3.5.1 Balance | Faible | 8 fichiers (migration) | ✅ Terminé |
 | 3.5.2 Pathfinding | Haute | 5 fichiers (nouveau + intégration) | ✅ Terminé |
-| 3.5.3 Crawler | Moyenne | 4 fichiers | ⏳ En attente |
+| 3.5.3 Crawler | Moyenne | 4 fichiers (Crawler.ts, Player.ts, ZombieFactory.ts, index.ts) | ✅ Terminé |
 | 3.5.4 Tests | Moyenne | 3 fichiers nouveaux | ⏳ En attente |
 | 3.5.5 Refactoring | Faible | Plusieurs fichiers | ⏳ En attente |
 
@@ -371,7 +381,7 @@ Nettoyage de code pour faciliter la Phase 4.
 
 1. ~~**balance.ts** — Fondation pour tout le reste~~ ✅
 2. ~~**Pathfinding** — Bloquant pour le gameplay tactique~~ ✅
-3. **Crawler** — Validation design + nouveau contenu
+3. ~~**Crawler** — Validation design + nouveau contenu~~ ✅
 4. **Tests** — Peuvent être écrits en parallèle
 5. **Refactoring** — À faire en continu
 
