@@ -112,6 +112,21 @@ export abstract class Zombie extends Entity {
   }
 
   /**
+   * Définit le multiplicateur de vitesse (pour les power-ups comme Freeze)
+   * @param multiplier Multiplicateur (0.3 = 30% de la vitesse normale)
+   */
+  public setSpeedMultiplier(multiplier: number): void {
+    this.movementComponent.setSpeedMultiplier(multiplier);
+  }
+
+  /**
+   * Récupère le multiplicateur de vitesse actuel
+   */
+  public getSpeedMultiplier(): number {
+    return this.movementComponent.getSpeedMultiplier();
+  }
+
+  /**
    * Configure le mode horde pour ce zombie
    * @param hordeManager Gestionnaire de horde
    * @param tacticalBehaviors Comportements tactiques

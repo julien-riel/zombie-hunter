@@ -4,6 +4,7 @@ import type { GameScene } from './GameScene';
 import type { WaveConfig } from '@systems/WaveSystem';
 import type { Weapon } from '@weapons/Weapon';
 import { ComboMeter } from '@ui/ComboMeter';
+import { PowerUpDisplay } from '@ui/PowerUpDisplay';
 import type { GameEventPayloads } from '@/types/events';
 
 /**
@@ -36,6 +37,9 @@ export class HUDScene extends Phaser.Scene {
   // Compteur de combo (Phase 6.1)
   private comboMeter!: ComboMeter;
 
+  // Affichage des power-ups actifs (Phase 6.3)
+  private powerUpDisplay!: PowerUpDisplay;
+
   constructor() {
     super({ key: SCENE_KEYS.HUD });
   }
@@ -59,6 +63,7 @@ export class HUDScene extends Phaser.Scene {
     this.createControls();
     this.createWeaponInventory();
     this.createComboMeter();
+    this.createPowerUpDisplay();
 
     // Écouter les événements de score
     this.gameScene.events.on('scoreUpdate', this.onScoreUpdate, this);
@@ -77,6 +82,10 @@ export class HUDScene extends Phaser.Scene {
     this.gameScene.events.on('combo:increase', this.onComboIncrease, this);
     this.gameScene.events.on('combo:break', this.onComboBreak, this);
     this.gameScene.events.on('combo:milestone', this.onComboMilestone, this);
+
+    // Écouter les événements de power-up (Phase 6.3)
+    this.gameScene.events.on('powerup:activate', this.onPowerUpActivate, this);
+    this.gameScene.events.on('powerup:expire', this.onPowerUpExpire, this);
   }
 
   /**
@@ -87,6 +96,7 @@ export class HUDScene extends Phaser.Scene {
       this.updateHealthBar();
       this.updateAmmoCounter();
       this.updateComboMeter();
+      this.updatePowerUpDisplay();
     }
   }
 
@@ -530,6 +540,46 @@ export class HUDScene extends Phaser.Scene {
   }
 
   /**
+   * Crée l'affichage des power-ups actifs (Phase 6.3)
+   */
+  private createPowerUpDisplay(): void {
+    this.powerUpDisplay = new PowerUpDisplay(this, {
+      x: 20,
+      y: 140,
+      width: 150,
+      height: 120,
+      maxDisplayed: 4,
+    });
+    this.powerUpDisplay.setDepth(100);
+  }
+
+  /**
+   * Met à jour l'affichage des power-ups actifs
+   */
+  private updatePowerUpDisplay(): void {
+    const powerUpSystem = this.gameScene.getPowerUpSystem();
+    if (powerUpSystem) {
+      const activePowerUps = powerUpSystem.getActivePowerUps();
+      this.powerUpDisplay.update(activePowerUps);
+    }
+  }
+
+  /**
+   * Gère l'activation d'un power-up
+   */
+  private onPowerUpActivate(payload: GameEventPayloads['powerup:activate']): void {
+    // Animer l'apparition du power-up dans le HUD
+    this.powerUpDisplay.animateNewPowerUp(payload.powerupType);
+  }
+
+  /**
+   * Gère l'expiration d'un power-up
+   */
+  private onPowerUpExpire(_payload: GameEventPayloads['powerup:expire']): void {
+    // L'affichage sera mis à jour automatiquement via updatePowerUpDisplay
+  }
+
+  /**
    * Nettoyage lors de la destruction de la scène
    */
   shutdown(): void {
@@ -546,5 +596,9 @@ export class HUDScene extends Phaser.Scene {
     this.gameScene.events.off('combo:increase', this.onComboIncrease, this);
     this.gameScene.events.off('combo:break', this.onComboBreak, this);
     this.gameScene.events.off('combo:milestone', this.onComboMilestone, this);
+
+    // Retirer les listeners de power-up (Phase 6.3)
+    this.gameScene.events.off('powerup:activate', this.onPowerUpActivate, this);
+    this.gameScene.events.off('powerup:expire', this.onPowerUpExpire, this);
   }
 }

@@ -41,7 +41,10 @@ export interface DebugControlCallbacks {
  * - X: Spawn horde mixte
  * - C: Spawn un de chaque type
  * - H: Spawn HealthDrop
- * - A: Spawn AmmoDrop
+ * - Q: Spawn AmmoDrop
+ * - P: Activer le power-up sélectionné
+ * - O: Cycler entre les power-ups
+ * - L: Spawn PowerUpDrop
  */
 export class DebugControls {
   private scene: Phaser.Scene;
@@ -98,6 +101,10 @@ export class DebugControls {
       H: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.H),
       // A est utilisé pour le mouvement, utiliser Q à la place
       Q: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
+      // Power-up controls
+      P: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P),
+      O: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.O),
+      L: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L),
     };
 
     // Touches numériques 1-0 pour sélectionner le type de zombie
@@ -231,6 +238,24 @@ export class DebugControls {
     if (Phaser.Input.Keyboard.JustDown(this.keys.Q)) {
       const player = this.gameScene.getPlayer();
       this.spawner.spawnItem('ammo', player.x, player.y);
+    }
+
+    // P: Activate selected power-up directly
+    if (Phaser.Input.Keyboard.JustDown(this.keys.P)) {
+      this.spawner.activateSelectedPowerUp();
+      console.log(`[Debug] Activated power-up: ${this.spawner.getSelectedPowerUpType()}`);
+    }
+
+    // O: Cycle through power-ups
+    if (Phaser.Input.Keyboard.JustDown(this.keys.O)) {
+      const newType = this.spawner.cyclePowerUp(1);
+      console.log(`[Debug] Selected power-up: ${newType}`);
+    }
+
+    // L: Spawn power-up drop at player position
+    if (Phaser.Input.Keyboard.JustDown(this.keys.L)) {
+      this.spawner.spawnPowerUpDrop();
+      console.log(`[Debug] Spawned power-up drop`);
     }
 
     // Number keys 1-0: Select zombie type

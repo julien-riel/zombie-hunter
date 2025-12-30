@@ -337,6 +337,47 @@ export const BALANCE = {
     },
   },
 
+  powerUps: {
+    // Configuration des power-ups
+    rage: {
+      duration: 10000, // 10 secondes
+      damageMultiplier: 2, // x2 dégâts
+      rarity: 'common' as const,
+      weight: 0.25, // Probabilité relative
+      color: 0xff4444, // Rouge
+    },
+    freeze: {
+      duration: 8000, // 8 secondes
+      slowFactor: 0.3, // 70% de ralentissement (vitesse = 30%)
+      bossSlowFactor: 0.7, // Seulement 30% de ralentissement pour les boss
+      rarity: 'common' as const,
+      weight: 0.25,
+      color: 0x44aaff, // Bleu
+    },
+    ghost: {
+      duration: 5000, // 5 secondes
+      rarity: 'rare' as const,
+      weight: 0.15,
+      color: 0xaaaaff, // Bleu clair/violet
+    },
+    magnet: {
+      duration: 12000, // 12 secondes
+      magnetRadius: 300, // Rayon d'attraction élargi
+      magnetSpeed: 400, // Vitesse d'attraction augmentée
+      rarity: 'common' as const,
+      weight: 0.25,
+      color: 0xffaa00, // Orange
+    },
+    nuke: {
+      duration: 0, // Instantané
+      bossDamagePercent: 0.5, // 50% de dégâts aux boss
+      minWaveToSpawn: 3, // Ne peut pas drop avant la vague 3
+      rarity: 'legendary' as const,
+      weight: 0.05,
+      color: 0xffff00, // Jaune
+    },
+  },
+
   covers: {
     pillar: {
       health: Infinity,

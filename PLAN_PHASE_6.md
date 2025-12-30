@@ -170,7 +170,7 @@ class DropSystem {
 
 ---
 
-## 6.3 Power-ups
+## 6.3 Power-ups ✅ COMPLÉTÉ
 
 ### Objectif
 Offrir des moments de puissance temporaire qui changent la dynamique de jeu.
@@ -246,6 +246,24 @@ abstract class PowerUp {
 - `PowerUpSystem` → gère l'état actif et les timers
 - `HUDScene` → affiche les power-ups actifs avec timer
 - `StatusEffectComponent` → applique les effets aux entités
+
+### Implémentation réalisée (2024-12-30)
+- ✅ `src/config/balance.ts` - Configuration des power-ups ajoutée (durées, raretés, couleurs, effets)
+- ✅ `src/items/powerups/PowerUp.ts` - Classe abstraite de base avec activation, désactivation et update
+- ✅ `src/items/powerups/RagePowerUp.ts` - Multiplicateur de dégâts x2 avec aura rouge
+- ✅ `src/items/powerups/FreezePowerUp.ts` - Ralentissement zombies 70% (30% pour boss) avec overlay bleu
+- ✅ `src/items/powerups/GhostPowerUp.ts` - Intangibilité avec effet semi-transparent
+- ✅ `src/items/powerups/MagnetPowerUp.ts` - Rayon de collecte augmenté à 300px avec aura orange
+- ✅ `src/items/powerups/NukePowerUp.ts` - Tue tous les zombies avec effet flash/onde de choc
+- ✅ `src/systems/PowerUpSystem.ts` - Gestion centralisée des power-ups actifs
+- ✅ `src/items/drops/PowerUpDrop.ts` - Mise à jour pour utiliser le vrai système
+- ✅ `src/ui/PowerUpDisplay.ts` - Affichage HUD des power-ups actifs avec timers
+- ✅ `src/components/MovementComponent.ts` - Ajout de setSpeedMultiplier pour Freeze
+- ✅ `src/entities/zombies/Zombie.ts` - Ajout de setSpeedMultiplier
+- ✅ `src/debug/DebugSpawner.ts` - Ajout des méthodes de spawn power-up
+- ✅ `src/debug/DebugControls.ts` - Raccourcis clavier: P (activer), O (cycler), L (spawn drop)
+- ✅ Intégration dans `GameScene` et `HUDScene`
+- ✅ Exports dans `src/systems/index.ts` et `src/items/index.ts`
 
 ---
 

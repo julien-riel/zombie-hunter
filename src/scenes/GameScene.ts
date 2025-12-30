@@ -17,6 +17,7 @@ import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
 import { ComboSystem } from '@systems/ComboSystem';
 import { DropSystem } from '@systems/DropSystem';
+import { PowerUpSystem } from '@systems/PowerUpSystem';
 import { SpawnSystem } from '@systems/SpawnSystem';
 import { WaveSystem } from '@systems/WaveSystem';
 import { DDASystem } from '@systems/DDASystem';
@@ -45,6 +46,7 @@ export class GameScene extends Phaser.Scene {
   private combatSystem!: CombatSystem;
   private comboSystem!: ComboSystem;
   private dropSystem!: DropSystem;
+  private powerUpSystem!: PowerUpSystem;
   private spawnSystem!: SpawnSystem;
   private waveSystem!: WaveSystem;
   private pathfinder!: Pathfinder;
@@ -147,6 +149,9 @@ export class GameScene extends Phaser.Scene {
 
     // Système de drops (Phase 6.2)
     this.dropSystem = new DropSystem(this, this.player, this.comboSystem);
+
+    // Système de power-ups (Phase 6.3)
+    this.powerUpSystem = new PowerUpSystem(this, this.player);
 
     // Enregistrer les groupes de zombies dans le système de combat
     for (const group of this.poolManager.getAllZombieGroups()) {
@@ -302,6 +307,9 @@ export class GameScene extends Phaser.Scene {
 
     // Mettre à jour le système de drops (Phase 6.2)
     this.dropSystem.update();
+
+    // Mettre à jour le système de power-ups (Phase 6.3)
+    this.powerUpSystem.update(delta);
 
     // Mettre à jour le système DDA (Phase 3.6)
     this.ddaSystem.update(delta);
@@ -513,6 +521,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le système de power-ups (Phase 6.3)
+   */
+  public getPowerUpSystem(): PowerUpSystem {
+    return this.powerUpSystem;
+  }
+
+  /**
    * Récupère le système de spawn
    */
   public getSpawnSystem(): SpawnSystem {
@@ -721,6 +736,7 @@ export class GameScene extends Phaser.Scene {
     this.combatSystem?.destroy();
     this.comboSystem?.destroy();
     this.dropSystem?.destroy();
+    this.powerUpSystem?.destroy();
     this.poolManager?.destroy();
     this.ddaSystem?.reset();
     this.acidSpitPool?.destroy();

@@ -144,14 +144,18 @@ export abstract class Drop extends Phaser.Physics.Arcade.Sprite {
     // Calculer la distance au joueur
     const distance = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
 
+    // Obtenir les paramètres magnétiques (peuvent être modifiés par le power-up Magnet)
+    const powerUpSystem = this.gameScene.getPowerUpSystem?.();
+    const magnetRadius = powerUpSystem?.getMagnetRadius() ?? this.dropConfig.magnetRadius;
+    const magnetSpeed = powerUpSystem?.getMagnetSpeed() ?? this.dropConfig.magnetSpeed;
+
     // Effet magnétique si le joueur est assez proche
-    if (distance <= this.dropConfig.magnetRadius && distance > this.dropConfig.collectionRadius) {
+    if (distance <= magnetRadius && distance > this.dropConfig.collectionRadius) {
       const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
-      const speed = this.dropConfig.magnetSpeed;
 
       (this.body as Phaser.Physics.Arcade.Body).setVelocity(
-        Math.cos(angle) * speed,
-        Math.sin(angle) * speed
+        Math.cos(angle) * magnetSpeed,
+        Math.sin(angle) * magnetSpeed
       );
     }
   }

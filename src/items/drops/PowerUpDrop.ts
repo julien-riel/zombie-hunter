@@ -1,45 +1,46 @@
 import { Drop } from './Drop';
 import type { GameScene } from '@scenes/GameScene';
 import type { Player } from '@entities/Player';
+import type { PowerUpType } from '@items/powerups';
+import { PowerUpSystem } from '@systems/PowerUpSystem';
+import { BALANCE } from '@config/balance';
 
 /**
- * Couleur du drop de power-up (violet)
- */
-const POWERUP_COLOR = 0x9932cc;
-
-/**
- * Types de power-ups disponibles
- * Sera étendu dans la Phase 6.3
- */
-export type PowerUpType = 'rage' | 'freeze' | 'ghost' | 'magnet' | 'nuke';
-
-/**
- * Drop de power-up (placeholder pour Phase 6.3)
+ * Drop de power-up
  *
- * Ce drop contiendra un power-up aléatoire qui sera activé
- * quand le joueur le collecte.
+ * Quand le joueur collecte ce drop, il active un power-up aléatoire.
+ * La couleur du drop correspond au type de power-up qu'il contient.
  *
- * Power-ups prévus:
- * - Rage (10s): Dégâts x2
- * - Freeze (8s): Ennemis ralentis 70%
- * - Ghost (5s): Intangibilité
- * - Magnet (12s): Attire tous les drops
- * - Nuke (instant): Tue tous les ennemis à l'écran
+ * Power-ups:
+ * - Rage (10s): Dégâts x2 (rouge)
+ * - Freeze (8s): Ennemis ralentis 70% (bleu)
+ * - Ghost (5s): Intangibilité (violet clair)
+ * - Magnet (12s): Attire tous les drops (orange)
+ * - Nuke (instant): Tue tous les ennemis à l'écran (jaune)
  */
 export class PowerUpDrop extends Drop {
   private powerUpType: PowerUpType;
+  private pulseAnim: Phaser.Tweens.Tween | null = null;
 
   constructor(scene: GameScene, x: number, y: number, powerUpType?: PowerUpType) {
-    super(scene, x, y, 'powerUp', POWERUP_COLOR);
+    // Obtenir la vague actuelle pour la sélection de power-up
+    const currentWave = scene.getWaveSystem?.()?.getCurrentWave() ?? 1;
 
-    // Pour l'instant, type aléatoire si non spécifié
-    this.powerUpType = powerUpType || this.selectRandomPowerUp();
+    // Sélectionner le type de power-up
+    const selectedType = powerUpType || PowerUpSystem.selectRandomPowerUpType(currentWave);
+
+    // Obtenir la couleur associée au type
+    const color = BALANCE.powerUps[selectedType].color;
+
+    super(scene, x, y, 'powerUp', color);
+
+    this.powerUpType = selectedType;
 
     // Les drops de power-up sont légèrement plus grands et brillants
     this.setDisplaySize(20, 20);
 
     // Effet de pulsation pour indiquer que c'est un power-up
-    this.scene.tweens.add({
+    this.pulseAnim = this.scene.tweens.add({
       targets: this,
       scale: { from: 1, to: 1.2 },
       duration: 500,
@@ -50,70 +51,27 @@ export class PowerUpDrop extends Drop {
   }
 
   /**
-   * Sélectionne un power-up aléatoire
-   * TODO: Implémenter les probabilités par rareté dans Phase 6.3
-   */
-  private selectRandomPowerUp(): PowerUpType {
-    const types: PowerUpType[] = ['rage', 'freeze', 'ghost', 'magnet', 'nuke'];
-    // Pour l'instant, distribution uniforme (sauf nuke qui est rare)
-    const weights = [0.25, 0.25, 0.2, 0.25, 0.05];
-
-    const random = Math.random();
-    let cumulative = 0;
-
-    for (let i = 0; i < types.length; i++) {
-      cumulative += weights[i];
-      if (random < cumulative) {
-        return types[i];
-      }
-    }
-
-    return 'rage';
-  }
-
-  /**
    * Applique l'effet du power-up au joueur
-   * TODO: Implémenter le PowerUpSystem dans Phase 6.3
    */
-  protected applyEffect(player: Player): void {
-    // Placeholder: émettre l'événement de power-up
-    // Le PowerUpSystem (Phase 6.3) écoutera cet événement
+  protected applyEffect(_player: Player): void {
+    // Activer le power-up via le PowerUpSystem
+    const powerUpSystem = this.gameScene.getPowerUpSystem?.();
 
-    this.gameScene.events.emit('powerup:activate', {
-      powerupType: this.powerUpType,
-      duration: this.getPowerUpDuration(),
-    });
-
-    // Log pour debug
-    console.log(`[PowerUpDrop] Power-up ${this.powerUpType} collected! (Implementation pending Phase 6.3)`);
-
-    // Placeholder: Pour l'instant, juste un effet visuel sur le joueur
-    this.showPlaceholderEffect(player);
-  }
-
-  /**
-   * Affiche un effet visuel placeholder
-   */
-  private showPlaceholderEffect(player: Player): void {
-    // Flash de couleur sur le joueur
-    player.setTint(POWERUP_COLOR);
-    this.scene.time.delayedCall(500, () => {
-      player.clearTint();
-    });
+    if (powerUpSystem) {
+      // Émettre l'événement de collecte pour que le PowerUpSystem l'active
+      this.gameScene.events.emit('powerup:collect', {
+        powerupType: this.powerUpType,
+      });
+    } else {
+      console.warn(`[PowerUpDrop] PowerUpSystem not available, power-up ${this.powerUpType} not activated`);
+    }
   }
 
   /**
    * Retourne la durée du power-up en ms
    */
   private getPowerUpDuration(): number {
-    const durations: Record<PowerUpType, number> = {
-      rage: 10000,
-      freeze: 8000,
-      ghost: 5000,
-      magnet: 12000,
-      nuke: 0, // Instant
-    };
-    return durations[this.powerUpType];
+    return BALANCE.powerUps[this.powerUpType].duration;
   }
 
   /**
@@ -129,4 +87,18 @@ export class PowerUpDrop extends Drop {
   public getPowerUpType(): PowerUpType {
     return this.powerUpType;
   }
+
+  /**
+   * Nettoie les ressources
+   */
+  public deactivate(): void {
+    if (this.pulseAnim) {
+      this.pulseAnim.stop();
+      this.pulseAnim = null;
+    }
+    super.deactivate();
+  }
 }
+
+// Re-export PowerUpType for backward compatibility
+export type { PowerUpType } from '@items/powerups';

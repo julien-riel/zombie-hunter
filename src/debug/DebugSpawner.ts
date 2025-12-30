@@ -4,6 +4,7 @@ import type { Zombie } from '@entities/zombies/Zombie';
 import type { ZombieType } from '@/types/entities';
 import { GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import type { DropType } from '@items/drops';
+import type { PowerUpType } from '@items/powerups';
 
 /**
  * Types d'items que le DebugSpawner peut créer
@@ -36,6 +37,17 @@ export const ZOMBIE_TYPES: ZombieType[] = [
 ];
 
 /**
+ * Liste complète des types de power-ups disponibles
+ */
+export const POWERUP_TYPES: PowerUpType[] = [
+  'rage',
+  'freeze',
+  'ghost',
+  'magnet',
+  'nuke',
+];
+
+/**
  * Système de spawn pour le mode debug
  * Permet de créer des zombies et items à la demande
  */
@@ -47,6 +59,10 @@ export class DebugSpawner {
   private selectedZombieType: ZombieType = 'shambler';
   /** Type d'item actuellement sélectionné pour le spawn */
   private selectedItemType: DebugItemType = 'health';
+  /** Type de power-up actuellement sélectionné pour le spawn */
+  private selectedPowerUpType: PowerUpType = 'rage';
+  /** Index du power-up sélectionné */
+  private selectedPowerUpIndex: number = 0;
 
   constructor(gameScene: GameScene) {
     this.gameScene = gameScene;
@@ -279,5 +295,72 @@ export class DebugSpawner {
    */
   public getActiveZombieCount(): number {
     return this.gameScene.getActiveZombies().length;
+  }
+
+  // ==================== POWER-UP METHODS ====================
+
+  /**
+   * Définit le type de power-up à activer
+   */
+  public setSelectedPowerUpType(type: PowerUpType): void {
+    this.selectedPowerUpType = type;
+    this.selectedPowerUpIndex = POWERUP_TYPES.indexOf(type);
+  }
+
+  /**
+   * Récupère le type de power-up sélectionné
+   */
+  public getSelectedPowerUpType(): PowerUpType {
+    return this.selectedPowerUpType;
+  }
+
+  /**
+   * Cycle vers le power-up suivant
+   */
+  public cyclePowerUp(direction: 1 | -1 = 1): PowerUpType {
+    this.selectedPowerUpIndex =
+      (this.selectedPowerUpIndex + direction + POWERUP_TYPES.length) % POWERUP_TYPES.length;
+    this.selectedPowerUpType = POWERUP_TYPES[this.selectedPowerUpIndex];
+    return this.selectedPowerUpType;
+  }
+
+  /**
+   * Active un power-up directement (sans drop)
+   */
+  public activatePowerUp(type: PowerUpType): void {
+    const powerUpSystem = this.gameScene.getPowerUpSystem();
+    if (powerUpSystem) {
+      powerUpSystem.activatePowerUp(type);
+    }
+  }
+
+  /**
+   * Active le power-up sélectionné
+   */
+  public activateSelectedPowerUp(): void {
+    this.activatePowerUp(this.selectedPowerUpType);
+  }
+
+  /**
+   * Spawn un drop de power-up à la position du joueur
+   */
+  public spawnPowerUpDrop(_type?: PowerUpType): void {
+    const player = this.gameScene.getPlayer();
+
+    // Utiliser le système de drops pour spawner
+    this.spawnDrop('powerUp', player.x + 50, player.y);
+
+    // Note: Le type spécifique ne peut pas être contrôlé via le DropSystem actuel
+    // Le drop aura un type aléatoire
+  }
+
+  /**
+   * Désactive tous les power-ups actifs
+   */
+  public deactivateAllPowerUps(): void {
+    const powerUpSystem = this.gameScene.getPowerUpSystem();
+    if (powerUpSystem) {
+      powerUpSystem.deactivateAll();
+    }
   }
 }

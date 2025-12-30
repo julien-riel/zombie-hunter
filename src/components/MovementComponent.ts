@@ -181,6 +181,21 @@ export class MovementComponent {
   }
 
   /**
+   * Définit le multiplicateur de vitesse (pour les power-ups)
+   * Contrairement à applySlow, ceci est permanent jusqu'à ce qu'il soit changé
+   */
+  public setSpeedMultiplier(multiplier: number): void {
+    this.slowMultiplier = multiplier;
+  }
+
+  /**
+   * Récupère le multiplicateur de vitesse actuel
+   */
+  public getSpeedMultiplier(): number {
+    return this.slowMultiplier;
+  }
+
+  /**
    * Applique un boost de vitesse
    */
   public applySpeedBoost(multiplier: number, duration: number): void {
