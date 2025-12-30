@@ -31,6 +31,7 @@ import { TacticalBehaviors } from '@ai/TacticalBehaviors';
 import { FlowFieldManager } from '@ai/FlowFieldManager';
 import type { Zombie } from '@entities/zombies/Zombie';
 import type { MiniZombie } from '@entities/zombies/MiniZombie';
+import { BossFactory } from '@entities/bosses/BossFactory';
 
 /**
  * Scène principale du jeu
@@ -63,6 +64,7 @@ export class GameScene extends Phaser.Scene {
   private hordeManager!: HordeManager;
   private tacticalBehaviors!: TacticalBehaviors;
   private flowFieldManager!: FlowFieldManager;
+  private bossFactory!: BossFactory;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -190,9 +192,13 @@ export class GameScene extends Phaser.Scene {
     this.ddaSystem = new DDASystem();
     this.ddaSystem.setTelemetryManager(this.telemetryManager);
 
+    // Factory pour créer les boss (Phase 7.3)
+    this.bossFactory = new BossFactory(this);
+
     // Système de vagues (avec intégration ThreatSystem et DDA)
     this.waveSystem = new WaveSystem(this);
     this.waveSystem.setDDASystem(this.ddaSystem);
+    this.waveSystem.setBossFactory(this.bossFactory);
 
     // Gestionnaire de horde pour les comportements de groupe (Phase 4.4)
     this.hordeManager = new HordeManager(this, {
@@ -337,6 +343,9 @@ export class GameScene extends Phaser.Scene {
 
     // Mettre à jour le système DDA (Phase 3.6)
     this.ddaSystem.update(delta);
+
+    // Mettre à jour le boss actif (Phase 7.3)
+    this.bossFactory.update(time, delta);
 
     // Mettre à jour la télémétrie avec la santé actuelle du joueur
     this.telemetryManager.updateHealth(
@@ -591,6 +600,13 @@ export class GameScene extends Phaser.Scene {
    */
   public getWaveSystem(): WaveSystem {
     return this.waveSystem;
+  }
+
+  /**
+   * Récupère la factory de boss (Phase 7.3)
+   */
+  public getBossFactory(): BossFactory {
+    return this.bossFactory;
   }
 
   /**

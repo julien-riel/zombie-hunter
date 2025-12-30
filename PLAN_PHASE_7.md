@@ -12,7 +12,7 @@ La Phase 7 introduit la variété de gameplay à travers 6 personnages jouables 
 |-------|--------|-------------|
 | 7.1 | ✅ Complété | Système de personnages (infrastructure) |
 | 7.2 | ✅ Complété | Les 6 personnages |
-| 7.3 | 🔲 À faire | Système de Boss |
+| 7.3 | ✅ Complété | Système de Boss |
 | 7.4 | 🔲 À faire | Événements spéciaux |
 
 ---
@@ -478,16 +478,18 @@ Pour chaque personnage :
 ### Objectif
 Créer des boss mémorables qui ponctuent la progression et modifient l'arène.
 
-### Fichiers à créer
+### Fichiers créés
 
 ```
 src/entities/bosses/
-├── Boss.ts               # Classe de base
-├── BossStateMachine.ts   # IA spécifique boss
-├── BossHealthBar.ts      # UI barre de vie boss
-├── Abomination.ts
-├── PatientZero.ts
-└── ColossusArmored.ts
+├── Boss.ts               # ✅ Classe de base abstraite
+├── BossStateMachine.ts   # ✅ IA avec états (IDLE, CHASE, ATTACK, etc.)
+├── BossHealthBar.ts      # ✅ UI barre de vie avec phases
+├── Abomination.ts        # ✅ Boss 1: charge, parasites, rage
+├── PatientZero.ts        # ✅ Boss 2: esquive, commande horde, téléport
+├── ColossusArmored.ts    # ✅ Boss 3: système d'armure destructible
+├── BossFactory.ts        # ✅ Factory avec spawn auto vague 5/10/15...
+└── index.ts              # ✅ Barrel exports
 ```
 
 ### Interface Boss
@@ -743,14 +745,17 @@ class ColossusArmored extends Boss {
 
 ### Tâches Boss
 
-- [ ] Créer `Boss.ts` classe de base
-- [ ] Créer `BossStateMachine.ts`
-- [ ] Créer `BossHealthBar.ts` (UI spéciale)
-- [ ] Implémenter cinématique d'entrée générique
-- [ ] Implémenter l'Abomination
-- [ ] Implémenter Patient Zéro
-- [ ] Implémenter Colosse Blindé
-- [ ] Intégrer spawn boss toutes les 5 vagues
+- [x] Créer `Boss.ts` classe de base
+- [x] Créer `BossStateMachine.ts`
+- [x] Créer `BossHealthBar.ts` (UI spéciale)
+- [x] Implémenter cinématique d'entrée générique
+- [x] Implémenter l'Abomination
+- [x] Implémenter Patient Zéro
+- [x] Implémenter Colosse Blindé
+- [x] Intégrer spawn boss toutes les 5 vagues
+- [x] Créer `BossFactory.ts`
+- [x] Ajouter configuration boss dans `balance.ts`
+- [x] Ajouter contrôles boss dans `DebugPanel`
 - [ ] Créer sprites placeholders boss
 - [ ] Tester et équilibrer
 

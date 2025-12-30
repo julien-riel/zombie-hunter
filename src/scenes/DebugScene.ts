@@ -4,7 +4,7 @@ import type { GameScene } from './GameScene';
 import { DebugSpawner } from '@debug/DebugSpawner';
 import { DebugControls } from '@debug/DebugControls';
 import { DebugPanel } from '@debug/DebugPanel';
-import type { ZombieType } from '@/types/entities';
+import type { ZombieType, BossType } from '@/types/entities';
 import type { DebugItemType } from '@debug/DebugSpawner';
 import type { DropType } from '@items/drops';
 import type { Door } from '@arena/Door';
@@ -79,6 +79,11 @@ export class DebugScene extends Phaser.Scene {
       onDoorDestroy: (door) => this.onDoorDestroy(door),
       onDoorDamageBarricade: (door, damage) => this.onDoorDamageBarricade(door, damage),
       getDropCount: () => this.gameScene.getDropSystem().getActiveDropCount(),
+      // Boss callbacks (Phase 7.3)
+      onBossSpawn: (type) => this.onBossSpawn(type),
+      onBossKill: () => this.onBossKill(),
+      onBossDamage: (amount) => this.onBossDamage(amount),
+      getActiveBoss: () => this.getActiveBoss(),
     });
 
     // Créer les contrôles clavier
@@ -441,6 +446,74 @@ export class DebugScene extends Phaser.Scene {
     } else {
       console.log(`[Debug] Door ${door.id} has no barricade`);
     }
+  }
+
+  // =========================================================================
+  // BOSS HANDLERS (Phase 7.3)
+  // =========================================================================
+
+  /**
+   * Spawn un boss
+   */
+  private onBossSpawn(type: BossType): void {
+    const bossFactory = this.gameScene.getBossFactory();
+
+    // Si un boss est déjà actif, on ne peut pas en spawner un autre
+    if (bossFactory.hasBoss()) {
+      console.log('[Debug] A boss is already active');
+      return;
+    }
+
+    // Position au centre de l'arène
+    const centerX = this.gameScene.cameras.main.centerX;
+    const centerY = this.gameScene.cameras.main.centerY;
+
+    const boss = bossFactory.create(type, centerX, centerY);
+    if (boss) {
+      console.log(`[Debug] Spawned boss: ${type}`);
+      // Démarrer l'animation d'entrée
+      bossFactory.startBossEntrance();
+    }
+  }
+
+  /**
+   * Tue le boss actif
+   */
+  private onBossKill(): void {
+    const bossFactory = this.gameScene.getBossFactory();
+    if (bossFactory.hasBoss()) {
+      bossFactory.killActiveBoss();
+      console.log('[Debug] Killed active boss');
+    } else {
+      console.log('[Debug] No active boss');
+    }
+  }
+
+  /**
+   * Inflige des dégâts au boss actif
+   */
+  private onBossDamage(amount: number): void {
+    const bossFactory = this.gameScene.getBossFactory();
+    if (bossFactory.hasBoss()) {
+      bossFactory.damageActiveBoss(amount);
+      console.log(`[Debug] Damaged boss for ${amount} HP`);
+    } else {
+      console.log('[Debug] No active boss');
+    }
+  }
+
+  /**
+   * Récupère les infos du boss actif
+   */
+  private getActiveBoss(): { type: BossType; healthPercent: number } | null {
+    const bossFactory = this.gameScene.getBossFactory();
+    const boss = bossFactory.getActiveBoss();
+    if (!boss) return null;
+
+    return {
+      type: boss.bossType,
+      healthPercent: boss.getHealthPercent(),
+    };
   }
 
   /**

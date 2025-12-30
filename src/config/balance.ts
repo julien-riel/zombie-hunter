@@ -18,6 +18,57 @@ export const BALANCE = {
     invulnerabilityDuration: 500,
   },
 
+  bosses: {
+    abomination: {
+      health: 1500,
+      speed: 80,
+      damage: 40,
+      attackCooldown: 2000,
+      detectionRange: 600,
+      attackRange: 60,
+      scoreValue: 500,
+      chargeCooldown: 8000,
+      chargeSpeed: 300,
+      parasiteSpawnChance: 0.3,
+    },
+    patient_zero: {
+      health: 800,
+      speed: 150,
+      damage: 25,
+      attackCooldown: 1000,
+      detectionRange: 500,
+      attackRange: 45,
+      scoreValue: 600,
+      dodgeChance: 0.4,
+      commandRadius: 400,
+      teleportCooldown: 5000,
+    },
+    colossus: {
+      health: 2000,
+      speed: 60,
+      damage: 60,
+      attackCooldown: 3000,
+      detectionRange: 500,
+      attackRange: 70,
+      scoreValue: 800,
+      armorHealth: {
+        torso: 600,
+        left_shoulder: 400,
+        right_shoulder: 400,
+        head: 300,
+      },
+      chargeCooldown: 6000,
+      chargeSpeed: 250,
+    },
+    // Intervalles de spawn des boss (toutes les N vagues)
+    spawnInterval: 5,
+    // Bonus de drop après avoir vaincu un boss
+    dropBonus: {
+      healthMedium: 0.5, // 50% chance de drop HP moyen
+      powerUp: 0.3, // 30% chance de power-up
+    },
+  },
+
   zombies: {
     shambler: {
       health: 30,

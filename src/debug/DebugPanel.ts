@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { DebugSpawner, DebugItemType } from './DebugSpawner';
 import { ZOMBIE_TYPES } from './DebugSpawner';
-import type { ZombieType, CharacterType } from '@/types/entities';
+import type { ZombieType, CharacterType, BossType } from '@/types/entities';
 import type { Door } from '@arena/Door';
 import { BarricadeType, DoorTrapType } from '@arena/Door';
 import type { DropType } from '@items/drops';
@@ -57,6 +57,15 @@ const CHARACTER_TYPES: { id: CharacterType; label: string }[] = [
 ];
 
 /**
+ * Configuration des boss disponibles (Phase 7.3)
+ */
+const BOSS_TYPES: { id: BossType; label: string }[] = [
+  { id: 'abomination', label: 'Abom.' },
+  { id: 'patient_zero', label: 'Pat.0' },
+  { id: 'colossus', label: 'Colos.' },
+];
+
+/**
  * Callbacks du panneau debug
  */
 export interface DebugPanelCallbacks {
@@ -80,6 +89,11 @@ export interface DebugPanelCallbacks {
   onAbilityUse?: () => void;
   onAbilityReset?: () => void;
   getCurrentCharacter?: () => CharacterType;
+  // Phase 7.3 - Bosses
+  onBossSpawn?: (type: BossType) => void;
+  onBossKill?: () => void;
+  onBossDamage?: (amount: number) => void;
+  getActiveBoss?: () => { type: BossType; healthPercent: number } | null;
 }
 
 /**
@@ -128,6 +142,9 @@ export class DebugPanel {
   // Phase 7.1 - Characters
   private characterButtons: Phaser.GameObjects.Container[] = [];
   private characterStatusText!: Phaser.GameObjects.Text;
+  // Phase 7.3 - Bosses
+  private bossButtons: Phaser.GameObjects.Container[] = [];
+  private bossStatusText!: Phaser.GameObjects.Text;
 
   private readonly PANEL_WIDTH = 320;
   private readonly PANEL_X = 10;
@@ -214,6 +231,13 @@ export class DebugPanel {
     // Characters section (Phase 7.1)
     currentY = this.addSectionHeader(currentY, 'CHARACTERS (click to switch)');
     currentY = this.createCharacterButtons(currentY);
+
+    // Separator
+    currentY = this.addSeparator(currentY);
+
+    // Bosses section (Phase 7.3)
+    currentY = this.addSectionHeader(currentY, 'BOSSES (click to spawn)');
+    currentY = this.createBossButtons(currentY);
 
     // Separator
     currentY = this.addSeparator(currentY);
@@ -685,6 +709,84 @@ export class DebugPanel {
   }
 
   /**
+   * Crée les boutons de boss (Phase 7.3)
+   */
+  private createBossButtons(startY: number): number {
+    let y = startY;
+    const buttonWidth = 56;
+    let x = 8;
+
+    // Ligne de statut du boss actif
+    this.bossStatusText = this.createText(x, y, 'Boss: None', 10, '#ff4444');
+    this.container.add(this.bossStatusText);
+    y += 16;
+
+    // Boutons de spawn de boss
+    for (const boss of BOSS_TYPES) {
+      const button = this.createButton(
+        x,
+        y,
+        buttonWidth,
+        boss.label,
+        () => this.onBossButtonClick(boss.id)
+      );
+
+      this.container.add(button);
+      this.bossButtons.push(button);
+      x += buttonWidth + this.BUTTON_SPACING;
+    }
+
+    // Boutons de contrôle
+    x += 10;
+    const killBtn = this.createButton(x, y, 48, 'Kill', () => this.onBossKill());
+    this.container.add(killBtn);
+    this.bossButtons.push(killBtn);
+    x += 52;
+
+    const dmgBtn = this.createButton(x, y, 48, 'Dmg', () => this.onBossDamage());
+    this.container.add(dmgBtn);
+    this.bossButtons.push(dmgBtn);
+
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+
+    return y;
+  }
+
+  /**
+   * Handler pour clic sur bouton boss
+   */
+  private onBossButtonClick(type: BossType): void {
+    this.callbacks.onBossSpawn?.(type);
+  }
+
+  /**
+   * Handler pour tuer le boss
+   */
+  private onBossKill(): void {
+    this.callbacks.onBossKill?.();
+  }
+
+  /**
+   * Handler pour infliger des dégâts au boss
+   */
+  private onBossDamage(): void {
+    this.callbacks.onBossDamage?.(100);
+  }
+
+  /**
+   * Met à jour l'affichage du statut du boss
+   */
+  private updateBossStatusDisplay(): void {
+    const activeBoss = this.callbacks.getActiveBoss?.();
+    if (activeBoss) {
+      const healthPercent = Math.round(activeBoss.healthPercent * 100);
+      this.bossStatusText?.setText(`Boss: ${activeBoss.type} (${healthPercent}%)`);
+    } else {
+      this.bossStatusText?.setText('Boss: None');
+    }
+  }
+
+  /**
    * Met à jour le style des boutons personnage pour refléter la sélection
    */
   private updateCharacterButtonStyles(): void {
@@ -836,6 +938,9 @@ export class DebugPanel {
       this.updateCharacterButtonStyles();
       this.updateCharacterStatusDisplay();
     }
+
+    // Update boss display (Phase 7.3)
+    this.updateBossStatusDisplay();
   }
 
   /**

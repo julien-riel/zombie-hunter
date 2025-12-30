@@ -8,6 +8,7 @@ import { SCENE_KEYS } from '@config/constants';
 const TACTICAL_MENU_DELAY = 500;
 import { ThreatSystem, type SpawnPlan, type WaveComposition } from './ThreatSystem';
 import type { DDASystem } from './DDASystem';
+import type { BossFactory } from '@entities/bosses/BossFactory';
 
 /**
  * Configuration d'un groupe de spawn dans une vague
@@ -69,6 +70,10 @@ export class WaveSystem {
   private ddaSystem: DDASystem | null = null;
   /** Active l'utilisation du ThreatSystem pour la génération de vagues */
   private useThreatSystem: boolean = true;
+  /** Factory pour créer les boss (Phase 7.3) */
+  private bossFactory: BossFactory | null = null;
+  /** Indique si un boss est en cours */
+  private bossActive: boolean = false;
 
   constructor(scene: GameScene) {
     this.scene = scene;
@@ -85,6 +90,16 @@ export class WaveSystem {
    */
   public setDDASystem(ddaSystem: DDASystem): void {
     this.ddaSystem = ddaSystem;
+  }
+
+  /**
+   * Configure la factory de boss (Phase 7.3)
+   */
+  public setBossFactory(bossFactory: BossFactory): void {
+    this.bossFactory = bossFactory;
+
+    // Écouter la mort des boss
+    this.scene.events.on('bossDefeated', this.onBossDefeated, this);
   }
 
   /**
@@ -117,6 +132,12 @@ export class WaveSystem {
     this.currentWave++;
     this.state = WaveState.PREPARING;
 
+    // Vérifier si c'est une vague de boss
+    if (this.bossFactory?.isBossWave(this.currentWave)) {
+      this.startBossWave();
+      return;
+    }
+
     // Générer la configuration de la vague
     this.waveConfig = this.generateWaveConfig(this.currentWave);
 
@@ -136,6 +157,86 @@ export class WaveSystem {
       this
     );
   }
+
+  /**
+   * Démarre une vague de boss (Phase 7.3)
+   */
+  private async startBossWave(): Promise<void> {
+    if (!this.bossFactory) return;
+
+    this.bossActive = true;
+
+    // Déterminer la position de spawn du boss
+    const doors = this.scene.arena.getDoors();
+    const activeDoors = doors.filter((door) => door.isActive() && !door.isDoorDestroyed());
+
+    let spawnX = this.scene.cameras.main.centerX;
+    let spawnY = this.scene.cameras.main.centerY;
+
+    if (activeDoors.length > 0) {
+      // Spawner près d'une porte aléatoire
+      const door = Phaser.Utils.Array.GetRandom(activeDoors);
+      spawnX = door.x;
+      spawnY = door.y;
+    }
+
+    // Créer le boss
+    const boss = this.bossFactory.createForWave(this.currentWave, spawnX, spawnY);
+
+    if (!boss) {
+      // Pas de boss pour cette vague, continuer normalement
+      this.bossActive = false;
+      this.waveConfig = this.generateWaveConfig(this.currentWave);
+      this.scene.events.emit('wavePreparing', this.currentWave, this.waveConfig);
+      this.transitionTimer = this.scene.time.delayedCall(
+        WAVES.transitionDelay,
+        () => this.beginWave(),
+        [],
+        this
+      );
+      return;
+    }
+
+    // Émettre l'événement de vague boss
+    this.scene.events.emit('wavePreparing', this.currentWave, {
+      waveNumber: this.currentWave,
+      isBossWave: true,
+      bossType: boss.bossType,
+    });
+
+    // Configuration minimale pour le suivi
+    this.waveConfig = {
+      waveNumber: this.currentWave,
+      activeDoors: doors.filter((d) => d.isActive()).length,
+      spawnGroups: [],
+      totalZombies: 1, // Le boss compte comme 1 pour le système
+    };
+
+    this.zombiesRemaining = 1;
+    this.zombiesSpawned = 0;
+    this.zombiesKilled = 0;
+    this.state = WaveState.ACTIVE;
+
+    // Émettre l'événement de début de vague
+    this.scene.events.emit('waveStart', this.currentWave, this.waveConfig);
+
+    // Démarrer l'animation d'entrée du boss
+    await this.bossFactory.startBossEntrance();
+  }
+
+  /**
+   * Callback quand un boss est vaincu (Phase 7.3)
+   */
+  private onBossDefeated = (): void => {
+    if (!this.bossActive) return;
+
+    this.bossActive = false;
+    this.zombiesRemaining = 0;
+    this.zombiesKilled = 1;
+
+    // Compléter la vague
+    this.completeWave();
+  };
 
   /**
    * Commence effectivement la vague
@@ -547,6 +648,21 @@ export class WaveSystem {
   }
 
   /**
+   * Vérifie si la vague actuelle est une vague de boss (Phase 7.3)
+   */
+  public isBossWave(waveNumber?: number): boolean {
+    const wave = waveNumber ?? this.currentWave;
+    return this.bossFactory?.isBossWave(wave) ?? false;
+  }
+
+  /**
+   * Vérifie si un boss est actuellement actif (Phase 7.3)
+   */
+  public isBossActive(): boolean {
+    return this.bossActive;
+  }
+
+  /**
    * Réinitialise le système de vagues à son état initial.
    * Annule les timers, remet les compteurs à zéro et retourne à l'état IDLE.
    * Utilisé lors d'un game over ou d'un restart.
@@ -563,9 +679,13 @@ export class WaveSystem {
     this.zombiesSpawned = 0;
     this.zombiesKilled = 0;
     this.waveConfig = null;
+    this.bossActive = false;
 
     // Réinitialiser le ThreatSystem
     this.threatSystem.reset();
+
+    // Réinitialiser le BossFactory
+    this.bossFactory?.reset();
   }
 
   /**
@@ -575,6 +695,7 @@ export class WaveSystem {
    */
   public destroy(): void {
     this.scene.events.off('zombieDeath', this.onZombieDeath, this);
+    this.scene.events.off('bossDefeated', this.onBossDefeated, this);
     this.reset();
   }
 }
