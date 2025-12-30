@@ -13,6 +13,7 @@ import { FlamePool } from '@entities/projectiles/FlamePool';
 import { PoolManager } from '@managers/PoolManager';
 import { TelemetryManager } from '@managers/TelemetryManager';
 import { CorpseManager } from '@managers/CorpseManager';
+import { SaveManager } from '@managers/SaveManager';
 import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
 import { ComboSystem } from '@systems/ComboSystem';
@@ -33,6 +34,15 @@ import type { Zombie } from '@entities/zombies/Zombie';
 import type { MiniZombie } from '@entities/zombies/MiniZombie';
 import { BossFactory } from '@entities/bosses/BossFactory';
 import { EventSystem } from '@systems/events/EventSystem';
+import { CampaignManager } from '@modes/CampaignManager';
+import { DailyChallengeManager } from '@modes/DailyChallengeManager';
+import type {
+  ModeConfig,
+  CampaignModeConfig,
+  DailyChallengeConfig,
+  GameSceneData,
+  GameModeType,
+} from '@/types/modes';
 
 /**
  * Scène principale du jeu
@@ -68,8 +78,30 @@ export class GameScene extends Phaser.Scene {
   private bossFactory!: BossFactory;
   private eventSystem!: EventSystem;
 
+  // Mode de jeu (Phase 8.2)
+  private modeConfig: ModeConfig | null = null;
+  private gameMode: GameModeType = 'survival';
+  private campaignManager: CampaignManager | null = null;
+  private dailyChallengeManager: DailyChallengeManager | null = null;
+
   constructor() {
     super({ key: SCENE_KEYS.GAME });
+  }
+
+  /**
+   * Initialise la scène avec les données du mode de jeu
+   */
+  init(data?: GameSceneData): void {
+    // Configuration par défaut (mode survie)
+    this.modeConfig = data?.mode || {
+      type: 'survival',
+      infiniteWaves: true,
+      trackHighScore: true,
+    };
+
+    this.gameMode = this.modeConfig.type;
+
+    console.log(`[GameScene] Initialized with mode: ${this.gameMode}`, this.modeConfig);
   }
 
   /**
@@ -129,6 +161,9 @@ export class GameScene extends Phaser.Scene {
 
     // Configuration de la caméra
     this.cameras.main.setBackgroundColor('#1a1a2e');
+
+    // Initialiser les managers de mode (Phase 8.2)
+    this.setupModeManagers();
 
     // Démarrer le système de vagues après un court délai
     this.time.delayedCall(1000, () => {
@@ -305,6 +340,144 @@ export class GameScene extends Phaser.Scene {
       this.telemetryManager.log('combo:updated', { combo: 0, score });
     });
   }
+
+  /**
+   * Initialise les managers de mode de jeu (Phase 8.2)
+   */
+  private setupModeManagers(): void {
+    switch (this.gameMode) {
+      case 'campaign': {
+        const config = this.modeConfig as CampaignModeConfig;
+        this.campaignManager = new CampaignManager(this);
+        this.campaignManager.initialize({ levelId: config.levelId });
+
+        // Configurer le WaveSystem pour le mode campagne (nombre limité de vagues)
+        this.waveSystem.setMaxWaves(config.level.waves);
+
+        // Écouter les événements de campagne
+        this.events.on('campaignVictory', this.onCampaignVictory, this);
+        this.events.on('campaignDefeat', this.onCampaignDefeat, this);
+
+        console.log(`[GameScene] Campaign mode initialized: ${config.level.name}`);
+        break;
+      }
+
+      case 'daily': {
+        const config = this.modeConfig as DailyChallengeConfig;
+        this.dailyChallengeManager = new DailyChallengeManager(this);
+        this.dailyChallengeManager.initialize();
+
+        // Appliquer les modificateurs du challenge quotidien
+        // Le WaveSystem utilisera les multiplicateurs via getDailyModifiers()
+
+        console.log(`[GameScene] Daily challenge initialized:`, {
+          date: config.date,
+          modifiers: config.modifiers.map((m) => m.name),
+        });
+        break;
+      }
+
+      case 'survival':
+      default:
+        // Mode survie par défaut - vagues infinies
+        console.log('[GameScene] Survival mode initialized');
+        break;
+    }
+  }
+
+  /**
+   * Obtient le mode de jeu actuel
+   */
+  public getGameMode(): GameModeType {
+    return this.gameMode;
+  }
+
+  /**
+   * Obtient la configuration du mode
+   */
+  public getModeConfig(): ModeConfig | null {
+    return this.modeConfig;
+  }
+
+  /**
+   * Obtient le manager de campagne (si en mode campagne)
+   */
+  public getCampaignManager(): CampaignManager | null {
+    return this.campaignManager;
+  }
+
+  /**
+   * Obtient le manager de challenge quotidien (si en mode daily)
+   */
+  public getDailyChallengeManager(): DailyChallengeManager | null {
+    return this.dailyChallengeManager;
+  }
+
+  /**
+   * Obtient les modificateurs du challenge quotidien (pour le WaveSystem)
+   */
+  public getDailyModifiers(): {
+    damageMultiplier: number;
+    healthMultiplier: number;
+    speedMultiplier: number;
+    spawnRateMultiplier: number;
+  } | null {
+    if (this.gameMode !== 'daily' || !this.dailyChallengeManager) {
+      return null;
+    }
+
+    return {
+      damageMultiplier: this.dailyChallengeManager.getDamageMultiplier(),
+      healthMultiplier: this.dailyChallengeManager.getHealthMultiplier(),
+      speedMultiplier: this.dailyChallengeManager.getSpeedMultiplier(),
+      spawnRateMultiplier: this.dailyChallengeManager.getSpawnRateMultiplier(),
+    };
+  }
+
+  /**
+   * Gestion de la victoire en mode campagne
+   */
+  private onCampaignVictory = (data: {
+    levelId: string;
+    score: number;
+    stars: number;
+    time: number;
+    kills: number;
+    xpEarned: number;
+  }): void => {
+    this.isGameOver = true;
+
+    // Récupérer le résumé de la run
+    const summary = this.telemetryManager.generateRunSummary();
+
+    // Arrêter les scènes parallèles
+    this.scene.stop(SCENE_KEYS.HUD);
+    if (this.scene.isActive(SCENE_KEYS.DEBUG)) {
+      this.scene.stop(SCENE_KEYS.DEBUG);
+    }
+
+    // Arrêter cette scène et lancer le game over (victoire)
+    this.scene.stop();
+    this.scene.start(SCENE_KEYS.GAME_OVER, {
+      summary: {
+        ...summary,
+        finalScore: data.score,
+      },
+      isVictory: true,
+      xpEarned: data.xpEarned,
+      campaignData: {
+        levelId: data.levelId,
+        stars: data.stars,
+      },
+    });
+  };
+
+  /**
+   * Gestion de la défaite en mode campagne
+   */
+  private onCampaignDefeat = (): void => {
+    // La défaite en campagne passe par onPlayerDeath comme d'habitude
+  };
 
   /**
    * Met à jour la logique de jeu
@@ -898,6 +1071,14 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) return;
     this.isGameOver = true;
 
+    // Notifier les managers de mode
+    if (this.campaignManager) {
+      this.campaignManager.onDefeat();
+    }
+    if (this.dailyChallengeManager) {
+      this.dailyChallengeManager.onGameOver();
+    }
+
     // Petit délai avant d'afficher le game over
     this.time.delayedCall(500, () => {
       this.showGameOver();
@@ -914,6 +1095,37 @@ export class GameScene extends Phaser.Scene {
     // Calculer l'XP gagnée (basé sur vagues, kills, etc.)
     const xpEarned = this.calculateXPEarned(summary);
 
+    // Sauvegarder les high scores selon le mode (Phase 8.2)
+    const saveManager = SaveManager.getInstance();
+    let isNewHighScore = false;
+
+    switch (this.gameMode) {
+      case 'survival':
+        isNewHighScore = saveManager.updateSurvivalHighScore({
+          wave: summary.maxWave,
+          score: summary.finalScore,
+          kills: summary.totalKills,
+          time: Math.floor(summary.duration),
+        });
+        break;
+
+      case 'daily':
+        if (this.dailyChallengeManager) {
+          const date = DailyChallengeManager.getTodayDate();
+          isNewHighScore = saveManager.updateDailyChallengeScore(date, {
+            score: summary.finalScore,
+            wave: summary.maxWave,
+          });
+        }
+        break;
+
+      case 'campaign':
+        // La sauvegarde de campagne est gérée par le CampaignManager
+        break;
+    }
+
+    saveManager.save();
+
     // Arrêter les scènes parallèles
     this.scene.stop(SCENE_KEYS.HUD);
     if (this.scene.isActive(SCENE_KEYS.DEBUG)) {
@@ -926,6 +1138,8 @@ export class GameScene extends Phaser.Scene {
       summary,
       isVictory: false,
       xpEarned,
+      gameMode: this.gameMode,
+      isNewHighScore,
     });
   }
 
@@ -945,6 +1159,16 @@ export class GameScene extends Phaser.Scene {
    * Nettoie la scène
    */
   shutdown(): void {
+    // Nettoyer les managers de mode (Phase 8.2)
+    this.campaignManager?.destroy();
+    this.campaignManager = null;
+    this.dailyChallengeManager?.destroy();
+    this.dailyChallengeManager = null;
+
+    // Nettoyer les événements de mode
+    this.events.off('campaignVictory', this.onCampaignVictory, this);
+    this.events.off('campaignDefeat', this.onCampaignDefeat, this);
+
     this.waveSystem?.destroy();
     this.spawnSystem?.destroy();
     this.combatSystem?.destroy();

@@ -33,7 +33,8 @@
       "@utils/*": ["./src/utils/*"],
       "@types/*": ["./src/types/*"],
       "@ai/*": ["./src/ai/*"],
-      "@debug/*": ["./src/debug/*"]
+      "@debug/*": ["./src/debug/*"],
+      "@modes/*": ["./src/modes/*"]
     },
     "baseUrl": "."
   },

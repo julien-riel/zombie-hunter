@@ -20,6 +20,7 @@ export default defineConfig({
       '@types': resolve(__dirname, './src/types'),
       '@ai': resolve(__dirname, './src/ai'),
       '@debug': resolve(__dirname, './src/debug'),
+      '@modes': resolve(__dirname, './src/modes'),
     },
   },
   server: {

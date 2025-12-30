@@ -1,11 +1,22 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
+import type {
+  GameModeType,
+  ModeConfig,
+  SurvivalModeConfig,
+  CampaignModeConfig,
+  GameSceneData,
+  ChallengeModifier,
+} from '@/types/modes';
+import { CAMPAIGN_LEVELS, getCampaignLevel } from '@config/campaign';
+import { DailyChallengeManager } from '@modes/DailyChallengeManager';
+import { SaveManager } from '@managers/SaveManager';
 
 /**
  * Configuration d'un mode de jeu
  */
 interface GameMode {
-  id: string;
+  id: GameModeType;
   name: string;
   description: string;
   icon: string;
@@ -54,35 +65,58 @@ export class ModeSelectScene extends Phaser.Scene {
    * Initialise les modes de jeu
    */
   private initModes(): void {
+    // Récupérer les high scores pour l'affichage
+    const saveManager = SaveManager.getInstance();
+    const survivalHighScore = saveManager.getSurvivalHighScore();
+    const campaignProgress = saveManager.getCampaignProgress();
+    const dailyHighScore = DailyChallengeManager.getTodayHighScore();
+
+    // Générer la description du mode survie avec le high score
+    let survivalDesc =
+      'Survivez le plus longtemps possible face à des vagues infinies de zombies. ' +
+      'La difficulté augmente progressivement.';
+    if (survivalHighScore.score > 0) {
+      survivalDesc += ` Record: Vague ${survivalHighScore.wave}, Score ${survivalHighScore.score}`;
+    }
+
+    // Générer la description de la campagne avec la progression
+    let campaignDesc =
+      "Parcourez une série de niveaux avec des objectifs variés. " +
+      "Découvrez l'histoire de l'épidémie et affrontez des boss redoutables.";
+    if (campaignProgress.completedLevels.length > 0) {
+      campaignDesc += ` Progression: ${campaignProgress.completedLevels.length}/${CAMPAIGN_LEVELS.length} niveaux, ${campaignProgress.totalStars} étoiles`;
+    }
+
+    // Générer la description du défi quotidien
+    const dailyConfig = DailyChallengeManager.generateDailyConfig();
+    let dailyDesc =
+      "Un défi unique chaque jour avec les mêmes conditions pour tous. " +
+      `Aujourd'hui: ${dailyConfig.modifiers.map((m: ChallengeModifier) => m.name).join(', ')}.`;
+    if (dailyHighScore) {
+      dailyDesc += ` Votre score: ${dailyHighScore.score} (Vague ${dailyHighScore.wave})`;
+    }
+
     this.modes = [
       {
         id: 'survival',
         name: 'SURVIE',
-        description:
-          'Survivez le plus longtemps possible face à des vagues infinies de zombies. ' +
-          'La difficulté augmente progressivement. Essayez de battre votre record!',
+        description: survivalDesc,
         icon: '♾️',
         available: true,
       },
       {
         id: 'campaign',
         name: 'CAMPAGNE',
-        description:
-          'Parcourez une série de niveaux avec des objectifs variés. ' +
-          'Découvrez l\'histoire de l\'épidémie et affrontez des boss redoutables.',
+        description: campaignDesc,
         icon: '📖',
-        available: false,
-        comingSoon: true,
+        available: true,
       },
       {
         id: 'daily',
         name: 'DÉFI QUOTIDIEN',
-        description:
-          'Un défi unique chaque jour avec les mêmes conditions pour tous. ' +
-          'Comparez vos scores avec d\'autres joueurs!',
+        description: dailyDesc,
         icon: '📅',
-        available: false,
-        comingSoon: true,
+        available: true,
       },
     ];
   }
@@ -501,10 +535,68 @@ export class ModeSelectScene extends Phaser.Scene {
     // Stocker le mode sélectionné
     this.registry.set('selectedMode', mode.id);
 
+    // Créer la configuration du mode
+    const modeConfig = this.createModeConfig(mode.id);
+    const character = this.registry.get('selectedCharacter') || 'cop';
+
+    // Données à passer à GameScene
+    const gameData: GameSceneData = {
+      mode: modeConfig,
+      character,
+    };
+
     // Lancer le jeu
     this.animateOut(() => {
-      this.scene.start(SCENE_KEYS.GAME);
+      this.scene.start(SCENE_KEYS.GAME, gameData);
     });
+  }
+
+  /**
+   * Crée la configuration du mode sélectionné
+   */
+  private createModeConfig(modeId: GameModeType): ModeConfig {
+    switch (modeId) {
+      case 'survival':
+        return {
+          type: 'survival',
+          infiniteWaves: true,
+          trackHighScore: true,
+        } as SurvivalModeConfig;
+
+      case 'campaign': {
+        // Pour la campagne, on démarre au niveau actuel ou au premier
+        const saveManager = SaveManager.getInstance();
+        const progress = saveManager.getCampaignProgress();
+        const levelId = progress.currentLevel || 'level_1';
+        const level = getCampaignLevel(levelId);
+
+        if (!level) {
+          // Fallback au premier niveau si le niveau n'existe pas
+          const firstLevel = CAMPAIGN_LEVELS[0];
+          return {
+            type: 'campaign',
+            levelId: firstLevel.id,
+            level: firstLevel,
+          } as CampaignModeConfig;
+        }
+
+        return {
+          type: 'campaign',
+          levelId,
+          level,
+        } as CampaignModeConfig;
+      }
+
+      case 'daily':
+        return DailyChallengeManager.generateDailyConfig();
+
+      default:
+        return {
+          type: 'survival',
+          infiniteWaves: true,
+          trackHighScore: true,
+        } as SurvivalModeConfig;
+    }
   }
 
   /**

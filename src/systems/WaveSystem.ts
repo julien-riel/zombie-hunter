@@ -81,6 +81,9 @@ export class WaveSystem {
   /** Événement actif pour la vague courante */
   private activeEvent: SpecialEvent | null = null;
 
+  /** Nombre maximum de vagues (0 = infini, pour mode campagne) (Phase 8.2) */
+  private maxWaves: number = 0;
+
   constructor(scene: GameScene) {
     this.scene = scene;
 
@@ -120,6 +123,29 @@ export class WaveSystem {
    */
   public getEventSystem(): EventSystem | null {
     return this.eventSystem;
+  }
+
+  /**
+   * Définit le nombre maximum de vagues (Phase 8.2)
+   * @param maxWaves 0 pour des vagues infinies (mode survie)
+   */
+  public setMaxWaves(maxWaves: number): void {
+    this.maxWaves = maxWaves;
+    console.log(`[WaveSystem] Max waves set to: ${maxWaves === 0 ? 'infinite' : maxWaves}`);
+  }
+
+  /**
+   * Obtient le nombre maximum de vagues
+   */
+  public getMaxWaves(): number {
+    return this.maxWaves;
+  }
+
+  /**
+   * Vérifie si toutes les vagues sont terminées (mode campagne)
+   */
+  public isAllWavesCompleted(): boolean {
+    return this.maxWaves > 0 && this.currentWave >= this.maxWaves;
   }
 
   /**
@@ -418,6 +444,14 @@ export class WaveSystem {
    * Continue vers la prochaine vague après le menu tactique
    */
   private continueToNextWave(): void {
+    // Vérifier si toutes les vagues sont terminées (mode campagne, Phase 8.2)
+    if (this.isAllWavesCompleted()) {
+      console.log('[WaveSystem] All waves completed! Campaign victory.');
+      // Émettre l'événement de victoire (le CampaignManager l'écoutera)
+      this.scene.events.emit('allWavesCompleted', this.currentWave);
+      return;
+    }
+
     // Transition vers la prochaine vague après un délai
     this.transitionTimer = this.scene.time.delayedCall(
       WAVES.transitionDelay,

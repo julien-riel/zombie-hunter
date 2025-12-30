@@ -21,6 +21,40 @@ export interface GameStats {
 }
 
 /**
+ * High scores par mode de jeu (Phase 8.2)
+ */
+export interface ModeHighScoresData {
+  survival: {
+    wave: number;
+    score: number;
+    kills: number;
+    time: number;
+    date: string;
+  };
+  campaign: Record<string, {
+    stars: number;
+    score: number;
+    completed: boolean;
+    date: string;
+  }>;
+  daily: Record<string, {
+    score: number;
+    wave: number;
+    date: string;
+  }>;
+}
+
+/**
+ * Progression de la campagne (Phase 8.2)
+ */
+export interface CampaignProgressData {
+  currentLevel: string;
+  completedLevels: string[];
+  levelStars: Record<string, number>;
+  totalStars: number;
+}
+
+/**
  * Données de progression des upgrades permanents
  */
 export interface ProgressionData {
@@ -59,6 +93,8 @@ export interface SaveData {
   unlocks: UnlockData;
   stats: GameStats;
   settings: SettingsData;
+  modeHighScores: ModeHighScoresData;
+  campaignProgress: CampaignProgressData;
 }
 
 /**
@@ -92,6 +128,23 @@ const DEFAULT_SAVE_DATA: SaveData = {
     sfxVolume: 0.8,
     ddaEnabled: true,
     showTutorials: true,
+  },
+  modeHighScores: {
+    survival: {
+      wave: 0,
+      score: 0,
+      kills: 0,
+      time: 0,
+      date: '',
+    },
+    campaign: {},
+    daily: {},
+  },
+  campaignProgress: {
+    currentLevel: 'level_1',
+    completedLevels: [],
+    levelStars: {},
+    totalStars: 0,
   },
 };
 
@@ -486,5 +539,153 @@ export class SaveManager {
   public updateSetting<K extends keyof SettingsData>(key: K, value: SettingsData[K]): void {
     this.data.settings[key] = value;
     this.markDirty();
+  }
+
+  // ==================== MODE HIGH SCORES (Phase 8.2) ====================
+
+  /**
+   * Obtient les high scores par mode
+   */
+  public getModeHighScores(): ModeHighScoresData {
+    return this.data.modeHighScores;
+  }
+
+  /**
+   * Obtient le high score du mode survie
+   */
+  public getSurvivalHighScore(): ModeHighScoresData['survival'] {
+    return this.data.modeHighScores.survival;
+  }
+
+  /**
+   * Met à jour le high score du mode survie
+   * @returns true si c'est un nouveau record
+   */
+  public updateSurvivalHighScore(data: {
+    wave: number;
+    score: number;
+    kills: number;
+    time: number;
+  }): boolean {
+    const current = this.data.modeHighScores.survival;
+    const isNewHighScore = data.score > current.score;
+
+    if (isNewHighScore) {
+      this.data.modeHighScores.survival = {
+        ...data,
+        date: new Date().toISOString(),
+      };
+      this.markDirty();
+    }
+
+    return isNewHighScore;
+  }
+
+  /**
+   * Obtient le résultat d'un niveau de campagne
+   */
+  public getCampaignLevelResult(levelId: string): ModeHighScoresData['campaign'][string] | null {
+    return this.data.modeHighScores.campaign[levelId] || null;
+  }
+
+  /**
+   * Met à jour le résultat d'un niveau de campagne
+   * @returns true si c'est une amélioration
+   */
+  public updateCampaignLevelResult(
+    levelId: string,
+    data: { stars: number; score: number; completed: boolean }
+  ): boolean {
+    const current = this.data.modeHighScores.campaign[levelId];
+    const isImprovement = !current || data.score > current.score || data.stars > current.stars;
+
+    if (isImprovement) {
+      this.data.modeHighScores.campaign[levelId] = {
+        stars: Math.max(data.stars, current?.stars || 0),
+        score: Math.max(data.score, current?.score || 0),
+        completed: data.completed || current?.completed || false,
+        date: new Date().toISOString(),
+      };
+      this.markDirty();
+    }
+
+    return isImprovement;
+  }
+
+  /**
+   * Obtient le score du défi quotidien pour une date
+   */
+  public getDailyChallengeScore(date: string): ModeHighScoresData['daily'][string] | null {
+    return this.data.modeHighScores.daily[date] || null;
+  }
+
+  /**
+   * Met à jour le score du défi quotidien
+   * @returns true si c'est un nouveau record pour cette date
+   */
+  public updateDailyChallengeScore(date: string, data: { score: number; wave: number }): boolean {
+    const current = this.data.modeHighScores.daily[date];
+    const isNewHighScore = !current || data.score > current.score;
+
+    if (isNewHighScore) {
+      this.data.modeHighScores.daily[date] = {
+        ...data,
+        date: new Date().toISOString(),
+      };
+      this.markDirty();
+    }
+
+    return isNewHighScore;
+  }
+
+  // ==================== CAMPAIGN PROGRESS (Phase 8.2) ====================
+
+  /**
+   * Obtient la progression de la campagne
+   */
+  public getCampaignProgress(): CampaignProgressData {
+    return this.data.campaignProgress;
+  }
+
+  /**
+   * Vérifie si un niveau est débloqué
+   */
+  public isLevelUnlocked(levelId: string): boolean {
+    // Le premier niveau est toujours débloqué
+    if (levelId === 'level_1') return true;
+    // Les autres sont débloqués si le niveau précédent est complété
+    return this.data.campaignProgress.completedLevels.includes(levelId);
+  }
+
+  /**
+   * Marque un niveau comme complété
+   */
+  public completeLevel(levelId: string, stars: number): void {
+    if (!this.data.campaignProgress.completedLevels.includes(levelId)) {
+      this.data.campaignProgress.completedLevels.push(levelId);
+    }
+
+    // Mettre à jour les étoiles si c'est mieux
+    const currentStars = this.data.campaignProgress.levelStars[levelId] || 0;
+    if (stars > currentStars) {
+      this.data.campaignProgress.levelStars[levelId] = stars;
+      this.data.campaignProgress.totalStars += (stars - currentStars);
+    }
+
+    this.markDirty();
+  }
+
+  /**
+   * Obtient le nombre total d'étoiles
+   */
+  public getTotalCampaignStars(): number {
+    return this.data.campaignProgress.totalStars;
+  }
+
+  /**
+   * Obtient les étoiles d'un niveau
+   */
+  public getLevelStars(levelId: string): number {
+    return this.data.campaignProgress.levelStars[levelId] || 0;
   }
 }

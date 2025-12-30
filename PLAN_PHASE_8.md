@@ -30,6 +30,38 @@
 
 ---
 
+### Phase 8.2 - Modes de Jeu ✅ COMPLÉTÉ
+
+**Fichiers créés :**
+- `src/types/modes.ts` - Types et interfaces pour les modes de jeu
+- `src/config/campaign.ts` - Configuration des 5 niveaux de campagne
+- `src/modes/CampaignManager.ts` - Gestionnaire du mode campagne avec objectifs
+- `src/modes/DailyChallengeManager.ts` - Gestionnaire du défi quotidien avec seed
+- `src/modes/index.ts` - Exports des gestionnaires de modes
+
+**Fichiers modifiés :**
+- `src/types/index.ts` - Export des types de modes
+- `src/managers/SaveManager.ts` - High scores par mode et progression campagne
+- `src/scenes/ModeSelectScene.ts` - Activation des 3 modes avec passage des données
+- `src/scenes/GameScene.ts` - Gestion des différents modes de jeu
+- `src/systems/WaveSystem.ts` - Support des vagues limitées (mode campagne)
+
+**Fonctionnalités implémentées :**
+- **Mode Survie** : Vagues infinies avec high score
+- **Mode Campagne** : 5 niveaux avec objectifs variés (survie, kills, boss)
+  - Système d'étoiles (1-3) basé sur le score
+  - Progression sauvegardée
+  - Narratif d'introduction et de fin
+  - Récompenses XP et déblocages
+- **Défi Quotidien** : Challenge unique par jour
+  - Seed basée sur la date
+  - 2 modificateurs aléatoires (Double Dégâts, Zombies Rapides, etc.)
+  - High score quotidien sauvegardé
+- High scores par mode sauvegardés séparément
+- Affichage des records dans ModeSelectScene
+
+---
+
 ## Vue d'Ensemble
 
 La Phase 8 est la phase finale de développement. Elle transforme le prototype fonctionnel en un jeu complet et poli, prêt pour la release. Cette phase se concentre sur l'expérience utilisateur globale : menus, audio, effets visuels, et polish général.
@@ -1195,9 +1227,9 @@ tests/integration/
 - [x] GameOverScene créé avec stats
 
 ### 8.2 Modes de Jeu
-- [ ] Mode Survie validé (high scores)
-- [ ] Mode Campagne implémenté (5+ niveaux)
-- [ ] Challenge Quotidien implémenté
+- [x] Mode Survie validé (high scores)
+- [x] Mode Campagne implémenté (5+ niveaux)
+- [x] Challenge Quotidien implémenté
 
 ### 8.3 Audio
 - [ ] AudioManager créé

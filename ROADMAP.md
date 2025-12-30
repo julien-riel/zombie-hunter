@@ -406,7 +406,7 @@ Finaliser l'expérience avec les menus, modes de jeu, et polish.
 - [ ] Mode Survie (classique, score infini)
 - [ ] Mode Campagne (niveaux avec objectifs)
 - [ ] Mode Challenge Quotidien (seed fixe)
-- [ ] Classements en ligne (optionnel)
+- [x] Classements en ligne (optionnel) ON LE SKIP
 
 #### 8.3 Audio
 - [ ] Intégrer musique de fond
