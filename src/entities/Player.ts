@@ -227,6 +227,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isDashing = true;
     this.canDash = false;
 
+    // Émettre l'événement pour la télémétrie
+    (this.scene as GameScene).events.emit('playerDash');
+
     // Direction du dash basée sur le mouvement actuel ou la direction de la souris
     let dashX = 0;
     let dashY = 0;
@@ -402,12 +405,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   /**
    * Inflige des dégâts au joueur
+   * @param amount Quantité de dégâts
+   * @param source Type de source des dégâts (optionnel)
+   * @param distance Distance de la source (optionnel)
    */
-  public takeDamage(amount: number): void {
+  public takeDamage(amount: number, source: string = 'unknown', distance: number = 0): void {
     // Ignorer les dégâts en mode God
     if (this.godMode) return;
 
     this.health = Math.max(0, this.health - amount);
+
+    // Émettre l'événement pour la télémétrie
+    (this.scene as GameScene).events.emit('playerHit', { damage: amount, source, distance });
 
     // Flash de dégâts
     this.setTint(0xff0000);

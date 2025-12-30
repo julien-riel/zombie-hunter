@@ -95,6 +95,10 @@ export class CombatSystem {
 
     // Récupérer les dégâts de la balle
     const damage = this.bulletPool.getDamage(bullet);
+    const weaponType = this.bulletPool.getWeaponType(bullet);
+
+    // Émettre l'événement de hit pour la télémétrie
+    this.scene.events.emit('weaponHit', { weapon: weaponType, damage });
 
     // Infliger les dégâts au zombie
     zombie.takeDamage(damage);

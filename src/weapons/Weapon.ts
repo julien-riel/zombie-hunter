@@ -54,6 +54,9 @@ export abstract class Weapon {
     this.lastFireTime = now;
     this.currentAmmo--;
 
+    // Émettre l'événement de tir pour la télémétrie
+    this.scene.events.emit('weaponFired', { weapon: this.config.name });
+
     // Appliquer le spread si configuré
     let finalDirection = direction.clone();
     if (this.config.spread) {

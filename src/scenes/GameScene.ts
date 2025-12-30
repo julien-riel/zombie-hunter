@@ -359,7 +359,8 @@ export class GameScene extends Phaser.Scene {
     // Mettre à jour le système d'événements (Phase 7.4)
     this.eventSystem.update(delta);
 
-    // Mettre à jour la télémétrie avec la santé actuelle du joueur
+    // Mettre à jour la télémétrie
+    this.telemetryManager.addGameTime(delta);
     this.telemetryManager.updateHealth(
       this.player.getHealth(),
       this.player.getMaxHealth()

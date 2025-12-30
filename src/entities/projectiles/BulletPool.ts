@@ -44,6 +44,7 @@ export class BulletPool {
   /**
    * Récupère une balle du pool et la configure
    * @param piercing - Si true, la balle traverse les ennemis
+   * @param weaponType - Type d'arme pour la télémétrie
    */
   public get(
     x: number,
@@ -51,7 +52,8 @@ export class BulletPool {
     direction: Phaser.Math.Vector2,
     speed: number,
     damage: number,
-    piercing: boolean = false
+    piercing: boolean = false,
+    weaponType: string = 'bullet'
   ): Phaser.Physics.Arcade.Sprite | null {
     const bullet = this.pool.getFirstDead(
       true,
@@ -68,6 +70,7 @@ export class BulletPool {
     bullet.setData('damage', damage);
     bullet.setData('speed', speed);
     bullet.setData('piercing', piercing);
+    bullet.setData('weaponType', weaponType);
     bullet.setData('hitTargets', []); // Track already-hit targets for piercing
 
     // Appliquer la vélocité
@@ -130,6 +133,13 @@ export class BulletPool {
    */
   public isPiercing(bullet: Phaser.Physics.Arcade.Sprite): boolean {
     return bullet.getData('piercing') === true;
+  }
+
+  /**
+   * Retourne le type d'arme d'une balle
+   */
+  public getWeaponType(bullet: Phaser.Physics.Arcade.Sprite): string {
+    return bullet.getData('weaponType') || 'bullet';
   }
 
   /**

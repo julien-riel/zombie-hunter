@@ -116,6 +116,7 @@ export interface SlidingWindowConfig {
 export class TelemetryManager {
   private events: TelemetryEvent[] = [];
   private startTime: number = 0;
+  private gameTime: number = 0; // Temps de jeu accumulé en ms (ne s'écoule pas en pause)
   private windowConfig: SlidingWindowConfig;
 
   // Compteurs cumulatifs
@@ -160,6 +161,15 @@ export class TelemetryManager {
   public start(): void {
     this.reset();
     this.startTime = Date.now();
+    this.gameTime = 0;
+  }
+
+  /**
+   * Met à jour le temps de jeu (appelé chaque frame)
+   * @param delta Temps écoulé depuis la dernière frame en ms
+   */
+  public addGameTime(delta: number): void {
+    this.gameTime += delta;
   }
 
   /**
@@ -186,6 +196,7 @@ export class TelemetryManager {
     this.recentKills = [];
     this.recentDashes = [];
     this.currentHealth = 100;
+    this.gameTime = 0;
     this.zombieSpawnTimes.clear();
     this.ttkRecords.clear();
   }
@@ -218,7 +229,7 @@ export class TelemetryManager {
         break;
 
       case 'player:hit':
-        this.handlePlayerHit(data as { amount: number; source: ZombieType; distance: number });
+        this.handlePlayerHit(data as { damage: number; source: string; distance: number });
         break;
 
       case 'player:heal':
@@ -284,13 +295,13 @@ export class TelemetryManager {
     this.zombieSpawnTimes.set(data.zombieId, Date.now());
   }
 
-  private handlePlayerHit(data: { amount: number; source: ZombieType; distance: number }): void {
+  private handlePlayerHit(data: { damage: number; source: string; distance: number }): void {
     const timestamp = Date.now();
-    this.totalDamageTaken += data.amount;
-    this.recentDamage.push({ timestamp, amount: data.amount });
+    this.totalDamageTaken += data.damage;
+    this.recentDamage.push({ timestamp, amount: data.damage });
 
     // Mettre à jour la santé
-    this.currentHealth = Math.max(0, this.currentHealth - data.amount);
+    this.currentHealth = Math.max(0, this.currentHealth - data.damage);
 
     // Vérifier near death
     if (this.currentHealth < this.maxHealth * 0.15) {
@@ -383,8 +394,8 @@ export class TelemetryManager {
   public getRealtimeMetrics(): DDAMetrics {
     this.cleanupWindow();
 
-    const now = Date.now();
-    const survivalTime = (now - this.startTime) / 1000;
+    // Utiliser le temps de jeu accumulé (ne s'écoule pas en pause)
+    const survivalTime = this.gameTime / 1000;
     const windowMinutes = this.windowConfig.windowSize / 60000;
 
     // Précision sur la fenêtre

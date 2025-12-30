@@ -55,6 +55,9 @@ export abstract class MeleeWeapon {
     this.isSwinging = true;
     this.canSwing = false;
 
+    // Émettre l'événement de tir pour la télémétrie
+    this.scene.events.emit('weaponFired', { weapon: this.config.name });
+
     // Calculer l'angle central de l'attaque
     const centerAngle = Math.atan2(direction.y, direction.x);
 
@@ -173,6 +176,9 @@ export abstract class MeleeWeapon {
    */
   protected onHit(zombies: Zombie[], direction: Phaser.Math.Vector2): void {
     for (const zombie of zombies) {
+      // Émettre l'événement de hit pour la télémétrie
+      this.scene.events.emit('weaponHit', { weapon: this.config.name, damage: this.config.damage });
+
       // Infliger les dégâts
       zombie.takeDamage(this.config.damage);
 

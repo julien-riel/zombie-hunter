@@ -103,11 +103,16 @@ export class Chainsaw {
     // Consommer le carburant
     this._currentFuel = Math.max(0, this._currentFuel - this.fuelConsumption);
 
+    // Émettre l'événement de tir pour la télémétrie
+    this.scene.events.emit('weaponFired', { weapon: 'Chainsaw' });
+
     // Détecter les zombies devant le joueur
     const hitZombies = this.detectZombiesInFront(direction);
 
     // Infliger les dégâts
     for (const zombie of hitZombies) {
+      // Émettre l'événement de hit pour la télémétrie
+      this.scene.events.emit('weaponHit', { weapon: 'Chainsaw', damage: this.damage });
       zombie.takeDamage(this.damage);
       this.createDamageEffect(zombie.x, zombie.y);
     }
