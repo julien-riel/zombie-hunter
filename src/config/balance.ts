@@ -540,6 +540,57 @@ export const BALANCE = {
     destroyedSpawnMultiplier: 1.5, // 50% faster spawns on destroyed doors
   },
 
+  activeItems: {
+    // Configuration des objets actifs (Phase 6.4)
+    turret: {
+      duration: 30000, // 30 secondes
+      health: 100,
+      damage: 5, // 50% du pistolet
+      fireRate: 400, // Tirs par seconde
+      detectionRadius: 200,
+      maxActive: 1, // Une seule tourelle active à la fois
+      rarity: 'rare' as const,
+      color: 0x888888, // Gris
+    },
+    mine: {
+      damage: 80,
+      explosionRadius: 60,
+      detectionRadius: 40,
+      maxActive: 3, // Jusqu'à 3 mines actives
+      armingTime: 1000, // 1 seconde avant activation
+      rarity: 'common' as const,
+      color: 0xff6600, // Orange
+    },
+    drone: {
+      duration: 20000, // 20 secondes
+      health: 50,
+      damage: 3,
+      fireRate: 300,
+      orbitRadius: 80,
+      orbitSpeed: 2, // Radians par seconde
+      detectionRadius: 150,
+      rarity: 'rare' as const,
+      color: 0x00aaff, // Bleu clair
+    },
+    decoy: {
+      duration: 8000, // 8 secondes
+      maxHits: 3, // Disparaît après 3 coups
+      attractionRadius: 200, // Rayon d'attraction des zombies
+      rarity: 'common' as const,
+      color: 0xaa00ff, // Violet
+    },
+    discoball: {
+      attractDuration: 3000, // 3 secondes d'attraction
+      attractRadius: 150,
+      explosionRadius: 100,
+      baseDamage: 50,
+      damagePerZombie: 5, // Bonus par zombie attiré
+      maxBonusDamage: 100, // Plafond du bonus
+      rarity: 'rare' as const,
+      color: 0xff00ff, // Magenta
+    },
+  },
+
   // Calculs de référence pour validation de l'équilibrage
   reference: {
     // Temps pour tuer un Shambler avec Pistol : 30 HP / 40 DPS = 0.75 secondes

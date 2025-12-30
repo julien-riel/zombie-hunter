@@ -267,7 +267,7 @@ abstract class PowerUp {
 
 ---
 
-## 6.4 Objets Actifs
+## 6.4 Objets Actifs ✅ COMPLÉTÉ
 
 ### Objectif
 Donner au joueur des outils tactiques à déclencher manuellement.
@@ -349,6 +349,22 @@ abstract class ActiveItem {
 - `ActiveItemSystem` → gère l'inventaire et l'utilisation
 - `InputManager` → capture les inputs
 - `HUDScene` → affiche l'objet équipé et les charges restantes
+
+### Implémentation réalisée (2024-12-30)
+- ✅ `src/config/balance.ts` - Configuration des objets actifs ajoutée (durées, dégâts, rayons, couleurs)
+- ✅ `src/items/active/ActiveItem.ts` - Classe abstraite de base avec déploiement, update et destruction
+- ✅ `src/items/active/PortableTurret.ts` - Tourelle automatique 30s avec détection et tir sur zombies
+- ✅ `src/items/active/ProximityMine.ts` - Mine avec armement 1s et explosion de zone (80 dégâts)
+- ✅ `src/items/active/AttackDrone.ts` - Drone orbital 20s avec tir laser automatique
+- ✅ `src/items/active/HolographicDecoy.ts` - Leurre 8s attirant zombies (3 coups max)
+- ✅ `src/items/active/DiscoBallGrenade.ts` - Grenade attirant puis explosant avec dégâts bonus
+- ✅ `src/systems/ActiveItemSystem.ts` - Gestion inventaire, déploiement et limites
+- ✅ `src/ui/ActiveItemDisplay.ts` - Affichage HUD des objets avec charges et sélection
+- ✅ Intégration dans `GameScene` avec getter getActiveItemSystem()
+- ✅ Intégration dans `HUDScene` avec ActiveItemDisplay
+- ✅ `src/debug/DebugSpawner.ts` - Méthodes de debug pour objets actifs
+- ✅ `src/debug/DebugControls.ts` - Raccourcis: I (ajouter), U (cycler), K (spawn), J (utiliser)
+- ✅ Exports dans `src/systems/index.ts`, `src/items/index.ts` et `src/ui/index.ts`
 
 ---
 

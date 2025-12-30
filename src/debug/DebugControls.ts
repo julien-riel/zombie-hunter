@@ -45,6 +45,10 @@ export interface DebugControlCallbacks {
  * - P: Activer le power-up sélectionné
  * - O: Cycler entre les power-ups
  * - L: Spawn PowerUpDrop
+ * - I: Ajouter l'objet actif sélectionné à l'inventaire
+ * - U: Cycler entre les objets actifs
+ * - K: Déployer l'objet actif sélectionné (debug)
+ * - J: Utiliser l'objet actif équipé
  */
 export class DebugControls {
   private scene: Phaser.Scene;
@@ -105,6 +109,11 @@ export class DebugControls {
       P: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P),
       O: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.O),
       L: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L),
+      // Active item controls
+      I: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I),
+      U: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.U),
+      K: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K),
+      J: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
     };
 
     // Touches numériques 1-0 pour sélectionner le type de zombie
@@ -256,6 +265,30 @@ export class DebugControls {
     if (Phaser.Input.Keyboard.JustDown(this.keys.L)) {
       this.spawner.spawnPowerUpDrop();
       console.log(`[Debug] Spawned power-up drop`);
+    }
+
+    // I: Add selected active item to inventory
+    if (Phaser.Input.Keyboard.JustDown(this.keys.I)) {
+      this.spawner.addSelectedActiveItemToInventory(1);
+      console.log(`[Debug] Added active item to inventory: ${this.spawner.getSelectedActiveItemType()}`);
+    }
+
+    // U: Cycle through active items
+    if (Phaser.Input.Keyboard.JustDown(this.keys.U)) {
+      const newType = this.spawner.cycleActiveItem(1);
+      console.log(`[Debug] Selected active item: ${newType}`);
+    }
+
+    // K: Spawn selected active item (debug, without using charges)
+    if (Phaser.Input.Keyboard.JustDown(this.keys.K)) {
+      this.spawner.spawnSelectedActiveItem();
+      console.log(`[Debug] Spawned active item: ${this.spawner.getSelectedActiveItemType()}`);
+    }
+
+    // J: Use equipped active item (uses a charge from inventory)
+    if (Phaser.Input.Keyboard.JustDown(this.keys.J)) {
+      this.spawner.useEquippedActiveItem();
+      console.log(`[Debug] Used equipped active item`);
     }
 
     // Number keys 1-0: Select zombie type

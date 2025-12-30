@@ -5,6 +5,7 @@ import type { ZombieType } from '@/types/entities';
 import { GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import type { DropType } from '@items/drops';
 import type { PowerUpType } from '@items/powerups';
+import type { ActiveItemType } from '@items/active';
 
 /**
  * Types d'items que le DebugSpawner peut créer
@@ -48,6 +49,17 @@ export const POWERUP_TYPES: PowerUpType[] = [
 ];
 
 /**
+ * Liste complète des types d'objets actifs disponibles
+ */
+export const ACTIVEITEM_TYPES: ActiveItemType[] = [
+  'turret',
+  'mine',
+  'drone',
+  'decoy',
+  'discoball',
+];
+
+/**
  * Système de spawn pour le mode debug
  * Permet de créer des zombies et items à la demande
  */
@@ -63,6 +75,10 @@ export class DebugSpawner {
   private selectedPowerUpType: PowerUpType = 'rage';
   /** Index du power-up sélectionné */
   private selectedPowerUpIndex: number = 0;
+  /** Type d'objet actif actuellement sélectionné */
+  private selectedActiveItemType: ActiveItemType = 'turret';
+  /** Index de l'objet actif sélectionné */
+  private selectedActiveItemIndex: number = 0;
 
   constructor(gameScene: GameScene) {
     this.gameScene = gameScene;
@@ -361,6 +377,92 @@ export class DebugSpawner {
     const powerUpSystem = this.gameScene.getPowerUpSystem();
     if (powerUpSystem) {
       powerUpSystem.deactivateAll();
+    }
+  }
+
+  // ==================== ACTIVE ITEM METHODS ====================
+
+  /**
+   * Définit le type d'objet actif sélectionné
+   */
+  public setSelectedActiveItemType(type: ActiveItemType): void {
+    this.selectedActiveItemType = type;
+    this.selectedActiveItemIndex = ACTIVEITEM_TYPES.indexOf(type);
+  }
+
+  /**
+   * Récupère le type d'objet actif sélectionné
+   */
+  public getSelectedActiveItemType(): ActiveItemType {
+    return this.selectedActiveItemType;
+  }
+
+  /**
+   * Cycle vers l'objet actif suivant
+   */
+  public cycleActiveItem(direction: 1 | -1 = 1): ActiveItemType {
+    this.selectedActiveItemIndex =
+      (this.selectedActiveItemIndex + direction + ACTIVEITEM_TYPES.length) % ACTIVEITEM_TYPES.length;
+    this.selectedActiveItemType = ACTIVEITEM_TYPES[this.selectedActiveItemIndex];
+    return this.selectedActiveItemType;
+  }
+
+  /**
+   * Ajoute un objet actif à l'inventaire du joueur
+   */
+  public addActiveItemToInventory(type: ActiveItemType, charges: number = 1): void {
+    const activeItemSystem = this.gameScene.getActiveItemSystem();
+    if (activeItemSystem) {
+      activeItemSystem.addItem(type, charges);
+    }
+  }
+
+  /**
+   * Ajoute l'objet actif sélectionné à l'inventaire
+   */
+  public addSelectedActiveItemToInventory(charges: number = 1): void {
+    this.addActiveItemToInventory(this.selectedActiveItemType, charges);
+  }
+
+  /**
+   * Déploie un objet actif à la position du joueur (debug, sans consommer de charge)
+   */
+  public spawnActiveItem(type: ActiveItemType): void {
+    const player = this.gameScene.getPlayer();
+    const activeItemSystem = this.gameScene.getActiveItemSystem();
+
+    if (activeItemSystem) {
+      // Utiliser la position du joueur avec un petit décalage
+      const spawnX = player.x + 50;
+      const spawnY = player.y;
+      activeItemSystem.debugSpawnItem(type, spawnX, spawnY);
+    }
+  }
+
+  /**
+   * Déploie l'objet actif sélectionné
+   */
+  public spawnSelectedActiveItem(): void {
+    this.spawnActiveItem(this.selectedActiveItemType);
+  }
+
+  /**
+   * Utilise l'objet actif équipé (consomme une charge)
+   */
+  public useEquippedActiveItem(): void {
+    const activeItemSystem = this.gameScene.getActiveItemSystem();
+    if (activeItemSystem) {
+      activeItemSystem.useEquippedItem();
+    }
+  }
+
+  /**
+   * Détruit tous les objets actifs déployés
+   */
+  public destroyAllActiveItems(): void {
+    const activeItemSystem = this.gameScene.getActiveItemSystem();
+    if (activeItemSystem) {
+      activeItemSystem.destroyAllDeployed();
     }
   }
 }

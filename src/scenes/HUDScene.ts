@@ -5,6 +5,7 @@ import type { WaveConfig } from '@systems/WaveSystem';
 import type { Weapon } from '@weapons/Weapon';
 import { ComboMeter } from '@ui/ComboMeter';
 import { PowerUpDisplay } from '@ui/PowerUpDisplay';
+import { ActiveItemDisplay } from '@ui/ActiveItemDisplay';
 import type { GameEventPayloads } from '@/types/events';
 
 /**
@@ -40,6 +41,9 @@ export class HUDScene extends Phaser.Scene {
   // Affichage des power-ups actifs (Phase 6.3)
   private powerUpDisplay!: PowerUpDisplay;
 
+  // Affichage des objets actifs (Phase 6.4)
+  private activeItemDisplay!: ActiveItemDisplay;
+
   constructor() {
     super({ key: SCENE_KEYS.HUD });
   }
@@ -64,6 +68,7 @@ export class HUDScene extends Phaser.Scene {
     this.createWeaponInventory();
     this.createComboMeter();
     this.createPowerUpDisplay();
+    this.createActiveItemDisplay();
 
     // Écouter les événements de score
     this.gameScene.events.on('scoreUpdate', this.onScoreUpdate, this);
@@ -86,6 +91,10 @@ export class HUDScene extends Phaser.Scene {
     // Écouter les événements de power-up (Phase 6.3)
     this.gameScene.events.on('powerup:activate', this.onPowerUpActivate, this);
     this.gameScene.events.on('powerup:expire', this.onPowerUpExpire, this);
+
+    // Écouter les événements d'objets actifs (Phase 6.4)
+    this.gameScene.events.on('activeitem:inventory_update', this.onActiveItemInventoryUpdate, this);
+    this.gameScene.events.on('activeitem:equipped', this.onActiveItemEquipped, this);
   }
 
   /**
@@ -97,6 +106,7 @@ export class HUDScene extends Phaser.Scene {
       this.updateAmmoCounter();
       this.updateComboMeter();
       this.updatePowerUpDisplay();
+      this.updateActiveItemDisplay();
     }
   }
 
@@ -580,6 +590,45 @@ export class HUDScene extends Phaser.Scene {
   }
 
   /**
+   * Crée l'affichage des objets actifs (Phase 6.4)
+   */
+  private createActiveItemDisplay(): void {
+    this.activeItemDisplay = new ActiveItemDisplay(this, {
+      x: 20,
+      y: 280,
+      slotSize: 40,
+      slotSpacing: 5,
+      maxSlots: 5,
+    });
+    this.activeItemDisplay.setDepth(100);
+  }
+
+  /**
+   * Met à jour l'affichage des objets actifs
+   */
+  private updateActiveItemDisplay(): void {
+    const activeItemSystem = this.gameScene.getActiveItemSystem();
+    if (activeItemSystem) {
+      const inventory = activeItemSystem.getInventory();
+      this.activeItemDisplay.update(inventory);
+    }
+  }
+
+  /**
+   * Gère la mise à jour de l'inventaire d'objets actifs
+   */
+  private onActiveItemInventoryUpdate(_data: { type: string; charges: number }): void {
+    // L'affichage sera mis à jour automatiquement via updateActiveItemDisplay
+  }
+
+  /**
+   * Gère l'équipement d'un objet actif
+   */
+  private onActiveItemEquipped(_data: { type: string }): void {
+    // L'affichage sera mis à jour automatiquement via updateActiveItemDisplay
+  }
+
+  /**
    * Nettoyage lors de la destruction de la scène
    */
   shutdown(): void {
@@ -600,5 +649,9 @@ export class HUDScene extends Phaser.Scene {
     // Retirer les listeners de power-up (Phase 6.3)
     this.gameScene.events.off('powerup:activate', this.onPowerUpActivate, this);
     this.gameScene.events.off('powerup:expire', this.onPowerUpExpire, this);
+
+    // Retirer les listeners d'objets actifs (Phase 6.4)
+    this.gameScene.events.off('activeitem:inventory_update', this.onActiveItemInventoryUpdate, this);
+    this.gameScene.events.off('activeitem:equipped', this.onActiveItemEquipped, this);
   }
 }
