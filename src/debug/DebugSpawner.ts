@@ -8,6 +8,7 @@ import type { DropType } from '@items/drops';
 import type { PowerUpType } from '@items/powerups';
 import type { ActiveItemType } from '@items/active';
 import { UPGRADES, type UpgradeDefinition } from '@config/upgrades';
+import { PERMANENT_UPGRADES, type PermanentUpgradeDefinition } from '@config/progression';
 
 /**
  * Types d'items que le DebugSpawner peut créer
@@ -620,5 +621,117 @@ export class DebugSpawner {
       return economySystem.getStats();
     }
     return { points: 0, totalEarned: 0, totalSpent: 0 };
+  }
+
+  // ==================== PROGRESSION METHODS (Phase 6.7) ====================
+
+  /** Index de l'upgrade permanent sélectionné */
+  private selectedPermanentUpgradeIndex: number = 0;
+
+  /**
+   * Récupère la liste des upgrades permanents disponibles
+   */
+  public getAvailablePermanentUpgrades(): PermanentUpgradeDefinition[] {
+    return PERMANENT_UPGRADES;
+  }
+
+  /**
+   * Récupère l'upgrade permanent actuellement sélectionné
+   */
+  public getSelectedPermanentUpgrade(): PermanentUpgradeDefinition {
+    return PERMANENT_UPGRADES[this.selectedPermanentUpgradeIndex];
+  }
+
+  /**
+   * Cycle vers l'upgrade permanent suivant
+   */
+  public cyclePermanentUpgrade(direction: 1 | -1 = 1): PermanentUpgradeDefinition {
+    this.selectedPermanentUpgradeIndex =
+      (this.selectedPermanentUpgradeIndex + direction + PERMANENT_UPGRADES.length) % PERMANENT_UPGRADES.length;
+    return this.getSelectedPermanentUpgrade();
+  }
+
+  /**
+   * Achète l'upgrade permanent sélectionné
+   */
+  public purchaseSelectedPermanentUpgrade(): boolean {
+    const progressionSystem = this.gameScene.getProgressionSystem();
+    if (progressionSystem) {
+      const upgrade = this.getSelectedPermanentUpgrade();
+      return progressionSystem.purchaseUpgrade(upgrade.id);
+    }
+    return false;
+  }
+
+  /**
+   * Ajoute de l'XP (debug)
+   */
+  public addXP(amount: number): number {
+    const progressionSystem = this.gameScene.getProgressionSystem();
+    if (progressionSystem) {
+      return progressionSystem.debugAddXP(amount);
+    }
+    return 0;
+  }
+
+  /**
+   * Récupère l'XP disponible
+   */
+  public getAvailableXP(): number {
+    const progressionSystem = this.gameScene.getProgressionSystem();
+    if (progressionSystem) {
+      return progressionSystem.getAvailableXP();
+    }
+    return 0;
+  }
+
+  /**
+   * Récupère les stats de progression
+   */
+  public getProgressionStats(): object {
+    const progressionSystem = this.gameScene.getProgressionSystem();
+    if (progressionSystem) {
+      return progressionSystem.getStats();
+    }
+    return {};
+  }
+
+  /**
+   * Ouvre la scène de progression
+   */
+  public openProgressionScene(): void {
+    this.gameScene.scene.launch(SCENE_KEYS.PROGRESSION, {
+      parentScene: this.gameScene,
+    });
+  }
+
+  /**
+   * Réinitialise toute la progression (debug)
+   */
+  public resetProgression(): void {
+    const progressionSystem = this.gameScene.getProgressionSystem();
+    if (progressionSystem) {
+      progressionSystem.debugResetProgression();
+    }
+  }
+
+  /**
+   * Débloque tout (debug)
+   */
+  public unlockAllProgression(): void {
+    const progressionSystem = this.gameScene.getProgressionSystem();
+    if (progressionSystem) {
+      progressionSystem.debugUnlockAll();
+    }
+  }
+
+  /**
+   * Max tous les upgrades permanents (debug)
+   */
+  public maxAllPermanentUpgrades(): void {
+    const progressionSystem = this.gameScene.getProgressionSystem();
+    if (progressionSystem) {
+      progressionSystem.debugMaxAllUpgrades();
+    }
   }
 }

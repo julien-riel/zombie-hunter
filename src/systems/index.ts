@@ -9,6 +9,8 @@ export { UpgradeSystem } from './UpgradeSystem';
 export type { AppliedUpgrade } from './UpgradeSystem';
 export { EconomySystem } from './EconomySystem';
 export type { PurchaseType, PurchaseInfo } from './EconomySystem';
+export { ProgressionSystem } from './ProgressionSystem';
+export type { PermanentModifiers, GameEndSummary, XPCalculationResult, ProgressionStats } from './ProgressionSystem';
 export { SpawnSystem } from './SpawnSystem';
 export { WaveSystem } from './WaveSystem';
 export type { WaveConfig, SpawnGroup, WaveState } from './WaveSystem';

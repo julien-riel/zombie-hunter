@@ -54,7 +54,9 @@ export interface DebugControlCallbacks {
  * - G: Ouvrir la scène de sélection d'upgrade
  * - M: Ouvrir le menu tactique
  * - N: Ajouter 100 points (économie)
- * - B: Retirer 50 points (économie)
+ * - V: Ouvrir la scène de progression permanente
+ * - B: Ajouter 500 XP (progression)
+ * - R: Cycler les upgrades permanents
  */
 export class DebugControls {
   private scene: Phaser.Scene;
@@ -127,7 +129,10 @@ export class DebugControls {
       // Economy/Tactical Menu controls (Phase 6.6)
       M: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M),
       N: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.N),
-      // Note: B key is not added here to avoid conflict with potential movement keys
+      // Progression controls (Phase 6.7)
+      V: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.V),
+      B: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.B),
+      R: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R),
     };
 
     // Touches numériques 1-0 pour sélectionner le type de zombie
@@ -334,6 +339,25 @@ export class DebugControls {
     if (Phaser.Input.Keyboard.JustDown(this.keys.N)) {
       const points = this.spawner.addPoints(100);
       console.log(`[Debug] Added 100 points. Total: ${points}`);
+    }
+
+    // V: Open progression scene
+    if (Phaser.Input.Keyboard.JustDown(this.keys.V)) {
+      this.spawner.openProgressionScene();
+      console.log(`[Debug] Opening progression scene`);
+    }
+
+    // B: Add 500 XP
+    if (Phaser.Input.Keyboard.JustDown(this.keys.B)) {
+      const totalXP = this.spawner.addXP(500);
+      console.log(`[Debug] Added 500 XP. Total: ${totalXP}`);
+    }
+
+    // R: Cycle permanent upgrades
+    if (Phaser.Input.Keyboard.JustDown(this.keys.R)) {
+      const upgrade = this.spawner.cyclePermanentUpgrade(1);
+      const level = this.gameScene.getProgressionSystem()?.getUpgradeLevel(upgrade.id) || 0;
+      console.log(`[Debug] Selected permanent upgrade: ${upgrade.name} (${level}/${upgrade.maxLevel})`);
     }
 
     // Number keys 1-0: Select zombie type

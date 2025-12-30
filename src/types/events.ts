@@ -59,7 +59,11 @@ export type ProgressionEvent =
   | 'item:drop'
   | 'item:pickup'
   | 'powerup:activate'
-  | 'powerup:expire';
+  | 'powerup:expire'
+  | 'progression:game_end'
+  | 'progression:unlock'
+  | 'progression:upgrade_purchased'
+  | 'progression:modifiers_applied';
 
 // ============================================================================
 // ÉVÉNEMENTS D'ENVIRONNEMENT
@@ -171,6 +175,38 @@ export interface GameEventPayloads {
   'powerup:activate': { powerupType: string; duration: number };
   /** Émis quand un power-up expire */
   'powerup:expire': { powerupType: string };
+
+  // --- Permanent Progression Events (Phase 6.7) ---
+  /** Émis à la fin d'une partie avec le résumé de progression */
+  'progression:game_end': {
+    summary: { waveReached: number; killCount: number; score: number; survivalTime: number };
+    xpResult: { total: number; breakdown: { waves: number; kills: number; score: number; bonus: number } };
+    newUnlocks: Array<{ unlock: { id: string; name: string; type: string }; isNew: boolean }>;
+  };
+  /** Émis quand un nouveau déblocage est obtenu */
+  'progression:unlock': {
+    unlock: { id: string; name: string; description: string; type: string };
+  };
+  /** Émis quand un upgrade permanent est acheté */
+  'progression:upgrade_purchased': {
+    upgradeId: string;
+    newLevel: number;
+    cost: number;
+  };
+  /** Émis quand les modificateurs permanents sont appliqués au joueur */
+  'progression:modifiers_applied': {
+    modifiers: {
+      damageMultiplier: number;
+      fireRateMultiplier: number;
+      critChance: number;
+      maxHealthBonus: number;
+      healthRegen: number;
+      armorMultiplier: number;
+      pickupRangeMultiplier: number;
+      powerUpDurationMultiplier: number;
+      pointsMultiplier: number;
+    };
+  };
 
   // --- Environment Events ---
   /** Émis quand une porte est activée */

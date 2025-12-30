@@ -21,6 +21,7 @@ import { PowerUpSystem } from '@systems/PowerUpSystem';
 import { ActiveItemSystem } from '@systems/ActiveItemSystem';
 import { UpgradeSystem } from '@systems/UpgradeSystem';
 import { EconomySystem } from '@systems/EconomySystem';
+import { ProgressionSystem } from '@systems/ProgressionSystem';
 import { SpawnSystem } from '@systems/SpawnSystem';
 import { WaveSystem } from '@systems/WaveSystem';
 import { DDASystem } from '@systems/DDASystem';
@@ -53,6 +54,7 @@ export class GameScene extends Phaser.Scene {
   private activeItemSystem!: ActiveItemSystem;
   private upgradeSystem!: UpgradeSystem;
   private economySystem!: EconomySystem;
+  private progressionSystem!: ProgressionSystem;
   private spawnSystem!: SpawnSystem;
   private waveSystem!: WaveSystem;
   private pathfinder!: Pathfinder;
@@ -168,6 +170,9 @@ export class GameScene extends Phaser.Scene {
     // Système économique (Phase 6.6)
     this.economySystem = new EconomySystem(this);
     this.economySystem.setComboSystem(this.comboSystem);
+
+    // Système de progression permanente (Phase 6.7)
+    this.progressionSystem = new ProgressionSystem(this, this.player);
 
     // Enregistrer les groupes de zombies dans le système de combat
     for (const group of this.poolManager.getAllZombieGroups()) {
@@ -568,6 +573,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le système de progression permanente (Phase 6.7)
+   */
+  public getProgressionSystem(): ProgressionSystem {
+    return this.progressionSystem;
+  }
+
+  /**
    * Récupère le système de spawn
    */
   public getSpawnSystem(): SpawnSystem {
@@ -780,6 +792,7 @@ export class GameScene extends Phaser.Scene {
     this.activeItemSystem?.destroy();
     this.upgradeSystem?.destroy();
     this.economySystem?.destroy();
+    this.progressionSystem?.destroy();
     this.poolManager?.destroy();
     this.ddaSystem?.reset();
     this.acidSpitPool?.destroy();

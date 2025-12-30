@@ -676,7 +676,7 @@ class EconomySystem {
 
 ---
 
-## 6.7 Progression Permanente
+## 6.7 Progression Permanente ✅ COMPLÉTÉ
 
 ### Objectif
 Donner un sentiment de progression long terme entre les parties.
@@ -773,6 +773,35 @@ class ProgressionManager {
 - `GameOverScene` → affiche XP gagnée et progression
 - `MenuScene` → accès à l'arbre de compétences
 - `Player` → reçoit les bonus permanents au spawn
+
+### Implémentation réalisée (2024-12-30)
+- ✅ `src/config/progression.ts` - Configuration des upgrades permanents, déblocages, courbe d'XP
+  - 9 upgrades permanents répartis en 3 catégories (Combat, Survie, Utilitaire)
+  - 14 déblocages (personnages, armes, objets actifs, succès)
+  - Système de prérequis pour les upgrades
+  - Coût d'XP croissant par niveau
+- ✅ `src/managers/SaveManager.ts` - Gestion de la persistance via localStorage
+  - Singleton pour accès global
+  - Auto-sauvegarde configurable
+  - Migration de versions pour futures mises à jour
+  - Gestion des stats, déblocages et paramètres
+- ✅ `src/systems/ProgressionSystem.ts` - Logique principale de progression
+  - Calcul d'XP en fin de partie (vagues, kills, score, bonus)
+  - Achat d'upgrades permanents avec prérequis
+  - Vérification des conditions de déblocage
+  - Modificateurs permanents appliqués au joueur
+  - Événements: `progression:game_end`, `progression:unlock`, `progression:upgrade_purchased`
+- ✅ `src/scenes/ProgressionScene.ts` - Interface de l'arbre de compétences
+  - Overlay avec 3 onglets de catégories
+  - Affichage des upgrades avec niveaux et coûts
+  - Achat interactif avec feedback visuel
+  - Lignes de connexion entre upgrades
+- ✅ `src/types/events.ts` - Événements de progression ajoutés
+- ✅ `src/config/constants.ts` - Clé PROGRESSION ajoutée à SCENE_KEYS
+- ✅ Intégration dans `GameScene` avec getter getProgressionSystem()
+- ✅ `src/debug/DebugSpawner.ts` - Méthodes de debug pour progression
+- ✅ `src/debug/DebugControls.ts` - Raccourcis clavier: V (scène progression), B (+500 XP), R (cycler upgrades)
+- ✅ Exports dans `src/systems/index.ts`, `src/managers/index.ts` et `src/scenes/index.ts`
 
 ---
 
