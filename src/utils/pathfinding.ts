@@ -164,13 +164,28 @@ export class Pathfinder {
     const start = this.worldToGrid(startX, startY);
     const end = this.worldToGrid(endX, endY);
 
-    // Si départ ou arrivée non walkable, retourner un chemin direct (fallback)
-    if (!this.isWalkable(start.x, start.y) || !this.isWalkable(end.x, end.y)) {
-      return [{ x: endX, y: endY }];
+    // Si départ non walkable, chercher la case walkable la plus proche
+    let actualStart = start;
+    if (!this.isWalkable(start.x, start.y)) {
+      const nearestStart = this.findNearestWalkable(start.x, start.y);
+      if (!nearestStart) {
+        return []; // Pas de case walkable proche, retourner vide
+      }
+      actualStart = nearestStart;
+    }
+
+    // Si arrivée non walkable, chercher la case walkable la plus proche de la destination
+    let actualEnd = end;
+    if (!this.isWalkable(end.x, end.y)) {
+      const nearestEnd = this.findNearestWalkable(end.x, end.y);
+      if (!nearestEnd) {
+        return []; // Pas de case walkable proche, retourner vide
+      }
+      actualEnd = nearestEnd;
     }
 
     // Si même tuile, pas besoin de chemin
-    if (start.x === end.x && start.y === end.y) {
+    if (actualStart.x === actualEnd.x && actualStart.y === actualEnd.y) {
       return [{ x: endX, y: endY }];
     }
 
@@ -178,10 +193,10 @@ export class Pathfinder {
     const closedSet = new Set<string>();
 
     const startNode: PathNode = {
-      x: start.x,
-      y: start.y,
+      x: actualStart.x,
+      y: actualStart.y,
       g: 0,
-      h: this.heuristic(start.x, start.y, end.x, end.y),
+      h: this.heuristic(actualStart.x, actualStart.y, actualEnd.x, actualEnd.y),
       f: 0,
       parent: null,
     };
@@ -200,7 +215,7 @@ export class Pathfinder {
       const current = openList[lowestIndex];
 
       // Arrivée atteinte
-      if (current.x === end.x && current.y === end.y) {
+      if (current.x === actualEnd.x && current.y === actualEnd.y) {
         return this.reconstructPath(current, endX, endY);
       }
 
@@ -226,7 +241,7 @@ export class Pathfinder {
         if (existingIndex === -1) {
           // Nouveau nœud
           neighbor.g = tentativeG;
-          neighbor.h = this.heuristic(neighbor.x, neighbor.y, end.x, end.y);
+          neighbor.h = this.heuristic(neighbor.x, neighbor.y, actualEnd.x, actualEnd.y);
           neighbor.f = neighbor.g + neighbor.h;
           neighbor.parent = current;
           openList.push(neighbor);
@@ -239,8 +254,59 @@ export class Pathfinder {
       }
     }
 
-    // Pas de chemin trouvé - fallback sur chemin direct
-    return [{ x: endX, y: endY }];
+    // Pas de chemin trouvé - retourner tableau vide
+    // Ne PAS retourner un chemin direct qui ignorerait les obstacles
+    return [];
+  }
+
+  /**
+   * Trouve la case walkable la plus proche d'une position donnée
+   * Utilise une recherche en spirale (BFS)
+   * @param gridX Position X en coordonnées grille
+   * @param gridY Position Y en coordonnées grille
+   * @param maxRadius Rayon max de recherche (en tuiles)
+   * @returns Position walkable ou null si aucune trouvée
+   */
+  public findNearestWalkable(gridX: number, gridY: number, maxRadius: number = 5): PathPoint | null {
+    // Si déjà walkable, retourner la position
+    if (this.isWalkable(gridX, gridY)) {
+      return { x: gridX, y: gridY };
+    }
+
+    // Recherche en spirale (BFS)
+    for (let radius = 1; radius <= maxRadius; radius++) {
+      // Parcourir le périmètre du carré de rayon 'radius'
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          // Ne vérifier que le périmètre, pas l'intérieur
+          if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+
+          const nx = gridX + dx;
+          const ny = gridY + dy;
+
+          if (this.isWalkable(nx, ny)) {
+            return { x: nx, y: ny };
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Trouve la position walkable la plus proche en coordonnées monde
+   * @param worldX Position X en coordonnées monde
+   * @param worldY Position Y en coordonnées monde
+   * @returns Position monde de la case walkable la plus proche, ou null
+   */
+  public findNearestWalkableWorld(worldX: number, worldY: number): PathPoint | null {
+    const gridPos = this.worldToGrid(worldX, worldY);
+    const nearestGrid = this.findNearestWalkable(gridPos.x, gridPos.y);
+
+    if (!nearestGrid) return null;
+
+    return this.gridToWorld(nearestGrid.x, nearestGrid.y);
   }
 
   /**

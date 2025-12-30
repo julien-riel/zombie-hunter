@@ -75,6 +75,13 @@ export class ZombieStateMachine {
   /** Dernière mise à jour du wander en IDLE */
   private lastIdleWanderTime: number = 0;
 
+  /** Dernier chemin valide (pour éviter les fallbacks en ligne droite) */
+  private lastValidPath: { x: number; y: number }[] = [];
+
+  /** Temps depuis le dernier mouvement significatif (détection blocage) */
+  private lastSignificantMoveTime: number = 0;
+  private lastPosition: { x: number; y: number } = { x: 0, y: 0 };
+
   constructor(
     zombie: Zombie,
     detectionRange: number = 400,
@@ -237,8 +244,19 @@ export class ZombieStateMachine {
     targetX = Math.max(bounds.x + 50, Math.min(bounds.width - 50, targetX));
     targetY = Math.max(bounds.y + 50, Math.min(bounds.height - 50, targetY));
 
-    // Définir la cible pour le MovementComponent
-    this.zombie.movementComponent.setTarget(targetX, targetY);
+    // Utiliser le pathfinding si disponible pour éviter les obstacles
+    const pathfinder = this.getPathfinder();
+    if (pathfinder) {
+      const path = pathfinder.findPath(this.zombie.x, this.zombie.y, targetX, targetY);
+      if (path.length > 0) {
+        this.zombie.movementComponent.setPath(path);
+        return;
+      }
+    }
+
+    // Fallback: si pathfinder non disponible ou pas de chemin,
+    // rester immobile plutôt que d'aller en ligne droite
+    // Le prochain cycle de wander choisira une nouvelle destination
   }
 
   /**
@@ -388,6 +406,9 @@ export class ZombieStateMachine {
   private applyHordeMovement(targetX: number, targetY: number, _time: number): void {
     const flowFieldManager = this.getFlowFieldManager();
 
+    // Vérifier si le zombie est bloqué
+    this.checkAndHandleStuck();
+
     // Utiliser le flow field si disponible
     if (flowFieldManager && flowFieldManager.isReady()) {
       // Récupérer la direction depuis le flow field
@@ -397,12 +418,24 @@ export class ZombieStateMachine {
         // Appliquer directement la direction du flow field
         this.zombie.movementComponent.moveInDirection(direction.x, direction.y);
 
+        // Appliquer l'évitement des murs pour les coins
+        this.applyWallAvoidance();
+
         // Mettre à jour la rotation
         const angle = Math.atan2(direction.y, direction.x);
         this.zombie.setRotation(angle);
       } else {
-        // Fallback sur la cible tactique directe
-        this.zombie.movementComponent.setTarget(targetX, targetY);
+        // Flow field sans direction - essayer A* comme fallback
+        const pathfinder = this.getPathfinder();
+        if (pathfinder) {
+          const path = pathfinder.findPath(this.zombie.x, this.zombie.y, targetX, targetY);
+          if (path.length > 0) {
+            this.zombie.movementComponent.setPath(path);
+            this.lastValidPath = [...path];
+          } else if (this.lastValidPath.length > 0) {
+            this.zombie.movementComponent.setPath(this.lastValidPath);
+          }
+        }
       }
     } else {
       // Fallback sur A* individuel
@@ -419,13 +452,14 @@ export class ZombieStateMachine {
 
           if (path.length > 0) {
             this.zombie.movementComponent.setPath(path);
+            this.lastValidPath = [...path];
           }
         }
       }
 
-      // Fallback si pas de chemin
-      if (!this.zombie.movementComponent.hasPath()) {
-        this.zombie.movementComponent.setTarget(targetX, targetY);
+      // Si pas de chemin actuel, utiliser le dernier chemin valide (pas de mouvement direct)
+      if (!this.zombie.movementComponent.hasPath() && this.lastValidPath.length > 0) {
+        this.zombie.movementComponent.setPath(this.lastValidPath);
       }
     }
 
@@ -450,6 +484,9 @@ export class ZombieStateMachine {
         }
       }
     }
+
+    // Appliquer l'évitement des murs après toutes les forces
+    this.applyWallAvoidance();
   }
 
   /**
@@ -479,6 +516,9 @@ export class ZombieStateMachine {
       return;
     }
 
+    // Vérifier si le zombie est bloqué et essayer de le débloquer
+    this.checkAndHandleStuck();
+
     // Fallback sur A* individuel
     const now = Date.now();
     const pathfinder = this.getPathfinder();
@@ -486,9 +526,10 @@ export class ZombieStateMachine {
     // Recalculer le chemin périodiquement ou si on n'en a pas
     if (!pathfinder || now - this.lastPathTime < PATH_UPDATE_INTERVAL) {
       // Pas de pathfinder ou trop tôt pour recalculer
-      // Continuer à suivre le chemin actuel ou aller en ligne droite
-      if (!this.zombie.movementComponent.hasPath()) {
-        this.zombie.movementComponent.setTarget(this.target.x, this.target.y);
+      // Continuer à suivre le chemin actuel (ne PAS aller en ligne droite)
+      // Si pas de chemin, utiliser le dernier chemin valide
+      if (!this.zombie.movementComponent.hasPath() && this.lastValidPath.length > 0) {
+        this.zombie.movementComponent.setPath(this.lastValidPath);
       }
       return;
     }
@@ -499,9 +540,14 @@ export class ZombieStateMachine {
 
     if (path.length > 0) {
       this.zombie.movementComponent.setPath(path);
+      this.lastValidPath = [...path]; // Sauvegarder le chemin valide
     } else {
-      // Fallback: aller en ligne droite
-      this.zombie.movementComponent.setTarget(this.target.x, this.target.y);
+      // Pas de chemin trouvé - utiliser le dernier chemin valide ou rester immobile
+      // Ne PAS aller en ligne droite (cela causerait le blocage sur les obstacles)
+      if (this.lastValidPath.length > 0) {
+        this.zombie.movementComponent.setPath(this.lastValidPath);
+      }
+      // Sinon, le zombie reste en place et attend le prochain recalcul
     }
   }
 
@@ -512,12 +558,28 @@ export class ZombieStateMachine {
   private chaseWithFlowField(flowFieldManager: FlowFieldManager): void {
     if (!this.target) return;
 
+    // Vérifier si le zombie est bloqué
+    this.checkAndHandleStuck();
+
     // Récupérer la direction depuis le flow field (interpolation smooth)
     const direction = flowFieldManager.getDirectionSmooth(this.zombie.x, this.zombie.y);
 
-    // Si pas de direction valide, fallback sur mouvement direct
+    // Si pas de direction valide, essayer A* comme fallback
     if (direction.x === 0 && direction.y === 0) {
-      this.zombie.movementComponent.setTarget(this.target.x, this.target.y);
+      // Ne PAS utiliser setTarget (mouvement direct)
+      // Essayer de calculer un chemin A* à la place
+      const pathfinder = this.getPathfinder();
+      if (pathfinder) {
+        const path = pathfinder.findPath(this.zombie.x, this.zombie.y, this.target.x, this.target.y);
+        if (path.length > 0) {
+          this.zombie.movementComponent.setPath(path);
+          this.lastValidPath = [...path];
+        } else if (this.lastValidPath.length > 0) {
+          // Utiliser le dernier chemin valide
+          this.zombie.movementComponent.setPath(this.lastValidPath);
+        }
+        // Sinon rester immobile
+      }
       return;
     }
 
@@ -525,9 +587,149 @@ export class ZombieStateMachine {
     // moveInDirection applique la vélocité dans la direction donnée
     this.zombie.movementComponent.moveInDirection(direction.x, direction.y);
 
+    // Appliquer l'évitement des murs pour les coins
+    this.applyWallAvoidance();
+
     // Mettre à jour la rotation pour regarder dans la direction du mouvement
     const angle = Math.atan2(direction.y, direction.x);
     this.zombie.setRotation(angle);
+  }
+
+  /**
+   * Applique une force de répulsion des murs pour éviter que le zombie
+   * se coince dans les coins à cause de son hitbox
+   */
+  private applyWallAvoidance(): void {
+    const pathfinder = this.getPathfinder();
+    if (!pathfinder) return;
+
+    const body = this.zombie.body as Phaser.Physics.Arcade.Body;
+    if (!body) return;
+
+    // Rayon de détection basé sur la taille du hitbox
+    const detectionRadius = Math.max(body.width, body.height) * 0.75;
+    const repulsionStrength = 150; // Force de répulsion
+
+    // Position actuelle en coordonnées grille
+    const gridPos = pathfinder.worldToGrid(this.zombie.x, this.zombie.y);
+
+    // Vecteur de répulsion accumulé
+    let repulsionX = 0;
+    let repulsionY = 0;
+    let wallCount = 0;
+
+    // Vérifier les 8 directions autour du zombie
+    const directions = [
+      { dx: -1, dy: -1 }, { dx: 0, dy: -1 }, { dx: 1, dy: -1 },
+      { dx: -1, dy: 0 },                      { dx: 1, dy: 0 },
+      { dx: -1, dy: 1 },  { dx: 0, dy: 1 },  { dx: 1, dy: 1 },
+    ];
+
+    for (const dir of directions) {
+      const checkX = gridPos.x + dir.dx;
+      const checkY = gridPos.y + dir.dy;
+
+      // Si la tuile n'est pas walkable, calculer la répulsion
+      if (!pathfinder.isWalkable(checkX, checkY)) {
+        // Position du centre de la tuile en monde
+        const tileWorldPos = pathfinder.gridToWorld(checkX, checkY);
+
+        // Vecteur du mur vers le zombie
+        const awayX = this.zombie.x - tileWorldPos.x;
+        const awayY = this.zombie.y - tileWorldPos.y;
+        const distance = Math.sqrt(awayX * awayX + awayY * awayY);
+
+        // Appliquer la répulsion si assez proche
+        if (distance < detectionRadius + 16) { // 16 = demi-tuile
+          const strength = 1 - (distance / (detectionRadius + 16));
+          if (distance > 0) {
+            repulsionX += (awayX / distance) * strength;
+            repulsionY += (awayY / distance) * strength;
+            wallCount++;
+          }
+        }
+      }
+    }
+
+    // Appliquer la force de répulsion si des murs ont été détectés
+    if (wallCount > 0) {
+      // Normaliser et appliquer
+      const repulsionLength = Math.sqrt(repulsionX * repulsionX + repulsionY * repulsionY);
+      if (repulsionLength > 0) {
+        const factor = repulsionStrength / repulsionLength;
+        body.velocity.x += repulsionX * factor;
+        body.velocity.y += repulsionY * factor;
+
+        // Limiter la vélocité totale
+        const speed = this.zombie.movementComponent.getSpeed();
+        const currentSpeed = Math.sqrt(
+          body.velocity.x * body.velocity.x + body.velocity.y * body.velocity.y
+        );
+        if (currentSpeed > speed * 1.2) { // Permettre un léger dépassement pour l'évitement
+          const scale = (speed * 1.2) / currentSpeed;
+          body.velocity.x *= scale;
+          body.velocity.y *= scale;
+        }
+      }
+    }
+  }
+
+  /**
+   * Vérifie si le zombie est bloqué et essaie de le débloquer
+   * Un zombie est considéré bloqué s'il n'a pas bougé significativement depuis un certain temps
+   */
+  private checkAndHandleStuck(): void {
+    const now = Date.now();
+    const currentPos = { x: this.zombie.x, y: this.zombie.y };
+
+    // Calculer la distance parcourue depuis la dernière vérification
+    const dx = currentPos.x - this.lastPosition.x;
+    const dy = currentPos.y - this.lastPosition.y;
+    const distanceMoved = Math.sqrt(dx * dx + dy * dy);
+
+    // Si le zombie a bougé significativement (> 5 pixels), mettre à jour
+    if (distanceMoved > 5) {
+      this.lastSignificantMoveTime = now;
+      this.lastPosition = currentPos;
+      return;
+    }
+
+    // Vérifier si le zombie est bloqué depuis trop longtemps (> 1 seconde)
+    const stuckDuration = now - this.lastSignificantMoveTime;
+    if (stuckDuration < 1000) {
+      return; // Pas encore assez longtemps pour être considéré bloqué
+    }
+
+    // Le zombie est bloqué - essayer de le débloquer
+    const pathfinder = this.getPathfinder();
+    if (!pathfinder) return;
+
+    // Chercher la case walkable la plus proche
+    const nearestWalkable = pathfinder.findNearestWalkableWorld(this.zombie.x, this.zombie.y);
+
+    if (nearestWalkable) {
+      // Téléporter doucement le zombie vers la case walkable
+      // (en utilisant un petit déplacement pour éviter les artefacts visuels)
+      const moveX = nearestWalkable.x - this.zombie.x;
+      const moveY = nearestWalkable.y - this.zombie.y;
+      const moveDist = Math.sqrt(moveX * moveX + moveY * moveY);
+
+      if (moveDist > 0) {
+        // Déplacer progressivement (max 8 pixels par frame)
+        const maxMove = 8;
+        const scale = Math.min(1, maxMove / moveDist);
+        this.zombie.x += moveX * scale;
+        this.zombie.y += moveY * scale;
+
+        // Forcer un recalcul du chemin
+        this.lastPathTime = 0;
+        this.lastValidPath = [];
+      }
+    }
+
+    // Réinitialiser le timer pour éviter les déblocages répétés
+    this.lastSignificantMoveTime = now;
+    this.lastPosition = currentPos;
   }
 
   /**
@@ -719,6 +921,11 @@ export class ZombieStateMachine {
     this.tacticalTarget = null;
     this.steeringForce.set(0, 0);
     this.steeringBehaviors.resetWanderAngle();
+
+    // Réinitialiser le tracking de blocage
+    this.lastValidPath = [];
+    this.lastSignificantMoveTime = Date.now();
+    this.lastPosition = { x: this.zombie.x, y: this.zombie.y };
 
     // Nettoyer les assignations tactiques
     if (this.tacticalBehaviors) {

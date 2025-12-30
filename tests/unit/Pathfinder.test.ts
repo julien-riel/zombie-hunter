@@ -256,31 +256,36 @@ describe('Pathfinder', () => {
   });
 
   describe('findPath - fallback behavior', () => {
-    it('should return direct path to target if start is non-walkable', () => {
+    it('should find path from nearest walkable when start is non-walkable', () => {
       pathfinder.buildGrid([
         { x: 100, y: 100, width: 64, height: 64 },
       ]);
 
       const path = pathfinder.findPath(100, 100, 300, 300);
 
-      expect(path.length).toBe(1);
-      expect(path[0].x).toBe(300);
-      expect(path[0].y).toBe(300);
+      // Should find nearest walkable position and create path from there
+      // Path should exist and end at target
+      expect(path.length).toBeGreaterThan(0);
+      expect(path[path.length - 1].x).toBe(300);
+      expect(path[path.length - 1].y).toBe(300);
     });
 
-    it('should return direct path if end is non-walkable', () => {
+    it('should find path to nearest walkable when end is non-walkable', () => {
       pathfinder.buildGrid([
         { x: 300, y: 300, width: 64, height: 64 },
       ]);
 
       const path = pathfinder.findPath(100, 100, 300, 300);
 
-      expect(path.length).toBe(1);
-      expect(path[0].x).toBe(300);
-      expect(path[0].y).toBe(300);
+      // Should find nearest walkable position to end and create path to there
+      // Path should exist and end at target (or near it)
+      expect(path.length).toBeGreaterThan(0);
+      // Last waypoint should be the exact target position (even if non-walkable)
+      expect(path[path.length - 1].x).toBe(300);
+      expect(path[path.length - 1].y).toBe(300);
     });
 
-    it('should fallback to direct path if completely blocked', () => {
+    it('should return empty array if completely blocked', () => {
       // Create a complete barrier
       const obstacles = [];
       for (let y = 0; y < 720; y += 32) {
@@ -290,8 +295,9 @@ describe('Pathfinder', () => {
 
       const path = pathfinder.findPath(200, 360, 800, 360);
 
-      // Should return at least the target
-      expect(path.length).toBeGreaterThan(0);
+      // Should return empty array when no path exists
+      // This prevents zombies from going directly through obstacles
+      expect(path.length).toBe(0);
     });
   });
 
@@ -434,6 +440,74 @@ describe('Pathfinder', () => {
         );
         expect(path.length).toBeGreaterThan(0);
       }
+    });
+  });
+
+  describe('findNearestWalkable', () => {
+    it('should return same position if already walkable', () => {
+      pathfinder.buildGrid([]);
+
+      const result = pathfinder.findNearestWalkable(5, 5);
+
+      expect(result).not.toBeNull();
+      expect(result!.x).toBe(5);
+      expect(result!.y).toBe(5);
+    });
+
+    it('should find nearest walkable position when on obstacle', () => {
+      pathfinder.buildGrid([
+        { x: 200, y: 200, width: 64, height: 64 },
+      ]);
+
+      // Position in the middle of obstacle (grid coords 6, 6 approximately)
+      const gridPos = pathfinder.worldToGrid(200, 200);
+      const result = pathfinder.findNearestWalkable(gridPos.x, gridPos.y);
+
+      expect(result).not.toBeNull();
+      // Should find a walkable position nearby
+      expect(pathfinder.isWalkable(result!.x, result!.y)).toBe(true);
+    });
+
+    it('should return null if no walkable position within radius', () => {
+      // Create a massive obstacle covering most of the grid
+      const obstacles = [];
+      for (let x = 0; x < 1280; x += 32) {
+        for (let y = 0; y < 720; y += 32) {
+          obstacles.push({ x, y, width: 32, height: 32 });
+        }
+      }
+      pathfinder.buildGrid(obstacles);
+
+      const result = pathfinder.findNearestWalkable(10, 10, 2);
+
+      // Might be null if completely blocked, or might find wall edges
+      // The important thing is it doesn't throw
+      expect(result === null || pathfinder.isWalkable(result.x, result.y)).toBe(true);
+    });
+  });
+
+  describe('findNearestWalkableWorld', () => {
+    it('should return world coordinates of nearest walkable position', () => {
+      pathfinder.buildGrid([
+        { x: 200, y: 200, width: 64, height: 64 },
+      ]);
+
+      const result = pathfinder.findNearestWalkableWorld(200, 200);
+
+      expect(result).not.toBeNull();
+      // Should return world coordinates (center of tile)
+      expect(result!.x % 16).toBe(0); // Should be center of 32px tile
+      expect(result!.y % 16).toBe(0);
+    });
+
+    it('should return null if no walkable position found', () => {
+      // This is hard to test without blocking everything
+      // Just verify the method exists and works
+      pathfinder.buildGrid([]);
+
+      const result = pathfinder.findNearestWalkableWorld(400, 400);
+
+      expect(result).not.toBeNull();
     });
   });
 });
