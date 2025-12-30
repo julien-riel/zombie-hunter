@@ -52,6 +52,9 @@ export interface DebugControlCallbacks {
  * - Y: Appliquer l'upgrade sélectionné
  * - T: Cycler entre les upgrades
  * - G: Ouvrir la scène de sélection d'upgrade
+ * - M: Ouvrir le menu tactique
+ * - N: Ajouter 100 points (économie)
+ * - B: Retirer 50 points (économie)
  */
 export class DebugControls {
   private scene: Phaser.Scene;
@@ -121,6 +124,10 @@ export class DebugControls {
       Y: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Y),
       T: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.T),
       G: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G),
+      // Economy/Tactical Menu controls (Phase 6.6)
+      M: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M),
+      N: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.N),
+      // Note: B key is not added here to avoid conflict with potential movement keys
     };
 
     // Touches numériques 1-0 pour sélectionner le type de zombie
@@ -315,6 +322,18 @@ export class DebugControls {
     if (Phaser.Input.Keyboard.JustDown(this.keys.G)) {
       this.spawner.openUpgradeScene();
       console.log(`[Debug] Opening upgrade selection scene`);
+    }
+
+    // M: Open tactical menu
+    if (Phaser.Input.Keyboard.JustDown(this.keys.M)) {
+      this.spawner.openTacticalMenu();
+      console.log(`[Debug] Opening tactical menu`);
+    }
+
+    // N: Add 100 points
+    if (Phaser.Input.Keyboard.JustDown(this.keys.N)) {
+      const points = this.spawner.addPoints(100);
+      console.log(`[Debug] Added 100 points. Total: ${points}`);
     }
 
     // Number keys 1-0: Select zombie type

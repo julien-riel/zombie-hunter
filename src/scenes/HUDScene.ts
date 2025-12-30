@@ -20,6 +20,7 @@ export class HUDScene extends Phaser.Scene {
   private healthBarBg!: Phaser.GameObjects.Rectangle;
   private scoreText!: Phaser.GameObjects.Text;
   private killsText!: Phaser.GameObjects.Text;
+  private pointsText!: Phaser.GameObjects.Text;
 
   // Éléments de vague
   private waveText!: Phaser.GameObjects.Text;
@@ -62,6 +63,7 @@ export class HUDScene extends Phaser.Scene {
     this.createHealthBar();
     this.createAmmoCounter();
     this.createScoreDisplay();
+    this.createPointsDisplay();
     this.createWaveDisplay();
     this.createWaveAnnouncement();
     this.createControls();
@@ -95,6 +97,10 @@ export class HUDScene extends Phaser.Scene {
     // Écouter les événements d'objets actifs (Phase 6.4)
     this.gameScene.events.on('activeitem:inventory_update', this.onActiveItemInventoryUpdate, this);
     this.gameScene.events.on('activeitem:equipped', this.onActiveItemEquipped, this);
+
+    // Écouter les événements d'économie (Phase 6.6)
+    this.gameScene.events.on('economy:update', this.onEconomyUpdate, this);
+    this.gameScene.events.on('economy:points_earned', this.onPointsEarned, this);
   }
 
   /**
@@ -161,6 +167,21 @@ export class HUDScene extends Phaser.Scene {
       fontSize: '16px',
       color: '#ff6666',
     });
+  }
+
+  /**
+   * Crée l'affichage des points (Phase 6.6)
+   */
+  private createPointsDisplay(): void {
+    const economySystem = this.gameScene.getEconomySystem();
+    const points = economySystem ? economySystem.getPoints() : 0;
+
+    this.pointsText = this.add.text(GAME_WIDTH - 20, 80, `Points: ${points}`, {
+      fontSize: '20px',
+      color: '#ffdd00',
+      fontStyle: 'bold',
+    });
+    this.pointsText.setOrigin(1, 0);
   }
 
   /**
@@ -629,6 +650,46 @@ export class HUDScene extends Phaser.Scene {
   }
 
   /**
+   * Gère la mise à jour de l'économie (Phase 6.6)
+   */
+  private onEconomyUpdate(data: { points: number; earned?: number; spent?: number }): void {
+    if (this.pointsText) {
+      this.pointsText.setText(`Points: ${data.points}`);
+    }
+  }
+
+  /**
+   * Gère les points gagnés (Phase 6.6)
+   */
+  private onPointsEarned(data: { amount: number; total: number }): void {
+    if (this.pointsText) {
+      this.pointsText.setText(`Points: ${data.total}`);
+
+      // Animation de gain de points
+      const earnedText = this.add.text(
+        this.pointsText.x - this.pointsText.width / 2,
+        this.pointsText.y + 25,
+        `+${data.amount}`,
+        {
+          fontSize: '14px',
+          color: '#00ff00',
+          fontStyle: 'bold',
+        }
+      );
+      earnedText.setOrigin(0.5, 0);
+
+      this.tweens.add({
+        targets: earnedText,
+        y: earnedText.y - 20,
+        alpha: 0,
+        duration: 1000,
+        ease: 'Power2',
+        onComplete: () => earnedText.destroy(),
+      });
+    }
+  }
+
+  /**
    * Nettoyage lors de la destruction de la scène
    */
   shutdown(): void {
@@ -653,5 +714,9 @@ export class HUDScene extends Phaser.Scene {
     // Retirer les listeners d'objets actifs (Phase 6.4)
     this.gameScene.events.off('activeitem:inventory_update', this.onActiveItemInventoryUpdate, this);
     this.gameScene.events.off('activeitem:equipped', this.onActiveItemEquipped, this);
+
+    // Retirer les listeners d'économie (Phase 6.6)
+    this.gameScene.events.off('economy:update', this.onEconomyUpdate, this);
+    this.gameScene.events.off('economy:points_earned', this.onPointsEarned, this);
   }
 }

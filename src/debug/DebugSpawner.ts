@@ -3,6 +3,7 @@ import type { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import type { Zombie } from '@entities/zombies/Zombie';
 import type { ZombieType } from '@/types/entities';
 import { GAME_WIDTH, GAME_HEIGHT, SCENE_KEYS } from '@config/constants';
+import Phaser from 'phaser';
 import type { DropType } from '@items/drops';
 import type { PowerUpType } from '@items/powerups';
 import type { ActiveItemType } from '@items/active';
@@ -556,5 +557,68 @@ export class DebugSpawner {
       return upgradeSystem.getStats();
     }
     return {};
+  }
+
+  // ==================== ECONOMY/TACTICAL MENU METHODS (Phase 6.6) ====================
+
+  /**
+   * Ouvre le menu tactique (debug)
+   */
+  public openTacticalMenu(): void {
+    const waveSystem = this.gameScene.getWaveSystem();
+    const currentWave = waveSystem ? waveSystem.getCurrentWave() : 0;
+
+    this.gameScene.scene.launch(SCENE_KEYS.TACTICAL, {
+      gameScene: this.gameScene,
+      waveNumber: currentWave,
+    });
+  }
+
+  /**
+   * Ajoute des points au joueur
+   * @returns Le nouveau total de points
+   */
+  public addPoints(amount: number): number {
+    const economySystem = this.gameScene.getEconomySystem();
+    if (economySystem) {
+      economySystem.addPoints(amount);
+      return economySystem.getPoints();
+    }
+    return 0;
+  }
+
+  /**
+   * Définit les points du joueur
+   * @returns Le nouveau total de points
+   */
+  public setPoints(amount: number): number {
+    const economySystem = this.gameScene.getEconomySystem();
+    if (economySystem) {
+      economySystem.setPoints(amount);
+      return economySystem.getPoints();
+    }
+    return 0;
+  }
+
+  /**
+   * Récupère les points actuels
+   */
+  public getPoints(): number {
+    const economySystem = this.gameScene.getEconomySystem();
+    if (economySystem) {
+      return economySystem.getPoints();
+    }
+    return 0;
+  }
+
+  /**
+   * Récupère les stats économiques
+   */
+  public getEconomyStats(): { points: number; totalEarned: number; totalSpent: number } {
+    const economySystem = this.gameScene.getEconomySystem();
+    if (economySystem) {
+      return economySystem.getStats();
+    }
+    return { points: 0, totalEarned: 0, totalSpent: 0 };
   }
 }

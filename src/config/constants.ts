@@ -31,6 +31,7 @@ export const SCENE_KEYS = {
   HUD: 'HUDScene',
   PAUSE: 'PauseScene',
   UPGRADE: 'UpgradeScene',
+  TACTICAL: 'TacticalMenuScene',
   GAME_OVER: 'GameOverScene',
   DEBUG: 'DebugScene',
 } as const;

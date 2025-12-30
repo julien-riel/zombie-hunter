@@ -540,6 +540,38 @@ export const BALANCE = {
     destroyedSpawnMultiplier: 1.5, // 50% faster spawns on destroyed doors
   },
 
+  economy: {
+    // Configuration du système économique (Phase 6.6)
+    basePointsPerKill: 10, // Points de base par zombie tué
+    comboMultiplierEnabled: true, // Les points sont multipliés par le combo
+
+    // Table de points par type de zombie (multiplicateur du base)
+    zombiePointMultipliers: {
+      shambler: 1.0,
+      runner: 1.5,
+      crawler: 2.0,
+      tank: 5.0,
+      spitter: 2.5,
+      bomber: 3.0,
+      screamer: 3.5,
+      splitter: 2.5,
+      invisible: 4.0,
+      necromancer: 5.0,
+    } as Record<string, number>,
+
+    // Coûts des achats dans le menu tactique
+    purchases: {
+      ammo: { cost: 50, reloadPercent: 1.0 }, // Recharge complète de l'arme
+      healthSmall: { cost: 50, healAmount: 25 },
+      healthLarge: { cost: 100, healAmount: 50 },
+      mine: { cost: 100, charges: 1 },
+      turret: { cost: 200, charges: 1 },
+    },
+
+    // Coûts liés aux portes (référence depuis doors.barricades/traps)
+    // Les coûts de barricades et pièges sont définis dans la section doors
+  },
+
   activeItems: {
     // Configuration des objets actifs (Phase 6.4)
     turret: {

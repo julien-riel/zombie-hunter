@@ -600,7 +600,7 @@ class UpgradeSystem {
 
 ---
 
-## 6.6 Menu Tactique
+## 6.6 Menu Tactique ✅ COMPLÉTÉ
 
 ### Objectif
 Permettre au joueur de dépenser ses points pour des avantages tactiques.
@@ -658,6 +658,21 @@ class EconomySystem {
 - `WaveSystem` → ouvre le menu entre les vagues
 - `DoorSystem` → applique barricades et pièges
 - `HUDScene` → affiche les points en permanence
+
+### Implémentation réalisée (2024-12-30)
+- ✅ `src/config/balance.ts` - Configuration de l'économie (points par zombie, coûts des achats)
+- ✅ `src/systems/EconomySystem.ts` - Gestion des points, multiplicateur combo, achats et dépenses
+- ✅ `src/scenes/TacticalMenuScene.ts` - Scène overlay complète avec:
+  - Section achats (munitions, soins, mines, tourelles)
+  - Section portes avec affichage des états
+  - Panneau d'actions pour barricades et pièges
+  - Bouton continuer et timer optionnel
+- ✅ Intégration dans `GameScene` avec getter getEconomySystem()
+- ✅ `HUDScene` - Affichage des points avec animation de gain
+- ✅ `WaveSystem` - Ouverture du menu tactique après la sélection d'upgrade
+- ✅ `src/debug/DebugSpawner.ts` - Méthodes de debug pour l'économie
+- ✅ `src/debug/DebugControls.ts` - Raccourcis clavier: M (menu tactique), N (+100 points)
+- ✅ Exports dans `src/systems/index.ts` et `src/scenes/index.ts`
 
 ---
 

@@ -3,6 +3,9 @@ import type { GameScene } from '@scenes/GameScene';
 import type { ZombieType } from '@/types/entities';
 import { BALANCE } from '@config/balance';
 import { SCENE_KEYS } from '@config/constants';
+
+/** Délai avant d'afficher le menu tactique après les upgrades (ms) */
+const TACTICAL_MENU_DELAY = 500;
 import { ThreatSystem, type SpawnPlan, type WaveComposition } from './ThreatSystem';
 import type { DDASystem } from './DDASystem';
 
@@ -231,7 +234,7 @@ export class WaveSystem {
 
     if (!upgradeSystem) {
       console.warn('[WaveSystem] UpgradeSystem not available, skipping upgrade selection');
-      this.continueToNextWave();
+      this.showTacticalMenu();
       return;
     }
 
@@ -240,13 +243,16 @@ export class WaveSystem {
 
     if (choices.length === 0) {
       console.log('[WaveSystem] No upgrades available, skipping selection');
-      this.continueToNextWave();
+      this.showTacticalMenu();
       return;
     }
 
     // Écouter la fermeture de la scène d'upgrade
     this.scene.events.once('upgradeSceneClosed', () => {
-      this.continueToNextWave();
+      // Afficher le menu tactique après un court délai
+      this.scene.time.delayedCall(TACTICAL_MENU_DELAY, () => {
+        this.showTacticalMenu();
+      });
     });
 
     // Lancer la scène d'upgrade
@@ -258,7 +264,24 @@ export class WaveSystem {
   }
 
   /**
-   * Continue vers la prochaine vague après la sélection d'upgrade
+   * Affiche le menu tactique (Phase 6.6)
+   */
+  private showTacticalMenu(): void {
+    // Écouter la fermeture du menu tactique
+    this.scene.events.once('tacticalMenuClosed', () => {
+      this.continueToNextWave();
+    });
+
+    // Lancer la scène du menu tactique
+    this.scene.scene.launch(SCENE_KEYS.TACTICAL, {
+      gameScene: this.scene,
+      waveNumber: this.currentWave,
+      // timeLimit: 30000, // Optionnel: 30 secondes de limite
+    });
+  }
+
+  /**
+   * Continue vers la prochaine vague après le menu tactique
    */
   private continueToNextWave(): void {
     // Transition vers la prochaine vague après un délai
