@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { DebugSpawner, DebugItemType } from './DebugSpawner';
 import { ZOMBIE_TYPES } from './DebugSpawner';
-import type { ZombieType } from '@/types/entities';
+import type { ZombieType, CharacterType } from '@/types/entities';
 import type { Door } from '@arena/Door';
 import { BarricadeType, DoorTrapType } from '@arena/Door';
 import type { DropType } from '@items/drops';
@@ -45,6 +45,18 @@ const DROP_TYPES: { id: DropType; label: string; color: string }[] = [
 ];
 
 /**
+ * Configuration des personnages disponibles (Phase 7.1)
+ */
+const CHARACTER_TYPES: { id: CharacterType; label: string }[] = [
+  { id: 'cop', label: 'Cop' },
+  { id: 'doctor', label: 'Doc' },
+  { id: 'mechanic', label: 'Mech' },
+  { id: 'athlete', label: 'Ath' },
+  { id: 'pyromaniac', label: 'Pyro' },
+  { id: 'kid', label: 'Kid' },
+];
+
+/**
  * Callbacks du panneau debug
  */
 export interface DebugPanelCallbacks {
@@ -63,6 +75,11 @@ export interface DebugPanelCallbacks {
   onDoorDamageBarricade?: (door: Door, damage: number) => void;
   getDoors?: () => Door[];
   getDropCount?: () => number;
+  // Phase 7.1 - Characters
+  onCharacterChange?: (type: CharacterType) => void;
+  onAbilityUse?: () => void;
+  onAbilityReset?: () => void;
+  getCurrentCharacter?: () => CharacterType;
 }
 
 /**
@@ -74,6 +91,7 @@ export interface DebugPanelState {
   currentWave: number;
   zombieCount: number;
   selectedZombieType: ZombieType;
+  selectedCharacter: CharacterType;
 }
 
 /**
@@ -92,6 +110,7 @@ export class DebugPanel {
     currentWave: 1,
     zombieCount: 0,
     selectedZombieType: 'shambler',
+    selectedCharacter: 'cop',
   };
 
   // UI Elements
@@ -106,6 +125,9 @@ export class DebugPanel {
   private doorButtons: Phaser.GameObjects.Container[] = [];
   private doorStatusText!: Phaser.GameObjects.Text;
   private selectedDoorIndex: number = 0;
+  // Phase 7.1 - Characters
+  private characterButtons: Phaser.GameObjects.Container[] = [];
+  private characterStatusText!: Phaser.GameObjects.Text;
 
   private readonly PANEL_WIDTH = 320;
   private readonly PANEL_X = 10;
@@ -185,6 +207,13 @@ export class DebugPanel {
     // Doors section
     currentY = this.addSectionHeader(currentY, 'DOORS (barricade/trap/destroy)');
     currentY = this.createDoorButtons(currentY);
+
+    // Separator
+    currentY = this.addSeparator(currentY);
+
+    // Characters section (Phase 7.1)
+    currentY = this.addSectionHeader(currentY, 'CHARACTERS (click to switch)');
+    currentY = this.createCharacterButtons(currentY);
 
     // Separator
     currentY = this.addSeparator(currentY);
@@ -586,6 +615,104 @@ export class DebugPanel {
   }
 
   /**
+   * Crée les boutons de personnages (Phase 7.1)
+   */
+  private createCharacterButtons(startY: number): number {
+    let y = startY;
+    const buttonWidth = 48;
+    const buttonsPerRow = 6;
+    let x = 8;
+    let col = 0;
+
+    // Ligne de statut du personnage actuel
+    this.characterStatusText = this.createText(x, y, `Char: ${this.state.selectedCharacter.toUpperCase()} [Q=Ability]`, 10, '#ff88ff');
+    this.container.add(this.characterStatusText);
+    y += 16;
+
+    for (const char of CHARACTER_TYPES) {
+      const isSelected = char.id === this.state.selectedCharacter;
+      const button = this.createButton(
+        x,
+        y,
+        buttonWidth,
+        char.label,
+        () => this.onCharacterButtonClick(char.id),
+        isSelected
+      );
+
+      this.container.add(button);
+      this.characterButtons.push(button);
+
+      col++;
+      x += buttonWidth + this.BUTTON_SPACING;
+
+      if (col >= buttonsPerRow) {
+        col = 0;
+        x = 8;
+        y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+      }
+    }
+
+    if (col > 0) {
+      y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+    }
+
+    // Bouton pour reset le cooldown de la compétence
+    const resetAbilityBtn = this.createButton(8, y, 100, 'Reset Ability', () => this.onResetAbility());
+    this.container.add(resetAbilityBtn);
+    this.characterButtons.push(resetAbilityBtn);
+
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+
+    return y;
+  }
+
+  /**
+   * Handler pour clic sur bouton personnage
+   */
+  private onCharacterButtonClick(type: CharacterType): void {
+    this.state.selectedCharacter = type;
+    this.callbacks.onCharacterChange?.(type);
+    this.updateCharacterButtonStyles();
+    this.updateCharacterStatusDisplay();
+  }
+
+  /**
+   * Handler pour reset la compétence
+   */
+  private onResetAbility(): void {
+    this.callbacks.onAbilityReset?.();
+  }
+
+  /**
+   * Met à jour le style des boutons personnage pour refléter la sélection
+   */
+  private updateCharacterButtonStyles(): void {
+    for (let i = 0; i < CHARACTER_TYPES.length; i++) {
+      const button = this.characterButtons[i];
+      if (!button) continue;
+
+      const isSelected = CHARACTER_TYPES[i].id === this.state.selectedCharacter;
+      const bg = button.getAt(0) as Phaser.GameObjects.Rectangle;
+      const text = button.getAt(1) as Phaser.GameObjects.Text;
+
+      if (bg && text) {
+        bg.setFillStyle(isSelected ? 0x440044 : 0x333333);
+        bg.setStrokeStyle(1, isSelected ? 0xff00ff : 0x666666);
+        text.setColor(isSelected ? '#ff00ff' : '#ffffff');
+      }
+    }
+  }
+
+  /**
+   * Met à jour l'affichage du statut du personnage
+   */
+  private updateCharacterStatusDisplay(): void {
+    const currentChar = this.callbacks.getCurrentCharacter?.() || this.state.selectedCharacter;
+    this.characterStatusText?.setText(`Char: ${currentChar.toUpperCase()} [Q=Ability]`);
+  }
+
+  /**
    * Handler dégâts barricade
    */
   private onDamageBarricade(damage: number): void {
@@ -700,6 +827,14 @@ export class DebugPanel {
     if (this.state.selectedZombieType !== this.spawner.getSelectedZombieType()) {
       this.state.selectedZombieType = this.spawner.getSelectedZombieType();
       this.updateZombieButtonStyles();
+    }
+
+    // Update character display (Phase 7.1)
+    const currentChar = this.callbacks.getCurrentCharacter?.();
+    if (currentChar && currentChar !== this.state.selectedCharacter) {
+      this.state.selectedCharacter = currentChar;
+      this.updateCharacterButtonStyles();
+      this.updateCharacterStatusDisplay();
     }
   }
 

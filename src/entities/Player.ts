@@ -7,6 +7,8 @@ import { Shotgun } from '@weapons/firearms/Shotgun';
 import { SMG } from '@weapons/firearms/SMG';
 import { SniperRifle } from '@weapons/firearms/SniperRifle';
 import type { GameScene } from '@scenes/GameScene';
+import { Character, CharacterFactory, AbilityManager } from '@characters/index';
+import type { CharacterType } from '@/types/entities';
 
 /** Nombre maximum d'armes que le joueur peut porter */
 const MAX_WEAPONS = 4;
@@ -37,6 +39,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private weaponKeys!: Phaser.Input.Keyboard.Key[];
   /** Touche R pour recharger manuellement */
   private reloadKey!: Phaser.Input.Keyboard.Key;
+  /** Touche Q pour utiliser la compétence */
+  private abilityKey!: Phaser.Input.Keyboard.Key;
 
   private isDashing: boolean = false;
   private canDash: boolean = true;
@@ -48,10 +52,31 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /** Mode God (invincibilité + ammo infini) pour le debug */
   private godMode: boolean = false;
 
-  constructor(scene: GameScene, x: number, y: number) {
+  /** Personnage actuel */
+  private character: Character;
+  /** Gestionnaire de compétence */
+  private abilityManager: AbilityManager;
+  /** Vitesse de déplacement (peut être modifiée temporairement) */
+  private moveSpeed: number;
+  /** Multiplicateur de vitesse (pour les effets temporaires) */
+  public speedMultiplier: number = 1.0;
+
+  constructor(scene: GameScene, x: number, y: number, characterType?: CharacterType) {
     super(scene, x, y, ASSET_KEYS.PLAYER);
-    this.maxHealth = BALANCE.player.maxHealth;
+
+    // Initialiser le personnage
+    this.character = characterType
+      ? CharacterFactory.getCharacter(characterType)
+      : CharacterFactory.getDefaultCharacter();
+
+    // Appliquer les stats du personnage
+    this.maxHealth = this.character.stats.maxHealth;
     this.health = this.maxHealth;
+    this.moveSpeed = this.character.stats.moveSpeed;
+
+    // Initialiser le gestionnaire de compétence
+    this.abilityManager = new AbilityManager(this);
+    this.abilityManager.setAbility(this.character.ability);
 
     // Ajouter au jeu et à la physique
     scene.add.existing(this);
@@ -86,6 +111,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     };
     this.spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.reloadKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.abilityKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
 
     // Touches 1-4 pour changer d'arme
     this.weaponKeys = [
@@ -108,8 +134,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /**
    * Met à jour le joueur à chaque frame
    */
-  update(_time: number, _delta: number): void {
+  update(_time: number, delta: number): void {
     if (!this.active) return;
+
+    // Mettre à jour le gestionnaire de compétence
+    this.abilityManager.update(delta);
 
     // Si étourdi, arrêter le mouvement et ignorer les inputs
     if (this.isStunned) {
@@ -123,6 +152,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleShooting();
     this.handleWeaponSwitch();
     this.handleReload();
+    this.handleAbility();
 
     // Mise à jour de l'arme
     this.currentWeapon?.update();
@@ -134,7 +164,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private handleMovement(): void {
     if (this.isDashing) return;
 
-    const speed = BALANCE.player.speed;
+    const speed = this.moveSpeed * this.speedMultiplier;
     let velocityX = 0;
     let velocityY = 0;
 
@@ -273,6 +303,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (Phaser.Input.Keyboard.JustDown(this.reloadKey)) {
       this.currentWeapon?.reload();
     }
+  }
+
+  /**
+   * Gère l'utilisation de la compétence via touche Q
+   */
+  private handleAbility(): void {
+    if (Phaser.Input.Keyboard.JustDown(this.abilityKey)) {
+      this.useAbility();
+    }
+  }
+
+  /**
+   * Utilise la compétence du personnage
+   * @returns true si la compétence a été activée
+   */
+  public useAbility(): boolean {
+    return this.abilityManager.useAbility();
   }
 
   /**
@@ -488,5 +535,114 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Émettre un événement pour le HUD
     (this.scene as GameScene).events.emit('weaponInventoryChanged', this.weapons, this.currentWeaponIndex);
+  }
+
+  // ==================== MÉTHODES PERSONNAGE (Phase 7.1) ====================
+
+  /**
+   * Récupère le personnage actuel
+   */
+  public getCharacter(): Character {
+    return this.character;
+  }
+
+  /**
+   * Récupère le type du personnage actuel
+   */
+  public getCharacterType(): CharacterType {
+    return this.character.id;
+  }
+
+  /**
+   * Récupère le gestionnaire de compétence
+   */
+  public getAbilityManager(): AbilityManager {
+    return this.abilityManager;
+  }
+
+  /**
+   * Vérifie si la compétence est prête
+   */
+  public isAbilityReady(): boolean {
+    return this.abilityManager.canUseAbility();
+  }
+
+  /**
+   * Récupère le ratio de cooldown de la compétence (0-1)
+   */
+  public getAbilityCooldownRatio(): number {
+    return this.abilityManager.getCooldownRatio();
+  }
+
+  /**
+   * Récupère le multiplicateur de dégâts du personnage
+   */
+  public getDamageMultiplier(): number {
+    return this.character.stats.damageMultiplier;
+  }
+
+  /**
+   * Récupère le bonus de précision du personnage
+   */
+  public getAccuracyBonus(): number {
+    return this.character.stats.accuracyBonus;
+  }
+
+  /**
+   * Récupère la chance de critique du personnage
+   */
+  public getCritChance(): number {
+    return this.character.stats.critChance;
+  }
+
+  /**
+   * Récupère le rayon de collecte du personnage
+   */
+  public getPickupRadius(): number {
+    return this.character.stats.pickupRadius;
+  }
+
+  /**
+   * Récupère la résistance au feu du personnage (0-1)
+   */
+  public getFireResistance(): number {
+    return this.character.stats.fireResistance;
+  }
+
+  /**
+   * Récupère la résistance au poison du personnage (0-1)
+   */
+  public getPoisonResistance(): number {
+    return this.character.stats.poisonResistance;
+  }
+
+  /**
+   * Change le personnage (debug uniquement)
+   * @param characterType Type du nouveau personnage
+   */
+  public setCharacter(characterType: CharacterType): void {
+    // Désactiver la compétence actuelle si active
+    this.abilityManager.forceDeactivate();
+
+    // Charger le nouveau personnage
+    this.character = CharacterFactory.getCharacter(characterType);
+
+    // Appliquer les nouvelles stats
+    this.maxHealth = this.character.stats.maxHealth;
+    this.health = Math.min(this.health, this.maxHealth);
+    this.moveSpeed = this.character.stats.moveSpeed;
+
+    // Configurer la nouvelle compétence
+    this.abilityManager.setAbility(this.character.ability);
+
+    // Émettre un événement pour le HUD
+    (this.scene as GameScene).events.emit('characterChanged', this.character);
+  }
+
+  /**
+   * Reset le cooldown de la compétence (debug)
+   */
+  public resetAbilityCooldown(): void {
+    this.abilityManager.resetCooldown();
   }
 }

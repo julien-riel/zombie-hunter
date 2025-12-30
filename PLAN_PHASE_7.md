@@ -6,6 +6,15 @@ La Phase 7 introduit la variété de gameplay à travers 6 personnages jouables 
 
 **Prérequis** : Phase 6 complétée (système d'upgrades, progression permanente)
 
+### Statut d'implémentation
+
+| Phase | Statut | Description |
+|-------|--------|-------------|
+| 7.1 | ✅ Complété | Système de personnages (infrastructure) |
+| 7.2 | 🔲 À faire | Les 6 personnages |
+| 7.3 | 🔲 À faire | Système de Boss |
+| 7.4 | 🔲 À faire | Événements spéciaux |
+
 ---
 
 ## 7.1 Système de Personnages
@@ -74,13 +83,15 @@ abstract class Character {
 
 ### Tâches
 
-- [ ] Créer `CharacterStats.ts` avec interface et valeurs par défaut
-- [ ] Créer `CharacterAbility.ts` avec système de cooldown et activation
-- [ ] Créer `Character.ts` classe de base abstraite
-- [ ] Créer `CharacterFactory.ts` pour instanciation
-- [ ] Modifier `Player.ts` pour accepter un Character
-- [ ] Ajouter UI de sélection de personnage dans le menu
-- [ ] Intégrer avec `ProgressionManager` pour déblocage
+- [x] Créer `CharacterStats.ts` avec interface et valeurs par défaut
+- [x] Créer `CharacterAbility.ts` avec système de cooldown et activation
+- [x] Créer `Character.ts` classe de base abstraite
+- [x] Créer `CharacterFactory.ts` pour instanciation
+- [x] Modifier `Player.ts` pour accepter un Character
+- [x] Créer `Cop.ts` premier personnage jouable (Marcus Webb)
+- [x] Ajouter système de personnages au DebugPanel
+- [ ] Ajouter UI de sélection de personnage dans le menu (Phase 7.2+)
+- [ ] Intégrer avec `ProgressionManager` pour déblocage (Phase 7.2+)
 
 ---
 
