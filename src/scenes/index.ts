@@ -1,7 +1,13 @@
 export { BootScene } from './BootScene';
 export { PreloadScene } from './PreloadScene';
+export { MainMenuScene } from './MainMenuScene';
+export { CharacterSelectScene } from './CharacterSelectScene';
+export { ModeSelectScene } from './ModeSelectScene';
+export { OptionsScene } from './OptionsScene';
 export { GameScene } from './GameScene';
 export { HUDScene } from './HUDScene';
+export { PauseScene } from './PauseScene';
+export { GameOverScene } from './GameOverScene';
 export { UpgradeScene } from './UpgradeScene';
 export { TacticalMenuScene } from './TacticalMenuScene';
 export { ProgressionScene, PROGRESSION_SCENE_KEY } from './ProgressionScene';

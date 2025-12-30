@@ -135,6 +135,15 @@ export class GameScene extends Phaser.Scene {
       this.waveSystem.start();
     });
 
+    // Configurer les contrôles de pause
+    this.setupPauseControls();
+
+    // Écouter l'événement de mort du joueur
+    this.events.on('playerDeath', this.onPlayerDeath, this);
+
+    // Réinitialiser le flag de game over
+    this.isGameOver = false;
+
     // Debug: créer les graphics et texte pour le flow field (F3 géré par DebugScene)
     this.debugFlowFieldGraphics = this.add.graphics();
     this.debugFlowFieldGraphics.setDepth(1000);
@@ -301,6 +310,9 @@ export class GameScene extends Phaser.Scene {
    * Met à jour la logique de jeu
    */
   update(time: number, delta: number): void {
+    // Vérifier l'input de pause
+    this.checkPauseInput();
+
     // Mettre à jour le joueur
     this.player.update(time, delta);
 
@@ -770,10 +782,17 @@ export class GameScene extends Phaser.Scene {
   private lastInteractTime: number = 0;
   private interactCooldown: number = 300; // ms
 
+  /** Touches pour pause */
+  private pauseKeyEsc: Phaser.Input.Keyboard.Key | null = null;
+  private pauseKeyP: Phaser.Input.Keyboard.Key | null = null;
+
   /** Debug flow field */
   private debugFlowFieldGraphics: Phaser.GameObjects.Graphics | null = null;
   private debugFlowFieldText: Phaser.GameObjects.Text | null = null;
   public showFlowFieldDebug: boolean = false;
+
+  /** Flag pour éviter le double déclenchement du game over */
+  private isGameOver: boolean = false;
 
   /**
    * Vérifie si le joueur interagit avec un élément (touche E)
@@ -836,6 +855,93 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Configure les contrôles de pause
+   */
+  private setupPauseControls(): void {
+    if (!this.input.keyboard) return;
+
+    this.pauseKeyEsc = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.pauseKeyP = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
+
+    // Vérifier la pause dans l'update
+  }
+
+  /**
+   * Vérifie si la touche pause est pressée (appelé dans update)
+   */
+  private checkPauseInput(): void {
+    if (!this.pauseKeyEsc || !this.pauseKeyP) return;
+
+    if (
+      Phaser.Input.Keyboard.JustDown(this.pauseKeyEsc) ||
+      Phaser.Input.Keyboard.JustDown(this.pauseKeyP)
+    ) {
+      this.openPauseMenu();
+    }
+  }
+
+  /**
+   * Ouvre le menu pause
+   */
+  private openPauseMenu(): void {
+    // Ne pas ouvrir si déjà en pause ou game over
+    if (this.isGameOver) return;
+
+    // Lancer la scène de pause
+    this.scene.launch(SCENE_KEYS.PAUSE, { gameScene: this });
+  }
+
+  /**
+   * Gère la mort du joueur
+   */
+  private onPlayerDeath(): void {
+    if (this.isGameOver) return;
+    this.isGameOver = true;
+
+    // Petit délai avant d'afficher le game over
+    this.time.delayedCall(500, () => {
+      this.showGameOver();
+    });
+  }
+
+  /**
+   * Affiche l'écran de game over
+   */
+  private showGameOver(): void {
+    // Récupérer le résumé de la run
+    const summary = this.telemetryManager.generateRunSummary();
+
+    // Calculer l'XP gagnée (basé sur vagues, kills, etc.)
+    const xpEarned = this.calculateXPEarned(summary);
+
+    // Arrêter les scènes parallèles
+    this.scene.stop(SCENE_KEYS.HUD);
+    if (this.scene.isActive(SCENE_KEYS.DEBUG)) {
+      this.scene.stop(SCENE_KEYS.DEBUG);
+    }
+
+    // Arrêter cette scène et lancer le game over
+    this.scene.stop();
+    this.scene.start(SCENE_KEYS.GAME_OVER, {
+      summary,
+      isVictory: false,
+      xpEarned,
+    });
+  }
+
+  /**
+   * Calcule l'XP gagnée pour cette run
+   */
+  private calculateXPEarned(summary: { maxWave: number; totalKills: number; duration: number }): number {
+    // XP basée sur les vagues, kills et temps de survie
+    const waveXP = summary.maxWave * 50;
+    const killXP = summary.totalKills * 2;
+    const timeXP = Math.floor(summary.duration / 10); // 1 XP par 10 secondes
+
+    return waveXP + killXP + timeXP;
+  }
+
+  /**
    * Nettoie la scène
    */
   shutdown(): void {
@@ -861,5 +967,6 @@ export class GameScene extends Phaser.Scene {
     this.arena?.destroy();
     this.events.off('miniZombieSpawned', this.onMiniZombieSpawned, this);
     this.events.off('arena:obstacleRemoved', this.onObstacleRemoved, this);
+    this.events.off('playerDeath', this.onPlayerDeath, this);
   }
 }

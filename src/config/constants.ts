@@ -26,7 +26,10 @@ export const COLLISION_CATEGORIES = {
 export const SCENE_KEYS = {
   BOOT: 'BootScene',
   PRELOAD: 'PreloadScene',
-  MENU: 'MenuScene',
+  MENU: 'MainMenuScene',
+  CHARACTER_SELECT: 'CharacterSelectScene',
+  MODE_SELECT: 'ModeSelectScene',
+  OPTIONS: 'OptionsScene',
   GAME: 'GameScene',
   HUD: 'HUDScene',
   PAUSE: 'PauseScene',

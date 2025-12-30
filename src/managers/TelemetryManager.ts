@@ -513,4 +513,24 @@ export class TelemetryManager {
   public getRecentEvents(type: TelemetryEventType, count: number = 10): TelemetryEvent[] {
     return this.events.filter((e) => e.type === type).slice(-count);
   }
+
+  /**
+   * Récupère les métriques de base (pour affichage simple)
+   */
+  public getMetrics(): {
+    kills: number;
+    gameTime: number;
+    maxCombo: number;
+    currentWave: number;
+    score: number;
+  } {
+    const totalKills = Array.from(this.zombieKills.values()).reduce((a, b) => a + b, 0);
+    return {
+      kills: totalKills,
+      gameTime: this.gameTime,
+      maxCombo: this.maxCombo,
+      currentWave: this.currentWave,
+      score: this.finalScore,
+    };
+  }
 }

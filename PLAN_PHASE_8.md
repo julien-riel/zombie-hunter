@@ -1,5 +1,35 @@
 # Zombie Hunter — Plan de la Phase 8 : Polish et Modes de Jeu
 
+## Statut d'Implémentation
+
+### Phase 8.1 - Menus ✅ COMPLÉTÉ
+
+**Fichiers créés :**
+- `src/scenes/MainMenuScene.ts` - Menu principal avec navigation clavier/souris
+- `src/scenes/CharacterSelectScene.ts` - Sélection de personnage avec grille et détails
+- `src/scenes/ModeSelectScene.ts` - Sélection du mode de jeu (Survie disponible)
+- `src/scenes/OptionsScene.ts` - Configuration audio/affichage/gameplay
+- `src/scenes/PauseScene.ts` - Menu pause avec stats de la run
+- `src/scenes/GameOverScene.ts` - Écran de fin avec stats et XP
+
+**Fichiers modifiés :**
+- `src/config/constants.ts` - Ajout des clés de scènes (CHARACTER_SELECT, MODE_SELECT, OPTIONS)
+- `src/config/game.config.ts` - Enregistrement des nouvelles scènes
+- `src/scenes/index.ts` - Export des nouvelles scènes
+- `src/scenes/PreloadScene.ts` - Transition vers MainMenuScene
+- `src/scenes/GameScene.ts` - Intégration Pause (Échap/P) et GameOver
+- `src/entities/Player.ts` - Émission de l'événement playerDeath
+- `src/managers/TelemetryManager.ts` - Ajout méthode getMetrics()
+
+**Fonctionnalités implémentées :**
+- Navigation fluide entre toutes les scènes
+- Contrôles clavier et souris
+- Animations de transition
+- Sauvegarde automatique des stats et settings
+- Affichage du high score et nouveau record
+
+---
+
 ## Vue d'Ensemble
 
 La Phase 8 est la phase finale de développement. Elle transforme le prototype fonctionnel en un jeu complet et poli, prêt pour la release. Cette phase se concentre sur l'expérience utilisateur globale : menus, audio, effets visuels, et polish général.
@@ -1157,12 +1187,12 @@ tests/integration/
 
 ```markdown
 ### 8.1 Menus
-- [ ] MainMenuScene créé et fonctionnel
-- [ ] CharacterSelectScene créé
-- [ ] ModeSelectScene créé
-- [ ] OptionsScene créé avec persistance
-- [ ] PauseScene créé
-- [ ] GameOverScene créé avec stats
+- [x] MainMenuScene créé et fonctionnel
+- [x] CharacterSelectScene créé
+- [x] ModeSelectScene créé
+- [x] OptionsScene créé avec persistance
+- [x] PauseScene créé
+- [x] GameOverScene créé avec stats
 
 ### 8.2 Modes de Jeu
 - [ ] Mode Survie validé (high scores)

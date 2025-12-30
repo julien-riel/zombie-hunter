@@ -1,5 +1,20 @@
 import Phaser from 'phaser';
-import { BootScene, PreloadScene, GameScene, HUDScene, UpgradeScene, TacticalMenuScene, ProgressionScene, DebugScene } from '@scenes/index';
+import {
+  BootScene,
+  PreloadScene,
+  MainMenuScene,
+  CharacterSelectScene,
+  ModeSelectScene,
+  OptionsScene,
+  GameScene,
+  HUDScene,
+  PauseScene,
+  GameOverScene,
+  UpgradeScene,
+  TacticalMenuScene,
+  ProgressionScene,
+  DebugScene,
+} from '@scenes/index';
 
 /**
  * Configuration principale du jeu Phaser
@@ -21,5 +36,20 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, PreloadScene, GameScene, HUDScene, UpgradeScene, TacticalMenuScene, ProgressionScene, DebugScene],
+  scene: [
+    BootScene,
+    PreloadScene,
+    MainMenuScene,
+    CharacterSelectScene,
+    ModeSelectScene,
+    OptionsScene,
+    GameScene,
+    HUDScene,
+    PauseScene,
+    GameOverScene,
+    UpgradeScene,
+    TacticalMenuScene,
+    ProgressionScene,
+    DebugScene,
+  ],
 };

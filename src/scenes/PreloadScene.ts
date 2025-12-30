@@ -20,11 +20,11 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   /**
-   * Transition vers le menu ou directement vers le jeu
+   * Transition vers le menu principal
    */
   create(): void {
-    // Pour la Phase 1, on va directement au jeu
-    this.scene.start(SCENE_KEYS.GAME);
+    // Phase 8.1: Transition vers le menu principal
+    this.scene.start(SCENE_KEYS.MENU);
   }
 
   /**

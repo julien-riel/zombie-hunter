@@ -442,7 +442,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private die(): void {
     this.setActive(false);
     this.setVisible(false);
-    // TODO: Déclencher l'écran de game over
+
+    // Émettre l'événement de mort pour la télémétrie et le game over
+    (this.scene as GameScene).events.emit('playerDeath');
   }
 
   /**
