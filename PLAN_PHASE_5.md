@@ -429,7 +429,7 @@ Object Layer Properties:
 
 ### Tâches
 
-- [ ] **5.5.1** Système de barricade
+- [x] **5.5.1** Système de barricade
   - Nouvelle propriété `Door.barricadeHealth: number`
   - Coût en points pour barricader (via menu tactique futur)
   - Barricade bloque les spawns tant qu'elle tient
@@ -438,7 +438,7 @@ Object Layer Properties:
   - Event `door:barricade_destroyed` quand détruite
   - Visuel : planches clouées sur la porte
 
-- [ ] **5.5.2** Pièges sur portes
+- [x] **5.5.2** Pièges sur portes
   - Nouvelle propriété `Door.trap: TrapType | null`
   - Types : `SPIKE` (dégâts), `SLOW` (ralentissement), `FIRE` (zone de feu)
   - Coût en points pour poser
@@ -446,14 +446,14 @@ Object Layer Properties:
   - Affecte les zombies qui spawn
   - Event `door:trap_triggered`
 
-- [ ] **5.5.3** Destruction par boss
+- [x] **5.5.3** Destruction par boss
   - Méthode `Door.destroy()`
   - Boss défonce la porte à son entrée (cinématique)
   - Porte détruite = spawn permanent plus rapide
   - Pas de possibilité de réparer
   - Visuel : porte arrachée, cadre endommagé
 
-- [ ] **5.5.4** Intégrer avec le futur menu tactique (Phase 6)
+- [x] **5.5.4** Intégrer avec le futur menu tactique (Phase 6)
   - Interface pour sélectionner une porte
   - Options : Barricader (coût), Piéger (coût), Réparer barricade
   - Preview du coût et effet
@@ -571,12 +571,14 @@ describe('Interactive', () => {
 | `GameScene.ts` | Intégration nouvelles classes, collisions | ✅ TerrainZone + covers + interactive |
 | `TeslaCannon.ts` | Intégration propagation via flaques | ✅ Propagation + bonus dégâts |
 | `FlamePool.ts` | Utilisation nouveau FireZone | ✅ Import mis à jour |
+| `Door.ts` | Barricades, pièges, destruction par boss | ✅ Système complet implémenté |
+| `SpawnSystem.ts` | Gestion barricades et pièges | ✅ Support barricades + pièges |
 | `CombatSystem.ts` | Gestion dégâts environnementaux | À faire |
 | `TelemetryManager.ts` | Nouveaux events | À faire |
 | `PreloadScene.ts` | Chargement tilemaps et tilesets | À faire |
 | `constants.ts` | Enum ArenaType, nouvelles constantes | À faire |
-| `balance.ts` | Stats covers, terrains, interactifs | ✅ Stats covers + terrainZones + interactive ajoutées |
-| `events.ts` | Nouveaux events interactive | ✅ Events interactive ajoutés |
+| `balance.ts` | Stats covers, terrains, interactifs, portes | ✅ Stats covers + terrainZones + interactive + doors ajoutées |
+| `events.ts` | Nouveaux events interactive + doors | ✅ Events interactive + doors ajoutés |
 
 ### Assets Nécessaires (Priorité)
 
@@ -607,7 +609,10 @@ Aucune — Phaser gère tout nativement (tilemaps, collision, etc.)
 - [x] Pièges à flammes et lames fonctionnels
 - [x] Système d'interaction joueur (touche E)
 - [ ] Tilemaps chargent correctement
-- [ ] Portes peuvent être barricadées
+- [x] Portes peuvent être barricadées
+- [x] Pièges sur portes fonctionnels (SPIKE, SLOW, FIRE)
+- [x] Destruction de porte par boss implémentée
+- [x] Interface tactique préparée (getDoorStatus, coûts, etc.)
 
 ### Performance
 

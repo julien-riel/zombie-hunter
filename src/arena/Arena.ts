@@ -7,6 +7,7 @@ import { TerrainZone, TerrainType } from './TerrainZone';
 import { PuddleZone, type PuddleConfig } from './PuddleZone';
 import { DebrisZone, type DebrisConfig } from './DebrisZone';
 import { ElectricZone, type ElectricZoneConfig } from './ElectricZone';
+import { FireZone, type FireZoneConfig } from './FireZone';
 import { Interactive } from './Interactive';
 import { BarrelExplosive, type BarrelExplosiveConfig } from './BarrelExplosive';
 import { BarrelFire, type BarrelFireConfig } from './BarrelFire';
@@ -374,10 +375,17 @@ export class Arena {
   }
 
   /**
-   * Retourne les portes actives
+   * Retourne les portes actives (non barricadées)
    */
   public getActiveDoors(): Door[] {
-    return this.doors.filter((door) => door.isActive());
+    return this.doors.filter((door) => door.isActive() && !door.hasBarricade());
+  }
+
+  /**
+   * Retourne les portes pouvant spawner (actives ou détruites, non barricadées)
+   */
+  public getSpawnableDoors(): Door[] {
+    return this.doors.filter((door) => door.canSpawn());
   }
 
   /**
@@ -502,6 +510,24 @@ export class Arena {
     this.terrainZones.push(electric);
     this.terrainZoneGroup.add(electric);
     return electric;
+  }
+
+  /**
+   * Crée une zone de feu (utilisé par les pièges de porte, lance-flammes, etc.)
+   * @param x Position X
+   * @param y Position Y
+   * @param duration Durée de la zone en ms (optionnel)
+   * @param radius Rayon de la zone (optionnel)
+   */
+  public createFireZone(x: number, y: number, duration?: number, radius?: number): FireZone {
+    const config: FireZoneConfig = { x, y };
+    if (duration !== undefined) config.duration = duration;
+    if (radius !== undefined) config.radius = radius;
+
+    const fire = new FireZone(this.scene, config);
+    this.terrainZones.push(fire);
+    this.terrainZoneGroup.add(fire);
+    return fire;
   }
 
   /**

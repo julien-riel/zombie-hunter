@@ -3,6 +3,7 @@ import type { GameScene } from '@scenes/GameScene';
 import type { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import type { ZombieType } from '@/types/entities';
 import type { Door } from '@arena/Door';
+import { DoorTrapType } from '@arena/Door';
 import type { WaveConfig } from './WaveSystem';
 import type { SpawnPlan } from './ThreatSystem';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@config/constants';
@@ -154,11 +155,11 @@ export class SpawnSystem {
   }
 
   /**
-   * Récupère les portes actives
+   * Récupère les portes pouvant spawner (actives ou détruites, non barricadées)
    */
   private getActiveDoors(): Door[] {
     if (!this.scene.arena) return [];
-    return this.scene.arena.getDoors().filter((door) => door.isActive());
+    return this.scene.arena.getDoors().filter((door) => door.canSpawn());
   }
 
   /**
@@ -200,11 +201,21 @@ export class SpawnSystem {
 
     let x: number;
     let y: number;
+    let door: Door | null = spawnEntry.door;
 
-    if (spawnEntry.door) {
+    // Vérifier si la porte assignée peut toujours spawner
+    if (door && !door.canSpawn()) {
+      // Trouver une autre porte disponible
+      const activeDoors = this.getActiveDoors();
+      door = activeDoors.length > 0
+        ? activeDoors[Math.floor(Math.random() * activeDoors.length)]
+        : null;
+    }
+
+    if (door) {
       // Spawn depuis une porte
-      spawnEntry.door.open();
-      const spawnPos = spawnEntry.door.getSpawnPosition();
+      door.open();
+      const spawnPos = door.getSpawnPosition();
       x = spawnPos.x;
       y = spawnPos.y;
     } else {
@@ -215,10 +226,58 @@ export class SpawnSystem {
       y = point.y;
     }
 
-    this.zombieFactory.create(spawnEntry.type, x, y);
+    const zombie = this.zombieFactory.create(spawnEntry.type, x, y);
+
+    // Appliquer les effets de piège si la porte en a un
+    if (door && zombie) {
+      this.applyDoorTrapEffects(door, zombie);
+    }
 
     // Notifier le WaveSystem
     this.scene.getWaveSystem()?.onZombieSpawned();
+  }
+
+  /**
+   * Applique les effets de piège de la porte au zombie qui spawn
+   */
+  private applyDoorTrapEffects(door: Door, zombie: Phaser.GameObjects.GameObject): void {
+    const trapResult = door.triggerTrap();
+
+    if (!trapResult.triggered) return;
+
+    // Appliquer l'effet selon le type de piège
+    switch (trapResult.type) {
+      case DoorTrapType.SPIKE:
+        // Infliger des dégâts directs
+        if ('takeDamage' in zombie && typeof zombie.takeDamage === 'function') {
+          (zombie as { takeDamage: (damage: number, source?: string) => void }).takeDamage(
+            trapResult.damage || BALANCE.doors.traps.spike.damage,
+            'door_trap_spike'
+          );
+        }
+        break;
+
+      case DoorTrapType.SLOW:
+        // Appliquer un ralentissement temporaire
+        if ('applySlowEffect' in zombie && typeof zombie.applySlowEffect === 'function') {
+          (zombie as { applySlowEffect: (factor: number, duration: number) => void }).applySlowEffect(
+            trapResult.slowFactor || BALANCE.doors.traps.slow.slowFactor,
+            BALANCE.doors.traps.slow.slowDuration
+          );
+        }
+        break;
+
+      case DoorTrapType.FIRE:
+        // Créer une zone de feu à la position de spawn
+        if (trapResult.position && this.scene.arena) {
+          this.scene.arena.createFireZone(
+            trapResult.position.x,
+            trapResult.position.y,
+            BALANCE.doors.traps.fire.fireDuration
+          );
+        }
+        break;
+    }
   }
 
   /**

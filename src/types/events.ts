@@ -70,6 +70,11 @@ export type ProgressionEvent =
 export type EnvironmentEvent =
   | 'door:activate'
   | 'door:barricade'
+  | 'door:barricade_damage'
+  | 'door:barricade_destroyed'
+  | 'door:barricade_repaired'
+  | 'door:trap_set'
+  | 'door:trap_triggered'
   | 'door:destroy'
   | 'cover:damage'
   | 'cover:destroy'
@@ -168,8 +173,18 @@ export interface GameEventPayloads {
   /** Émis quand une porte est activée */
   'door:activate': { doorId: string; position: { x: number; y: number } };
   /** Émis quand une porte est barricadée */
-  'door:barricade': { doorId: string; durability: number };
-  /** Émis quand une porte est détruite */
+  'door:barricade': { doorId: string; barricadeType: string; health: number };
+  /** Émis quand une barricade subit des dégâts */
+  'door:barricade_damage': { doorId: string; damage: number; remainingHealth: number; source?: string };
+  /** Émis quand une barricade est détruite */
+  'door:barricade_destroyed': { doorId: string; destroyedBy?: string };
+  /** Émis quand une barricade est réparée */
+  'door:barricade_repaired': { doorId: string; healAmount: number; currentHealth: number };
+  /** Émis quand un piège est placé sur une porte */
+  'door:trap_set': { doorId: string; trapType: string; charges: number };
+  /** Émis quand un piège de porte se déclenche */
+  'door:trap_triggered': { doorId: string; trapType: string; chargesRemaining: number };
+  /** Émis quand une porte est détruite (par un boss) */
   'door:destroy': { doorId: string; destroyedBy?: string };
   /** Émis quand une couverture subit des dégâts */
   'cover:damage': { coverId: string; damage: number; remainingHealth: number };

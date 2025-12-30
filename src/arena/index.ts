@@ -1,7 +1,12 @@
 export { Arena } from './Arena';
 export type { ObstacleData } from './Arena';
-export { Door, DoorState } from './Door';
-export type { DoorConfig } from './Door';
+export {
+  Door,
+  DoorState,
+  DoorTrapType,
+  BarricadeType,
+} from './Door';
+export type { DoorConfig, DoorTrapConfig } from './Door';
 export { Cover, CoverType } from './Cover';
 export type { CoverConfig, CoverData } from './Cover';
 

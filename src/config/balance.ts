@@ -419,6 +419,41 @@ export const BALANCE = {
     },
   },
 
+  doors: {
+    barricades: {
+      light: {
+        health: 100,
+        cost: 100,
+      },
+      reinforced: {
+        health: 250,
+        cost: 250,
+      },
+    },
+    traps: {
+      spike: {
+        damage: 30,
+        charges: 5,
+        cost: 150,
+      },
+      slow: {
+        slowFactor: 0.5,
+        slowDuration: 3000,
+        charges: 10,
+        cost: 100,
+      },
+      fire: {
+        fireDuration: 3000,
+        fireDamage: 20,
+        charges: 3,
+        cost: 200,
+      },
+    },
+    repairCost: 50,
+    repairAmount: 50,
+    destroyedSpawnMultiplier: 1.5, // 50% faster spawns on destroyed doors
+  },
+
   // Calculs de référence pour validation de l'équilibrage
   reference: {
     // Temps pour tuer un Shambler avec Pistol : 30 HP / 40 DPS = 0.75 secondes
