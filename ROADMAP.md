@@ -239,25 +239,25 @@ Enrichir l'arène avec des éléments interactifs et des zones de terrain.
 ### Tâches
 
 #### 5.1 Couvertures
-- [ ] Créer classe `Cover`
-- [ ] Colonnes/piliers (indestructibles)
-- [ ] Murets (destructibles, contournables)
-- [ ] Mobilier (destructible, peut contenir loot)
+- [x] Créer classe `Cover`
+- [x] Colonnes/piliers (indestructibles)
+- [x] Murets (destructibles, contournables)
+- [x] Mobilier (destructible, peut contenir loot)
 
 #### 5.2 Zones de Terrain
-- [ ] Créer classe `TerrainZone`
-- [ ] Flaques (ralentissement)
-- [ ] Gravats (ralentissement)
-- [ ] Zones électrifiées (dégâts périodiques)
-- [ ] Appliquer effets au joueur ET aux zombies
+- [x] Créer classe `TerrainZone`
+- [x] Flaques (ralentissement)
+- [x] Gravats (ralentissement)
+- [x] Zones électrifiées (dégâts périodiques)
+- [x] Appliquer effets au joueur ET aux zombies
 
 #### 5.3 Éléments Interactifs
-- [ ] Barils explosifs
-- [ ] Interrupteurs (pièges)
-- [ ] Générateurs (zones électrifiées)
-- [ ] Jets de flammes activables
+- [x] Barils explosifs
+- [x] Interrupteurs (pièges)
+- [x] Générateurs (zones électrifiées)
+- [x] Jets de flammes activables
 
-#### 5.4 Environnements
+#### 5.4 Environnements - En attente du designer... On skip
 - [ ] Créer tileset pour hôpital abandonné
 - [ ] Créer tileset pour centre commercial
 - [ ] Créer tileset pour station de métro
@@ -266,9 +266,9 @@ Enrichir l'arène avec des éléments interactifs et des zones de terrain.
 - [ ] Designer les layouts de chaque arène
 
 #### 5.5 Portes Avancées
-- [ ] Système de barricade (coût en points)
-- [ ] Pièges sur portes
-- [ ] Destruction de porte par les boss
+- [x] Système de barricade (coût en points)
+- [x] Pièges sur portes
+- [x] Destruction de porte par les boss
 
 ### Livrable
 Arènes riches avec terrain tactique et éléments interactifs.

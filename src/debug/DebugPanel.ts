@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import type { DebugSpawner, DebugItemType } from './DebugSpawner';
 import { ZOMBIE_TYPES } from './DebugSpawner';
 import type { ZombieType } from '@/types/entities';
+import type { Door } from '@arena/Door';
+import { BarricadeType, DoorTrapType } from '@arena/Door';
 
 /**
  * Configuration des armes disponibles
@@ -43,6 +45,11 @@ export interface DebugPanelCallbacks {
   onHealFull?: () => void;
   onToggleGodMode?: () => void;
   onTogglePause?: () => void;
+  onDoorBarricade?: (door: Door, type: BarricadeType) => void;
+  onDoorTrap?: (door: Door, type: DoorTrapType) => void;
+  onDoorDestroy?: (door: Door) => void;
+  onDoorDamageBarricade?: (door: Door, damage: number) => void;
+  getDoors?: () => Door[];
 }
 
 /**
@@ -82,6 +89,9 @@ export class DebugPanel {
   private weaponButtons: Phaser.GameObjects.Container[] = [];
   private itemButtons: Phaser.GameObjects.Container[] = [];
   private actionButtons: Phaser.GameObjects.Container[] = [];
+  private doorButtons: Phaser.GameObjects.Container[] = [];
+  private doorStatusText!: Phaser.GameObjects.Text;
+  private selectedDoorIndex: number = 0;
 
   private readonly PANEL_WIDTH = 320;
   private readonly PANEL_X = 10;
@@ -147,6 +157,13 @@ export class DebugPanel {
     // Items section
     currentY = this.addSectionHeader(currentY, 'ITEMS (click to spawn)');
     currentY = this.createItemButtons(currentY);
+
+    // Separator
+    currentY = this.addSeparator(currentY);
+
+    // Doors section
+    currentY = this.addSectionHeader(currentY, 'DOORS (barricade/trap/destroy)');
+    currentY = this.createDoorButtons(currentY);
 
     // Separator
     currentY = this.addSeparator(currentY);
@@ -354,6 +371,172 @@ export class DebugPanel {
     }
 
     return y;
+  }
+
+  /**
+   * Crée les boutons de gestion des portes
+   */
+  private createDoorButtons(startY: number): number {
+    let y = startY;
+    const buttonWidth = 48;
+    let x = 8;
+
+    // Door selector (< Door X >)
+    const prevBtn = this.createButton(x, y, 24, '<', () => this.selectPrevDoor());
+    this.container.add(prevBtn);
+    this.doorButtons.push(prevBtn);
+    x += 28;
+
+    this.doorStatusText = this.createText(x, y + 4, 'Door 1: --', 10, '#ffff00');
+    this.container.add(this.doorStatusText);
+    x += 130;
+
+    const nextBtn = this.createButton(x, y, 24, '>', () => this.selectNextDoor());
+    this.container.add(nextBtn);
+    this.doorButtons.push(nextBtn);
+
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+    x = 8;
+
+    // Barricade buttons
+    const barricadeLight = this.createButton(x, y, buttonWidth, 'Bar.L', () => this.onBarricadeDoor(BarricadeType.LIGHT));
+    this.container.add(barricadeLight);
+    this.doorButtons.push(barricadeLight);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    const barricadeHeavy = this.createButton(x, y, buttonWidth, 'Bar.R', () => this.onBarricadeDoor(BarricadeType.REINFORCED));
+    this.container.add(barricadeHeavy);
+    this.doorButtons.push(barricadeHeavy);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    // Damage barricade
+    const damageBtn = this.createButton(x, y, buttonWidth, 'Dmg 50', () => this.onDamageBarricade(50));
+    this.container.add(damageBtn);
+    this.doorButtons.push(damageBtn);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+    x = 8;
+
+    // Trap buttons
+    const trapSpike = this.createButton(x, y, buttonWidth, 'T.Spike', () => this.onTrapDoor(DoorTrapType.SPIKE));
+    this.container.add(trapSpike);
+    this.doorButtons.push(trapSpike);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    const trapSlow = this.createButton(x, y, buttonWidth, 'T.Slow', () => this.onTrapDoor(DoorTrapType.SLOW));
+    this.container.add(trapSlow);
+    this.doorButtons.push(trapSlow);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    const trapFire = this.createButton(x, y, buttonWidth, 'T.Fire', () => this.onTrapDoor(DoorTrapType.FIRE));
+    this.container.add(trapFire);
+    this.doorButtons.push(trapFire);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    // Destroy door
+    const destroyBtn = this.createButton(x, y, buttonWidth, 'Destroy', () => this.onDestroyDoor());
+    this.container.add(destroyBtn);
+    this.doorButtons.push(destroyBtn);
+
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+
+    return y;
+  }
+
+  /**
+   * Sélectionne la porte précédente
+   */
+  private selectPrevDoor(): void {
+    const doors = this.callbacks.getDoors?.() || [];
+    if (doors.length === 0) return;
+    this.selectedDoorIndex = (this.selectedDoorIndex - 1 + doors.length) % doors.length;
+    this.updateDoorStatusDisplay();
+  }
+
+  /**
+   * Sélectionne la porte suivante
+   */
+  private selectNextDoor(): void {
+    const doors = this.callbacks.getDoors?.() || [];
+    if (doors.length === 0) return;
+    this.selectedDoorIndex = (this.selectedDoorIndex + 1) % doors.length;
+    this.updateDoorStatusDisplay();
+  }
+
+  /**
+   * Récupère la porte actuellement sélectionnée
+   */
+  private getSelectedDoor(): Door | null {
+    const doors = this.callbacks.getDoors?.() || [];
+    if (doors.length === 0) return null;
+    return doors[this.selectedDoorIndex] || null;
+  }
+
+  /**
+   * Met à jour l'affichage du statut de la porte
+   */
+  private updateDoorStatusDisplay(): void {
+    const door = this.getSelectedDoor();
+    if (!door) {
+      this.doorStatusText.setText('No doors');
+      return;
+    }
+
+    const status = door.getDoorStatus();
+    let statusStr = `Door ${this.selectedDoorIndex + 1} (${status.side}): `;
+
+    if (status.isDestroyed) {
+      statusStr += 'DESTROYED';
+    } else if (status.barricade.type) {
+      statusStr += `Bar ${status.barricade.health}/${status.barricade.maxHealth}`;
+    } else if (status.trap.type) {
+      statusStr += `Trap(${status.trap.type}) x${status.trap.chargesRemaining}`;
+    } else {
+      statusStr += status.state;
+    }
+
+    this.doorStatusText.setText(statusStr);
+  }
+
+  /**
+   * Handler barricade porte
+   */
+  private onBarricadeDoor(type: BarricadeType): void {
+    const door = this.getSelectedDoor();
+    if (!door) return;
+    this.callbacks.onDoorBarricade?.(door, type);
+    this.updateDoorStatusDisplay();
+  }
+
+  /**
+   * Handler piège porte
+   */
+  private onTrapDoor(type: DoorTrapType): void {
+    const door = this.getSelectedDoor();
+    if (!door) return;
+    this.callbacks.onDoorTrap?.(door, type);
+    this.updateDoorStatusDisplay();
+  }
+
+  /**
+   * Handler destruction porte
+   */
+  private onDestroyDoor(): void {
+    const door = this.getSelectedDoor();
+    if (!door) return;
+    this.callbacks.onDoorDestroy?.(door);
+    this.updateDoorStatusDisplay();
+  }
+
+  /**
+   * Handler dégâts barricade
+   */
+  private onDamageBarricade(damage: number): void {
+    const door = this.getSelectedDoor();
+    if (!door) return;
+    this.callbacks.onDoorDamageBarricade?.(door, damage);
+    this.updateDoorStatusDisplay();
   }
 
   /**

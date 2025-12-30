@@ -6,6 +6,9 @@ import { DebugControls } from '@debug/DebugControls';
 import { DebugPanel } from '@debug/DebugPanel';
 import type { ZombieType } from '@/types/entities';
 import type { DebugItemType } from '@debug/DebugSpawner';
+import type { Door } from '@arena/Door';
+import { BarricadeType, DoorTrapType } from '@arena/Door';
+import { BALANCE } from '@config/balance';
 
 // Import des armes pour les donner au joueur
 import { Pistol } from '@weapons/firearms/Pistol';
@@ -67,6 +70,12 @@ export class DebugScene extends Phaser.Scene {
       onHealFull: () => this.healPlayerFull(),
       onToggleGodMode: () => this.toggleGodMode(),
       onTogglePause: () => this.toggleSpawnPause(),
+      // Door callbacks
+      getDoors: () => this.getDoors(),
+      onDoorBarricade: (door, type) => this.onDoorBarricade(door, type),
+      onDoorTrap: (door, type) => this.onDoorTrap(door, type),
+      onDoorDestroy: (door) => this.onDoorDestroy(door),
+      onDoorDamageBarricade: (door, damage) => this.onDoorDamageBarricade(door, damage),
     });
 
     // Créer les contrôles clavier
@@ -349,6 +358,78 @@ export class DebugScene extends Phaser.Scene {
   private onZombieTypeSelected(type: ZombieType): void {
     this.panel.updateState({ selectedZombieType: type });
     console.log(`[Debug] Selected zombie type: ${type}`);
+  }
+
+  // =========================================================================
+  // DOOR HANDLERS
+  // =========================================================================
+
+  /**
+   * Récupère toutes les portes de l'arène
+   */
+  private getDoors(): Door[] {
+    return this.gameScene.arena?.getDoors() || [];
+  }
+
+  /**
+   * Handler pour barricader une porte
+   */
+  private onDoorBarricade(door: Door, type: BarricadeType): void {
+    if (door.barricade(type)) {
+      console.log(`[Debug] Barricaded door ${door.id} with ${type}`);
+    } else {
+      console.log(`[Debug] Cannot barricade door ${door.id} (already barricaded or destroyed)`);
+    }
+  }
+
+  /**
+   * Handler pour piéger une porte
+   */
+  private onDoorTrap(door: Door, type: DoorTrapType): void {
+    const trapConfigs = {
+      [DoorTrapType.SPIKE]: {
+        type: DoorTrapType.SPIKE,
+        damage: BALANCE.doors.traps.spike.damage,
+        charges: BALANCE.doors.traps.spike.charges,
+      },
+      [DoorTrapType.SLOW]: {
+        type: DoorTrapType.SLOW,
+        slowFactor: BALANCE.doors.traps.slow.slowFactor,
+        charges: BALANCE.doors.traps.slow.charges,
+      },
+      [DoorTrapType.FIRE]: {
+        type: DoorTrapType.FIRE,
+        fireDuration: BALANCE.doors.traps.fire.fireDuration,
+        charges: BALANCE.doors.traps.fire.charges,
+      },
+    };
+
+    if (door.setTrap(trapConfigs[type])) {
+      console.log(`[Debug] Set ${type} trap on door ${door.id}`);
+    } else {
+      console.log(`[Debug] Cannot trap door ${door.id} (already trapped or destroyed)`);
+    }
+  }
+
+  /**
+   * Handler pour détruire une porte (simulation boss)
+   */
+  private onDoorDestroy(door: Door): void {
+    door.destroyDoor('debug_boss');
+    console.log(`[Debug] Destroyed door ${door.id}`);
+  }
+
+  /**
+   * Handler pour infliger des dégâts à la barricade
+   */
+  private onDoorDamageBarricade(door: Door, damage: number): void {
+    if (door.hasBarricade()) {
+      const destroyed = door.damageBarricade(damage, 'debug');
+      const info = door.getBarricadeInfo();
+      console.log(`[Debug] Damaged barricade on door ${door.id}: ${info.health}/${info.maxHealth} HP${destroyed ? ' (DESTROYED)' : ''}`);
+    } else {
+      console.log(`[Debug] Door ${door.id} has no barricade`);
+    }
   }
 
   /**
