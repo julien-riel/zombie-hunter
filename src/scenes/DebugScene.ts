@@ -6,6 +6,7 @@ import { DebugControls } from '@debug/DebugControls';
 import { DebugPanel } from '@debug/DebugPanel';
 import type { ZombieType } from '@/types/entities';
 import type { DebugItemType } from '@debug/DebugSpawner';
+import type { DropType } from '@items/drops';
 import type { Door } from '@arena/Door';
 import { BarricadeType, DoorTrapType } from '@arena/Door';
 import { BALANCE } from '@config/balance';
@@ -65,6 +66,7 @@ export class DebugScene extends Phaser.Scene {
       onZombieSpawn: (type, x, y) => this.onZombieSpawn(type, x, y),
       onWeaponGive: (weaponId) => this.onWeaponGive(weaponId),
       onItemSpawn: (type, x, y) => this.onItemSpawn(type, x, y),
+      onDropSpawn: (type, x, y) => this.onDropSpawn(type, x, y),
       onKillAll: () => this.killAllZombies(),
       onNextWave: () => this.skipToNextWave(),
       onHealFull: () => this.healPlayerFull(),
@@ -76,6 +78,7 @@ export class DebugScene extends Phaser.Scene {
       onDoorTrap: (door, type) => this.onDoorTrap(door, type),
       onDoorDestroy: (door) => this.onDoorDestroy(door),
       onDoorDamageBarricade: (door, damage) => this.onDoorDamageBarricade(door, damage),
+      getDropCount: () => this.gameScene.getDropSystem().getActiveDropCount(),
     });
 
     // Créer les contrôles clavier
@@ -350,6 +353,14 @@ export class DebugScene extends Phaser.Scene {
   private onItemSpawn(type: DebugItemType, x: number, y: number): void {
     this.spawner.spawnItem(type, x, y);
     console.log(`[Debug] Spawned ${type} at (${Math.round(x)}, ${Math.round(y)})`);
+  }
+
+  /**
+   * Handler pour spawn de drop (Phase 6.2)
+   */
+  private onDropSpawn(type: DropType, x: number, y: number): void {
+    this.spawner.spawnDrop(type, x, y);
+    console.log(`[Debug] Spawned drop ${type} at (${Math.round(x)}, ${Math.round(y)})`);
   }
 
   /**

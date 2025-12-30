@@ -108,4 +108,29 @@ export abstract class Weapon {
   public getName(): string {
     return this.config.name;
   }
+
+  /**
+   * Retourne la taille du chargeur
+   */
+  public getMagazineSize(): number {
+    return this.maxAmmo;
+  }
+
+  /**
+   * Ajoute des munitions à l'arme
+   * @param amount Nombre de munitions à ajouter
+   * @returns Le nombre de munitions effectivement ajoutées
+   */
+  public addAmmo(amount: number): number {
+    const previousAmmo = this.currentAmmo;
+    this.currentAmmo = Math.min(this.maxAmmo, this.currentAmmo + amount);
+    return this.currentAmmo - previousAmmo;
+  }
+
+  /**
+   * Vérifie si le chargeur est plein
+   */
+  public isFullAmmo(): boolean {
+    return this.currentAmmo >= this.maxAmmo;
+  }
 }

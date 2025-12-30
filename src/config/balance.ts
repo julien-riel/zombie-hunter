@@ -300,6 +300,43 @@ export const BALANCE = {
     milestones: [2, 3, 4, 5, 6, 7, 8, 9, 10], // Seuils pour effets visuels
   },
 
+  drops: {
+    // Configuration générale des drops
+    lifetime: 15000, // Durée de vie en ms avant disparition
+    blinkStartTime: 3000, // Temps avant disparition où le drop commence à clignoter
+    collectionRadius: 32, // Rayon de collecte par défaut
+    magnetRadius: 64, // Rayon d'attraction magnétique vers le joueur
+    magnetSpeed: 200, // Vitesse d'attraction
+    popVelocity: 100, // Vitesse initiale du "pop" à la création
+    maxDropsOnGround: 50, // Limite de drops au sol
+
+    // Types de drops et leurs effets
+    ammo: {
+      reloadPercent: 0.3, // +30% du chargeur
+    },
+    healthSmall: {
+      healAmount: 15, // +15 HP
+    },
+    healthMedium: {
+      healAmount: 30, // +30 HP
+    },
+
+    // Table de loot par type de zombie
+    // Format: { ammo, healthSmall, healthMedium, powerUp }
+    lootTables: {
+      shambler: { ammo: 0.15, healthSmall: 0.08, healthMedium: 0, powerUp: 0.01 },
+      runner: { ammo: 0.12, healthSmall: 0.05, healthMedium: 0, powerUp: 0.02 },
+      crawler: { ammo: 0.12, healthSmall: 0.06, healthMedium: 0.02, powerUp: 0.02 },
+      tank: { ammo: 0.25, healthSmall: 0.15, healthMedium: 0.15, powerUp: 0.05 },
+      spitter: { ammo: 0.20, healthSmall: 0.10, healthMedium: 0, powerUp: 0.03 },
+      bomber: { ammo: 0.10, healthSmall: 0.05, healthMedium: 0, powerUp: 0.03 },
+      screamer: { ammo: 0.20, healthSmall: 0.12, healthMedium: 0, powerUp: 0.08 },
+      splitter: { ammo: 0.15, healthSmall: 0.08, healthMedium: 0, powerUp: 0.02 },
+      invisible: { ammo: 0.18, healthSmall: 0.10, healthMedium: 0.05, powerUp: 0.05 },
+      necromancer: { ammo: 0.30, healthSmall: 0.20, healthMedium: 0.10, powerUp: 0.10 },
+    },
+  },
+
   covers: {
     pillar: {
       health: Infinity,

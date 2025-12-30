@@ -85,7 +85,7 @@ class ComboSystem {
 
 ---
 
-## 6.2 Drops et Items
+## 6.2 Drops et Items ✅ COMPLÉTÉ
 
 ### Objectif
 Fournir des ressources pour maintenir le joueur en vie et récompenser les kills.
@@ -156,6 +156,17 @@ class DropSystem {
 - `ComboSystem` → fournit bonus de qualité
 - `Player` → collecte via collision
 - Object pooling via `PoolManager`
+
+### Implémentation réalisée (2024-12-30)
+- ✅ `src/config/balance.ts` - Configuration des drops ajoutée (lifetime, loot tables, paramètres)
+- ✅ `src/items/drops/Drop.ts` - Classe de base abstraite avec pooling, animations, effet magnétique
+- ✅ `src/items/drops/AmmoDrop.ts` - Drop de munitions (+30% du chargeur)
+- ✅ `src/items/drops/HealthDrop.ts` - Drop de soins (petit: +15 HP, moyen: +30 HP)
+- ✅ `src/items/drops/PowerUpDrop.ts` - Placeholder pour Phase 6.3 avec sélection aléatoire
+- ✅ `src/systems/DropSystem.ts` - Système principal avec pooling, loot tables, et intégration combo
+- ✅ `src/weapons/Weapon.ts` - Ajout des méthodes getMagazineSize(), addAmmo(), isFullAmmo()
+- ✅ Intégration dans `GameScene` avec getter getDropSystem()
+- ✅ Exports dans `src/systems/index.ts` et `src/items/index.ts`
 
 ---
 

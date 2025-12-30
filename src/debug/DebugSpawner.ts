@@ -3,6 +3,7 @@ import type { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import type { Zombie } from '@entities/zombies/Zombie';
 import type { ZombieType } from '@/types/entities';
 import { GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
+import type { DropType } from '@items/drops';
 
 /**
  * Types d'items que le DebugSpawner peut créer
@@ -193,18 +194,34 @@ export class DebugSpawner {
 
   /**
    * Spawn un item à une position donnée
-   * Note: Le système d'items n'est pas encore implémenté complètement
+   * Note: Pour les drops réels, utiliser spawnDrop()
    */
   public spawnItem(type: DebugItemType, x: number, y: number): void {
-    // Émettre un événement pour le système d'items (quand il sera implémenté)
-    this.gameScene.events.emit('item:drop', {
-      itemType: type,
-      position: { x, y },
-      source: 'debug',
-    });
+    // Mapper vers le vrai système de drops si possible
+    const dropMapping: Partial<Record<DebugItemType, DropType>> = {
+      health: 'healthSmall',
+      ammo: 'ammo',
+    };
 
-    // Effet visuel temporaire pour montrer où l'item a été placé
+    const dropType = dropMapping[type];
+    if (dropType) {
+      this.spawnDrop(dropType, x, y);
+      return;
+    }
+
+    // Sinon, créer un placeholder visuel
     this.createItemPlaceholder(type, x, y);
+  }
+
+  /**
+   * Spawn un drop réel à une position donnée (utilise le DropSystem)
+   */
+  public spawnDrop(type: DropType, x: number, y: number): void {
+    const dropSystem = this.gameScene.getDropSystem();
+
+    // Créer le drop via le système
+    // On utilise une méthode interne exposée pour le debug
+    (dropSystem as unknown as { spawnDropDebug: (type: DropType, x: number, y: number) => void }).spawnDropDebug(type, x, y);
   }
 
   /**

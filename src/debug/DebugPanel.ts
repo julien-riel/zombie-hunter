@@ -4,6 +4,7 @@ import { ZOMBIE_TYPES } from './DebugSpawner';
 import type { ZombieType } from '@/types/entities';
 import type { Door } from '@arena/Door';
 import { BarricadeType, DoorTrapType } from '@arena/Door';
+import type { DropType } from '@items/drops';
 
 /**
  * Configuration des armes disponibles
@@ -34,12 +35,23 @@ const ITEM_TYPES: { id: DebugItemType; label: string }[] = [
 ];
 
 /**
+ * Configuration des drops disponibles (Phase 6.2)
+ */
+const DROP_TYPES: { id: DropType; label: string; color: string }[] = [
+  { id: 'ammo', label: 'Ammo', color: '#ffd700' },
+  { id: 'healthSmall', label: 'HP+', color: '#00ff00' },
+  { id: 'healthMedium', label: 'HP++', color: '#00cc00' },
+  { id: 'powerUp', label: 'Power', color: '#9932cc' },
+];
+
+/**
  * Callbacks du panneau debug
  */
 export interface DebugPanelCallbacks {
   onZombieSpawn?: (type: ZombieType, x: number, y: number) => void;
   onWeaponGive?: (weaponId: string) => void;
   onItemSpawn?: (type: DebugItemType, x: number, y: number) => void;
+  onDropSpawn?: (type: DropType, x: number, y: number) => void;
   onKillAll?: () => void;
   onNextWave?: () => void;
   onHealFull?: () => void;
@@ -50,6 +62,7 @@ export interface DebugPanelCallbacks {
   onDoorDestroy?: (door: Door) => void;
   onDoorDamageBarricade?: (door: Door, damage: number) => void;
   getDoors?: () => Door[];
+  getDropCount?: () => number;
 }
 
 /**
@@ -88,6 +101,7 @@ export class DebugPanel {
   private zombieButtons: Phaser.GameObjects.Container[] = [];
   private weaponButtons: Phaser.GameObjects.Container[] = [];
   private itemButtons: Phaser.GameObjects.Container[] = [];
+  private dropButtons: Phaser.GameObjects.Container[] = [];
   private actionButtons: Phaser.GameObjects.Container[] = [];
   private doorButtons: Phaser.GameObjects.Container[] = [];
   private doorStatusText!: Phaser.GameObjects.Text;
@@ -157,6 +171,13 @@ export class DebugPanel {
     // Items section
     currentY = this.addSectionHeader(currentY, 'ITEMS (click to spawn)');
     currentY = this.createItemButtons(currentY);
+
+    // Separator
+    currentY = this.addSeparator(currentY);
+
+    // Drops section (Phase 6.2)
+    currentY = this.addSectionHeader(currentY, 'DROPS (click to spawn at player)');
+    currentY = this.createDropButtons(currentY);
 
     // Separator
     currentY = this.addSeparator(currentY);
@@ -355,6 +376,41 @@ export class DebugPanel {
 
       this.container.add(button);
       this.itemButtons.push(button);
+
+      col++;
+      x += buttonWidth + this.BUTTON_SPACING;
+
+      if (col >= buttonsPerRow) {
+        col = 0;
+        x = 8;
+        y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+      }
+    }
+
+    if (col > 0) {
+      y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+    }
+
+    return y;
+  }
+
+  /**
+   * Crée les boutons de drops (Phase 6.2)
+   */
+  private createDropButtons(startY: number): number {
+    let y = startY;
+    const buttonWidth = 70;
+    const buttonsPerRow = 4;
+    let x = 8;
+    let col = 0;
+
+    for (const drop of DROP_TYPES) {
+      const button = this.createButton(x, y, buttonWidth, drop.label, () =>
+        this.onDropButtonClick(drop.id)
+      );
+
+      this.container.add(button);
+      this.dropButtons.push(button);
 
       col++;
       x += buttonWidth + this.BUTTON_SPACING;
@@ -590,6 +646,14 @@ export class DebugPanel {
     this.spawner.setSelectedItemType(type);
     const pointer = this.scene.input.activePointer;
     this.callbacks.onItemSpawn?.(type, pointer.worldX, pointer.worldY);
+  }
+
+  /**
+   * Handler pour clic sur bouton drop (Phase 6.2)
+   */
+  private onDropButtonClick(type: DropType): void {
+    const pointer = this.scene.input.activePointer;
+    this.callbacks.onDropSpawn?.(type, pointer.worldX, pointer.worldY);
   }
 
   /**
