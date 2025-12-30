@@ -272,6 +272,11 @@ export class ActiveItemSystem {
 
     // Retirer les objets expirés/détruits
     for (const id of toRemove) {
+      const item = this.deployedItems.get(id);
+      if (item) {
+        // S'assurer que destroy() est appelé pour nettoyer les visuels
+        item.destroy();
+      }
       this.deployedItems.delete(id);
     }
   }
