@@ -13,7 +13,7 @@ La Phase 7 introduit la variété de gameplay à travers 6 personnages jouables 
 | 7.1 | ✅ Complété | Système de personnages (infrastructure) |
 | 7.2 | ✅ Complété | Les 6 personnages |
 | 7.3 | ✅ Complété | Système de Boss |
-| 7.4 | 🔲 À faire | Événements spéciaux |
+| 7.4 | ✅ Complété | Événements spéciaux |
 
 ---
 
@@ -934,15 +934,29 @@ class BossRushEvent implements SpecialEvent {
 
 ### Tâches Événements
 
-- [ ] Créer `EventSystem.ts`
-- [ ] Créer interface `SpecialEvent`
-- [ ] Implémenter Blackout
-- [ ] Implémenter Horde
-- [ ] Implémenter Porte Surchauffée
-- [ ] Implémenter Boss Rush
-- [ ] Intégrer avec WaveSystem (probabilité d'événement)
-- [ ] Ajouter UI d'annonce d'événement
+- [x] Créer `EventSystem.ts`
+- [x] Créer interface `SpecialEvent`
+- [x] Implémenter Blackout
+- [x] Implémenter Horde
+- [x] Implémenter Porte Surchauffée
+- [x] Implémenter Boss Rush
+- [x] Intégrer avec WaveSystem (probabilité d'événement)
+- [x] Ajouter UI d'annonce d'événement
+- [x] Ajouter contrôles debug pour les événements
 - [ ] Tester chaque événement
+
+### Fichiers créés (Phase 7.4)
+
+```
+src/systems/events/
+├── SpecialEvent.ts       # ✅ Interface et classe de base
+├── EventSystem.ts        # ✅ Gestionnaire central des événements
+├── BlackoutEvent.ts      # ✅ Visibilité réduite, yeux lumineux
+├── HordeEvent.ts         # ✅ Triple les spawns, drops améliorés
+├── OverheatedDoorEvent.ts # ✅ Porte négligée libère Tank enragé
+├── BossRushEvent.ts      # ✅ Enchaîne 2-3 boss sans pause
+└── index.ts              # ✅ Barrel exports
+```
 
 ---
 

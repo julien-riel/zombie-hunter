@@ -9,6 +9,8 @@ const TACTICAL_MENU_DELAY = 500;
 import { ThreatSystem, type SpawnPlan, type WaveComposition } from './ThreatSystem';
 import type { DDASystem } from './DDASystem';
 import type { BossFactory } from '@entities/bosses/BossFactory';
+import type { EventSystem } from './events/EventSystem';
+import type { SpecialEvent } from './events/SpecialEvent';
 
 /**
  * Configuration d'un groupe de spawn dans une vague
@@ -74,6 +76,10 @@ export class WaveSystem {
   private bossFactory: BossFactory | null = null;
   /** Indique si un boss est en cours */
   private bossActive: boolean = false;
+  /** Système d'événements spéciaux (Phase 7.4) */
+  private eventSystem: EventSystem | null = null;
+  /** Événement actif pour la vague courante */
+  private activeEvent: SpecialEvent | null = null;
 
   constructor(scene: GameScene) {
     this.scene = scene;
@@ -100,6 +106,20 @@ export class WaveSystem {
 
     // Écouter la mort des boss
     this.scene.events.on('bossDefeated', this.onBossDefeated, this);
+  }
+
+  /**
+   * Configure le système d'événements (Phase 7.4)
+   */
+  public setEventSystem(eventSystem: EventSystem): void {
+    this.eventSystem = eventSystem;
+  }
+
+  /**
+   * Récupère le système d'événements
+   */
+  public getEventSystem(): EventSystem | null {
+    return this.eventSystem;
   }
 
   /**
@@ -132,14 +152,22 @@ export class WaveSystem {
     this.currentWave++;
     this.state = WaveState.PREPARING;
 
-    // Vérifier si c'est une vague de boss
-    if (this.bossFactory?.isBossWave(this.currentWave)) {
+    // Phase 7.4: Vérifier si un événement spécial se déclenche
+    this.activeEvent = this.eventSystem?.checkForEvent(this.currentWave) || null;
+
+    // Vérifier si c'est une vague de boss (sauf si Boss Rush prend le contrôle)
+    if (this.bossFactory?.isBossWave(this.currentWave) && !this.activeEvent) {
       this.startBossWave();
       return;
     }
 
     // Générer la configuration de la vague
     this.waveConfig = this.generateWaveConfig(this.currentWave);
+
+    // Phase 7.4: Modifier la config selon l'événement actif
+    if (this.activeEvent && this.eventSystem) {
+      this.waveConfig = this.eventSystem.modifyWaveConfig(this.waveConfig);
+    }
 
     // Émettre l'événement de préparation de vague
     this.scene.events.emit('wavePreparing', this.currentWave, this.waveConfig);
@@ -248,6 +276,11 @@ export class WaveSystem {
     this.zombiesSpawned = 0;
     this.zombiesKilled = 0;
     this.zombiesRemaining = this.waveConfig.totalZombies;
+
+    // Phase 7.4: Activer l'événement en attente
+    if (this.activeEvent) {
+      this.eventSystem?.activatePendingEvent();
+    }
 
     // Émettre l'événement de début de vague
     this.scene.events.emit('waveStart', this.currentWave, this.waveConfig);
@@ -680,12 +713,16 @@ export class WaveSystem {
     this.zombiesKilled = 0;
     this.waveConfig = null;
     this.bossActive = false;
+    this.activeEvent = null;
 
     // Réinitialiser le ThreatSystem
     this.threatSystem.reset();
 
     // Réinitialiser le BossFactory
     this.bossFactory?.reset();
+
+    // Réinitialiser le EventSystem (Phase 7.4)
+    this.eventSystem?.reset();
   }
 
   /**

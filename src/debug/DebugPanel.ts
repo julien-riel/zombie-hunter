@@ -5,6 +5,7 @@ import type { ZombieType, CharacterType, BossType } from '@/types/entities';
 import type { Door } from '@arena/Door';
 import { BarricadeType, DoorTrapType } from '@arena/Door';
 import type { DropType } from '@items/drops';
+import { SpecialEventType } from '@systems/events';
 
 /**
  * Configuration des armes disponibles
@@ -66,6 +67,16 @@ const BOSS_TYPES: { id: BossType; label: string }[] = [
 ];
 
 /**
+ * Configuration des événements spéciaux (Phase 7.4)
+ */
+const EVENT_TYPES: { id: SpecialEventType; label: string }[] = [
+  { id: SpecialEventType.BLACKOUT, label: 'Black' },
+  { id: SpecialEventType.HORDE, label: 'Horde' },
+  { id: SpecialEventType.OVERHEATED_DOOR, label: 'Door' },
+  { id: SpecialEventType.BOSS_RUSH, label: 'Rush' },
+];
+
+/**
  * Callbacks du panneau debug
  */
 export interface DebugPanelCallbacks {
@@ -94,6 +105,11 @@ export interface DebugPanelCallbacks {
   onBossKill?: () => void;
   onBossDamage?: (amount: number) => void;
   getActiveBoss?: () => { type: BossType; healthPercent: number } | null;
+  // Phase 7.4 - Events
+  onEventTrigger?: (type: SpecialEventType) => void;
+  onEventStop?: (type: SpecialEventType) => void;
+  onEventStopAll?: () => void;
+  getActiveEvents?: () => SpecialEventType[];
 }
 
 /**
@@ -145,6 +161,9 @@ export class DebugPanel {
   // Phase 7.3 - Bosses
   private bossButtons: Phaser.GameObjects.Container[] = [];
   private bossStatusText!: Phaser.GameObjects.Text;
+  // Phase 7.4 - Events
+  private eventButtons: Phaser.GameObjects.Container[] = [];
+  private eventStatusText!: Phaser.GameObjects.Text;
 
   private readonly PANEL_WIDTH = 320;
   private readonly PANEL_X = 10;
@@ -238,6 +257,13 @@ export class DebugPanel {
     // Bosses section (Phase 7.3)
     currentY = this.addSectionHeader(currentY, 'BOSSES (click to spawn)');
     currentY = this.createBossButtons(currentY);
+
+    // Separator
+    currentY = this.addSeparator(currentY);
+
+    // Events section (Phase 7.4)
+    currentY = this.addSectionHeader(currentY, 'EVENTS (click to trigger)');
+    currentY = this.createEventButtons(currentY);
 
     // Separator
     currentY = this.addSeparator(currentY);
@@ -787,6 +813,83 @@ export class DebugPanel {
   }
 
   /**
+   * Crée les boutons d'événements (Phase 7.4)
+   */
+  private createEventButtons(startY: number): number {
+    let y = startY;
+    const buttonWidth = 56;
+    let x = 8;
+
+    // Ligne de statut des événements actifs
+    this.eventStatusText = this.createText(x, y, 'Events: None', 10, '#ffaa00');
+    this.container.add(this.eventStatusText);
+    y += 16;
+
+    // Boutons de déclenchement d'événements
+    for (const event of EVENT_TYPES) {
+      const button = this.createButton(
+        x,
+        y,
+        buttonWidth,
+        event.label,
+        () => this.onEventButtonClick(event.id)
+      );
+
+      this.container.add(button);
+      this.eventButtons.push(button);
+      x += buttonWidth + this.BUTTON_SPACING;
+    }
+
+    // Bouton Stop All
+    x += 10;
+    const stopAllBtn = this.createButton(x, y, 56, 'StopAll', () => this.onStopAllEvents());
+    this.container.add(stopAllBtn);
+    this.eventButtons.push(stopAllBtn);
+
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+
+    return y;
+  }
+
+  /**
+   * Handler pour clic sur bouton événement
+   */
+  private onEventButtonClick(type: SpecialEventType): void {
+    // Si l'événement est actif, l'arrêter, sinon le déclencher
+    const activeEvents = this.callbacks.getActiveEvents?.() || [];
+    if (activeEvents.includes(type)) {
+      this.callbacks.onEventStop?.(type);
+    } else {
+      this.callbacks.onEventTrigger?.(type);
+    }
+    this.updateEventStatusDisplay();
+  }
+
+  /**
+   * Handler pour arrêter tous les événements
+   */
+  private onStopAllEvents(): void {
+    this.callbacks.onEventStopAll?.();
+    this.updateEventStatusDisplay();
+  }
+
+  /**
+   * Met à jour l'affichage du statut des événements
+   */
+  private updateEventStatusDisplay(): void {
+    const activeEvents = this.callbacks.getActiveEvents?.() || [];
+    if (activeEvents.length > 0) {
+      const eventNames = activeEvents.map(e => {
+        const found = EVENT_TYPES.find(et => et.id === e);
+        return found?.label || e;
+      });
+      this.eventStatusText?.setText(`Events: ${eventNames.join(', ')}`);
+    } else {
+      this.eventStatusText?.setText('Events: None');
+    }
+  }
+
+  /**
    * Met à jour le style des boutons personnage pour refléter la sélection
    */
   private updateCharacterButtonStyles(): void {
@@ -941,6 +1044,9 @@ export class DebugPanel {
 
     // Update boss display (Phase 7.3)
     this.updateBossStatusDisplay();
+
+    // Update event display (Phase 7.4)
+    this.updateEventStatusDisplay();
   }
 
   /**

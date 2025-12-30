@@ -14,3 +14,13 @@ export type { PermanentModifiers, GameEndSummary, XPCalculationResult, Progressi
 export { SpawnSystem } from './SpawnSystem';
 export { WaveSystem } from './WaveSystem';
 export type { WaveConfig, SpawnGroup, WaveState } from './WaveSystem';
+
+// Phase 7.4 - Événements Spéciaux
+export {
+  EventSystem,
+  type EventSystemConfig,
+  SpecialEventType,
+  EventState,
+  type SpecialEvent,
+  type SpecialEventConfig,
+} from './events';

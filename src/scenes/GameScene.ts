@@ -32,6 +32,7 @@ import { FlowFieldManager } from '@ai/FlowFieldManager';
 import type { Zombie } from '@entities/zombies/Zombie';
 import type { MiniZombie } from '@entities/zombies/MiniZombie';
 import { BossFactory } from '@entities/bosses/BossFactory';
+import { EventSystem } from '@systems/events/EventSystem';
 
 /**
  * Scène principale du jeu
@@ -65,6 +66,7 @@ export class GameScene extends Phaser.Scene {
   private tacticalBehaviors!: TacticalBehaviors;
   private flowFieldManager!: FlowFieldManager;
   private bossFactory!: BossFactory;
+  private eventSystem!: EventSystem;
 
   constructor() {
     super({ key: SCENE_KEYS.GAME });
@@ -195,10 +197,14 @@ export class GameScene extends Phaser.Scene {
     // Factory pour créer les boss (Phase 7.3)
     this.bossFactory = new BossFactory(this);
 
-    // Système de vagues (avec intégration ThreatSystem et DDA)
+    // Système d'événements spéciaux (Phase 7.4)
+    this.eventSystem = new EventSystem(this);
+
+    // Système de vagues (avec intégration ThreatSystem, DDA, et EventSystem)
     this.waveSystem = new WaveSystem(this);
     this.waveSystem.setDDASystem(this.ddaSystem);
     this.waveSystem.setBossFactory(this.bossFactory);
+    this.waveSystem.setEventSystem(this.eventSystem);
 
     // Gestionnaire de horde pour les comportements de groupe (Phase 4.4)
     this.hordeManager = new HordeManager(this, {
@@ -346,6 +352,9 @@ export class GameScene extends Phaser.Scene {
 
     // Mettre à jour le boss actif (Phase 7.3)
     this.bossFactory.update(time, delta);
+
+    // Mettre à jour le système d'événements (Phase 7.4)
+    this.eventSystem.update(delta);
 
     // Mettre à jour la télémétrie avec la santé actuelle du joueur
     this.telemetryManager.updateHealth(
@@ -610,6 +619,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le système d'événements (Phase 7.4)
+   */
+  public getEventSystem(): EventSystem {
+    return this.eventSystem;
+  }
+
+  /**
    * Récupère le pathfinder pour la navigation des zombies
    */
   public getPathfinder(): Pathfinder {
@@ -817,6 +833,7 @@ export class GameScene extends Phaser.Scene {
     this.hordeManager?.destroy();
     this.tacticalBehaviors?.reset();
     this.flowFieldManager?.destroy();
+    this.eventSystem?.destroy();
     this.arena?.destroy();
     this.events.off('miniZombieSpawned', this.onMiniZombieSpawned, this);
     this.events.off('arena:obstacleRemoved', this.onObstacleRemoved, this);

@@ -10,6 +10,7 @@ import type { DropType } from '@items/drops';
 import type { Door } from '@arena/Door';
 import { BarricadeType, DoorTrapType } from '@arena/Door';
 import { BALANCE } from '@config/balance';
+import { SpecialEventType } from '@systems/events';
 
 // Import des armes pour les donner au joueur
 import { Pistol } from '@weapons/firearms/Pistol';
@@ -84,6 +85,11 @@ export class DebugScene extends Phaser.Scene {
       onBossKill: () => this.onBossKill(),
       onBossDamage: (amount) => this.onBossDamage(amount),
       getActiveBoss: () => this.getActiveBoss(),
+      // Event callbacks (Phase 7.4)
+      onEventTrigger: (type) => this.onEventTrigger(type),
+      onEventStop: (type) => this.onEventStop(type),
+      onEventStopAll: () => this.onEventStopAll(),
+      getActiveEvents: () => this.getActiveEvents(),
     });
 
     // Créer les contrôles clavier
@@ -514,6 +520,45 @@ export class DebugScene extends Phaser.Scene {
       type: boss.bossType,
       healthPercent: boss.getHealthPercent(),
     };
+  }
+
+  // =========================================================================
+  // EVENT HANDLERS (Phase 7.4)
+  // =========================================================================
+
+  /**
+   * Déclenche un événement spécial
+   */
+  private onEventTrigger(type: SpecialEventType): void {
+    const eventSystem = this.gameScene.getEventSystem();
+    eventSystem.triggerEvent(type);
+    console.log(`[Debug] Triggered event: ${type}`);
+  }
+
+  /**
+   * Arrête un événement spécial
+   */
+  private onEventStop(type: SpecialEventType): void {
+    const eventSystem = this.gameScene.getEventSystem();
+    eventSystem.stopEvent(type);
+    console.log(`[Debug] Stopped event: ${type}`);
+  }
+
+  /**
+   * Arrête tous les événements actifs
+   */
+  private onEventStopAll(): void {
+    const eventSystem = this.gameScene.getEventSystem();
+    eventSystem.stopAllEvents();
+    console.log('[Debug] Stopped all events');
+  }
+
+  /**
+   * Récupère les événements actifs
+   */
+  private getActiveEvents(): SpecialEventType[] {
+    const eventSystem = this.gameScene.getEventSystem();
+    return eventSystem.getActiveEvents().map((e) => e.type);
   }
 
   /**
