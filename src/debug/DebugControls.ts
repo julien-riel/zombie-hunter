@@ -10,6 +10,7 @@ export interface DebugControlCallbacks {
   onTogglePause?: () => void;
   onExitPlacementMode?: () => void;
   onToggleFlowFieldDebug?: () => void;
+  onToggleStatsPanel?: () => void;
 }
 
 /**
@@ -19,6 +20,7 @@ export interface DebugControlCallbacks {
  * - F1: Toggle panneau debug
  * - F2: Toggle pause (game pause)
  * - F3: Toggle flowfield debug visualization
+ * - F4: Toggle stats panel (DDA, Threat, Wave systems)
  * - ESC: Annuler le mode placement
  *
  * Toutes les autres actions sont disponibles via le panneau debug (F1)
@@ -45,17 +47,18 @@ export class DebugControls {
   }
 
   /**
-   * Configure les raccourcis clavier (minimal - F1, F2, F3, ESC)
+   * Configure les raccourcis clavier (minimal - F1, F2, F3, F4, ESC)
    */
   private setupKeys(): void {
     const keyboard = this.scene.input.keyboard;
     if (!keyboard) return;
 
-    // F1 toggle panel, F2 toggle pause, F3 flowfield debug, ESC annuler modes
+    // F1 toggle panel, F2 toggle pause, F3 flowfield debug, F4 stats panel, ESC annuler modes
     this.keys = {
       F1: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F1),
       F2: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F2),
       F3: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F3),
+      F4: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F4),
       ESC: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
     };
   }
@@ -76,7 +79,7 @@ export class DebugControls {
 
   /**
    * Met à jour les contrôles (appelé chaque frame)
-   * Gère F1 (toggle panel), F2 (pause), F3 (flowfield debug), ESC (annuler modes)
+   * Gère F1 (toggle panel), F2 (pause), F3 (flowfield debug), F4 (stats panel), ESC (annuler modes)
    */
   public update(): void {
     // F1: Toggle panneau
@@ -92,6 +95,11 @@ export class DebugControls {
     // F3: Toggle flowfield debug
     if (Phaser.Input.Keyboard.JustDown(this.keys.F3)) {
       this.callbacks.onToggleFlowFieldDebug?.();
+    }
+
+    // F4: Toggle stats panel
+    if (Phaser.Input.Keyboard.JustDown(this.keys.F4)) {
+      this.callbacks.onToggleStatsPanel?.();
     }
 
     // ESC: Annuler le mode placement

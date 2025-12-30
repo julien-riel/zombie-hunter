@@ -4,6 +4,7 @@ import type { GameScene } from './GameScene';
 import { DebugSpawner } from '@debug/DebugSpawner';
 import { DebugControls } from '@debug/DebugControls';
 import { DebugPanel } from '@debug/DebugPanel';
+import { StatsPanel } from '@debug/StatsPanel';
 import type { ZombieType, BossType } from '@/types/entities';
 import type { DebugItemType } from '@debug/DebugSpawner';
 import type { DropType } from '@items/drops';
@@ -38,6 +39,7 @@ export class DebugScene extends Phaser.Scene {
   private spawner!: DebugSpawner;
   private controls!: DebugControls;
   private panel!: DebugPanel;
+  private statsPanel!: StatsPanel;
 
   private isVisible: boolean = false;
   private godMode: boolean = false;
@@ -106,12 +108,21 @@ export class DebugScene extends Phaser.Scene {
       onReloadWeapons: () => this.reloadAllWeapons(),
     });
 
-    // Créer les contrôles clavier (minimal - F1, F2, F3, ESC)
+    // Créer le panneau de stats (F4)
+    this.statsPanel = new StatsPanel(this, () => ({
+      ddaSystem: this.gameScene.getDDASystem(),
+      threatSystem: this.gameScene.getWaveSystem().getThreatSystem(),
+      waveSystem: this.gameScene.getWaveSystem(),
+      telemetryManager: this.gameScene.getTelemetryManager(),
+    }));
+
+    // Créer les contrôles clavier (minimal - F1, F2, F3, F4, ESC)
     this.controls = new DebugControls(this, this.gameScene, this.spawner, {
       onTogglePanel: () => this.toggle(),
       onTogglePause: () => this.toggleGamePause(),
       onExitPlacementMode: () => this.panel.exitPlacementMode(),
       onToggleFlowFieldDebug: () => this.toggleFlowFieldDebug(),
+      onToggleStatsPanel: () => this.toggleStatsPanel(),
     });
 
     // Masquer le panneau au départ
@@ -121,7 +132,7 @@ export class DebugScene extends Phaser.Scene {
     this.setupEventListeners();
 
     // Log de démarrage
-    console.log('[DebugScene] Initialized - Press F1 to toggle debug panel');
+    console.log('[DebugScene] Initialized - F1: debug panel, F4: stats panel');
   }
 
   /**
@@ -171,6 +182,11 @@ export class DebugScene extends Phaser.Scene {
         godMode: this.godMode,
         spawnPaused: this.spawnPaused,
       });
+    }
+
+    // Mettre à jour le panneau de stats
+    if (this.statsPanel.isVisible()) {
+      this.statsPanel.update();
     }
 
     // Si god mode actif, maintenir la santé et les munitions
@@ -365,6 +381,14 @@ export class DebugScene extends Phaser.Scene {
   public toggleFlowFieldDebug(): void {
     this.gameScene.toggleFlowFieldDebug();
     console.log(`[Debug] Flow field debug: ${this.gameScene.showFlowFieldDebug ? 'ON' : 'OFF'}`);
+  }
+
+  /**
+   * Toggle le panneau de stats (F4)
+   */
+  public toggleStatsPanel(): void {
+    this.statsPanel.toggle();
+    console.log(`[Debug] Stats panel: ${this.statsPanel.isVisible() ? 'ON' : 'OFF'}`);
   }
 
   /**
@@ -683,5 +707,6 @@ export class DebugScene extends Phaser.Scene {
     // Nettoyer les composants
     this.controls?.destroy();
     this.panel?.destroy();
+    this.statsPanel?.destroy();
   }
 }
