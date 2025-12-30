@@ -2,10 +2,11 @@ import type { GameScene } from '@scenes/GameScene';
 import type { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import type { Zombie } from '@entities/zombies/Zombie';
 import type { ZombieType } from '@/types/entities';
-import { GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
+import { GAME_WIDTH, GAME_HEIGHT, SCENE_KEYS } from '@config/constants';
 import type { DropType } from '@items/drops';
 import type { PowerUpType } from '@items/powerups';
 import type { ActiveItemType } from '@items/active';
+import { UPGRADES, type UpgradeDefinition } from '@config/upgrades';
 
 /**
  * Types d'items que le DebugSpawner peut créer
@@ -464,5 +465,96 @@ export class DebugSpawner {
     if (activeItemSystem) {
       activeItemSystem.destroyAllDeployed();
     }
+  }
+
+  // ==================== UPGRADE METHODS (Phase 6.5) ====================
+
+  /** Index de l'upgrade sélectionné */
+  private selectedUpgradeIndex: number = 0;
+
+  /**
+   * Récupère la liste des upgrades disponibles
+   */
+  public getAvailableUpgrades(): UpgradeDefinition[] {
+    return UPGRADES;
+  }
+
+  /**
+   * Récupère l'upgrade actuellement sélectionné
+   */
+  public getSelectedUpgrade(): UpgradeDefinition {
+    return UPGRADES[this.selectedUpgradeIndex];
+  }
+
+  /**
+   * Cycle vers l'upgrade suivant
+   */
+  public cycleUpgrade(direction: 1 | -1 = 1): UpgradeDefinition {
+    this.selectedUpgradeIndex =
+      (this.selectedUpgradeIndex + direction + UPGRADES.length) % UPGRADES.length;
+    return this.getSelectedUpgrade();
+  }
+
+  /**
+   * Applique l'upgrade sélectionné
+   */
+  public applySelectedUpgrade(): boolean {
+    const upgradeSystem = this.gameScene.getUpgradeSystem();
+    if (upgradeSystem) {
+      return upgradeSystem.applyUpgrade(this.getSelectedUpgrade());
+    }
+    return false;
+  }
+
+  /**
+   * Applique un upgrade par son ID
+   */
+  public applyUpgradeById(upgradeId: string): boolean {
+    const upgradeSystem = this.gameScene.getUpgradeSystem();
+    if (upgradeSystem) {
+      return upgradeSystem.applyUpgradeById(upgradeId);
+    }
+    return false;
+  }
+
+  /**
+   * Ouvre la scène de sélection d'upgrade (debug)
+   */
+  public openUpgradeScene(): void {
+    const upgradeSystem = this.gameScene.getUpgradeSystem();
+    if (!upgradeSystem) return;
+
+    const choices = upgradeSystem.generateChoices(3);
+    if (choices.length === 0) {
+      console.log('[Debug] No upgrades available');
+      return;
+    }
+
+    this.gameScene.scene.launch(SCENE_KEYS.UPGRADE, {
+      gameScene: this.gameScene,
+      waveNumber: 0, // Debug wave
+      choices: choices,
+    });
+  }
+
+  /**
+   * Réinitialise tous les upgrades
+   */
+  public resetUpgrades(): void {
+    const upgradeSystem = this.gameScene.getUpgradeSystem();
+    if (upgradeSystem) {
+      upgradeSystem.reset();
+    }
+  }
+
+  /**
+   * Récupère les stats d'upgrade actuelles
+   */
+  public getUpgradeStats(): object {
+    const upgradeSystem = this.gameScene.getUpgradeSystem();
+    if (upgradeSystem) {
+      return upgradeSystem.getStats();
+    }
+    return {};
   }
 }

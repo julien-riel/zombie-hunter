@@ -19,6 +19,7 @@ import { ComboSystem } from '@systems/ComboSystem';
 import { DropSystem } from '@systems/DropSystem';
 import { PowerUpSystem } from '@systems/PowerUpSystem';
 import { ActiveItemSystem } from '@systems/ActiveItemSystem';
+import { UpgradeSystem } from '@systems/UpgradeSystem';
 import { SpawnSystem } from '@systems/SpawnSystem';
 import { WaveSystem } from '@systems/WaveSystem';
 import { DDASystem } from '@systems/DDASystem';
@@ -49,6 +50,7 @@ export class GameScene extends Phaser.Scene {
   private dropSystem!: DropSystem;
   private powerUpSystem!: PowerUpSystem;
   private activeItemSystem!: ActiveItemSystem;
+  private upgradeSystem!: UpgradeSystem;
   private spawnSystem!: SpawnSystem;
   private waveSystem!: WaveSystem;
   private pathfinder!: Pathfinder;
@@ -157,6 +159,9 @@ export class GameScene extends Phaser.Scene {
 
     // Système d'objets actifs (Phase 6.4)
     this.activeItemSystem = new ActiveItemSystem(this, this.player);
+
+    // Système d'upgrades roguelite (Phase 6.5)
+    this.upgradeSystem = new UpgradeSystem(this, this.player);
 
     // Enregistrer les groupes de zombies dans le système de combat
     for (const group of this.poolManager.getAllZombieGroups()) {
@@ -543,6 +548,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le système d'upgrades roguelite (Phase 6.5)
+   */
+  public getUpgradeSystem(): UpgradeSystem {
+    return this.upgradeSystem;
+  }
+
+  /**
    * Récupère le système de spawn
    */
   public getSpawnSystem(): SpawnSystem {
@@ -753,6 +765,7 @@ export class GameScene extends Phaser.Scene {
     this.dropSystem?.destroy();
     this.powerUpSystem?.destroy();
     this.activeItemSystem?.destroy();
+    this.upgradeSystem?.destroy();
     this.poolManager?.destroy();
     this.ddaSystem?.reset();
     this.acidSpitPool?.destroy();

@@ -49,6 +49,9 @@ export interface DebugControlCallbacks {
  * - U: Cycler entre les objets actifs
  * - K: Déployer l'objet actif sélectionné (debug)
  * - J: Utiliser l'objet actif équipé
+ * - Y: Appliquer l'upgrade sélectionné
+ * - T: Cycler entre les upgrades
+ * - G: Ouvrir la scène de sélection d'upgrade
  */
 export class DebugControls {
   private scene: Phaser.Scene;
@@ -114,6 +117,10 @@ export class DebugControls {
       U: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.U),
       K: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K),
       J: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J),
+      // Upgrade controls (Phase 6.5)
+      Y: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Y),
+      T: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.T),
+      G: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G),
     };
 
     // Touches numériques 1-0 pour sélectionner le type de zombie
@@ -289,6 +296,25 @@ export class DebugControls {
     if (Phaser.Input.Keyboard.JustDown(this.keys.J)) {
       this.spawner.useEquippedActiveItem();
       console.log(`[Debug] Used equipped active item`);
+    }
+
+    // Y: Apply selected upgrade
+    if (Phaser.Input.Keyboard.JustDown(this.keys.Y)) {
+      const upgrade = this.spawner.getSelectedUpgrade();
+      const applied = this.spawner.applySelectedUpgrade();
+      console.log(`[Debug] Applied upgrade: ${upgrade.name} (${applied ? 'success' : 'failed'})`);
+    }
+
+    // T: Cycle through upgrades
+    if (Phaser.Input.Keyboard.JustDown(this.keys.T)) {
+      const newUpgrade = this.spawner.cycleUpgrade(1);
+      console.log(`[Debug] Selected upgrade: ${newUpgrade.name} (${newUpgrade.rarity})`);
+    }
+
+    // G: Open upgrade selection scene
+    if (Phaser.Input.Keyboard.JustDown(this.keys.G)) {
+      this.spawner.openUpgradeScene();
+      console.log(`[Debug] Opening upgrade selection scene`);
     }
 
     // Number keys 1-0: Select zombie type

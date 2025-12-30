@@ -368,7 +368,7 @@ abstract class ActiveItem {
 
 ---
 
-## 6.5 Upgrades Roguelite
+## 6.5 Upgrades Roguelite ✅ COMPLÉTÉ
 
 ### Objectif
 Offrir des choix de build significatifs entre les vagues.
@@ -585,6 +585,18 @@ class UpgradeSystem {
 - `WaveSystem` → déclenche `UpgradeScene` à la fin de chaque vague
 - `GameScene` → pause pendant la sélection
 - `Player` → reçoit les bonus via `apply()`
+
+### Implémentation réalisée (2024-12-30)
+- ✅ `src/config/upgrades.ts` - Définitions des 26 upgrades avec raretés, catégories et effets
+- ✅ `src/systems/UpgradeSystem.ts` - Gestion du pool, génération de choix pondérés, application des upgrades
+- ✅ `src/ui/UpgradeCard.ts` - Composant UI avec animations, hover, sélection et effets de glow par rareté
+- ✅ `src/scenes/UpgradeScene.ts` - Scène overlay qui pause le jeu et affiche 3 cartes de choix
+- ✅ Intégration dans `GameScene` avec getter getUpgradeSystem()
+- ✅ Modification de `WaveSystem` pour déclencher la scène d'upgrade après chaque vague
+- ✅ Réinitialisation du Second Wind à chaque nouvelle vague
+- ✅ `src/debug/DebugSpawner.ts` - Méthodes de debug pour les upgrades
+- ✅ `src/debug/DebugControls.ts` - Raccourcis clavier: Y (appliquer), T (cycler), G (ouvrir scène)
+- ✅ Exports dans `src/systems/index.ts`, `src/ui/index.ts` et `src/scenes/index.ts`
 
 ---
 

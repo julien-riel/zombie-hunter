@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { GameScene } from '@scenes/GameScene';
 import type { ZombieType } from '@/types/entities';
 import { BALANCE } from '@config/balance';
+import { SCENE_KEYS } from '@config/constants';
 import { ThreatSystem, type SpawnPlan, type WaveComposition } from './ThreatSystem';
 import type { DDASystem } from './DDASystem';
 
@@ -211,9 +212,55 @@ export class WaveSystem {
     // Notifier le DDA que la vague est terminée
     this.ddaSystem?.onWaveComplete();
 
+    // Réinitialiser le second wind pour la prochaine vague
+    const upgradeSystem = this.scene.getUpgradeSystem();
+    upgradeSystem?.resetSecondWind();
+
     // Émettre l'événement de fin de vague
     this.scene.events.emit('waveComplete', this.currentWave);
 
+    // Ouvrir la scène de sélection d'upgrade (Phase 6.5)
+    this.showUpgradeSelection();
+  }
+
+  /**
+   * Affiche la scène de sélection d'upgrade
+   */
+  private showUpgradeSelection(): void {
+    const upgradeSystem = this.scene.getUpgradeSystem();
+
+    if (!upgradeSystem) {
+      console.warn('[WaveSystem] UpgradeSystem not available, skipping upgrade selection');
+      this.continueToNextWave();
+      return;
+    }
+
+    // Générer les choix d'upgrades
+    const choices = upgradeSystem.generateChoices(3);
+
+    if (choices.length === 0) {
+      console.log('[WaveSystem] No upgrades available, skipping selection');
+      this.continueToNextWave();
+      return;
+    }
+
+    // Écouter la fermeture de la scène d'upgrade
+    this.scene.events.once('upgradeSceneClosed', () => {
+      this.continueToNextWave();
+    });
+
+    // Lancer la scène d'upgrade
+    this.scene.scene.launch(SCENE_KEYS.UPGRADE, {
+      gameScene: this.scene,
+      waveNumber: this.currentWave,
+      choices: choices,
+    });
+  }
+
+  /**
+   * Continue vers la prochaine vague après la sélection d'upgrade
+   */
+  private continueToNextWave(): void {
     // Transition vers la prochaine vague après un délai
     this.transitionTimer = this.scene.time.delayedCall(
       WAVES.transitionDelay,

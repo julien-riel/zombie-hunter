@@ -5,6 +5,8 @@ export { PowerUpSystem } from './PowerUpSystem';
 export type { ActivePowerUpInfo } from './PowerUpSystem';
 export { ActiveItemSystem } from './ActiveItemSystem';
 export type { ActiveItemInventoryInfo, DeployedActiveItemInfo } from './ActiveItemSystem';
+export { UpgradeSystem } from './UpgradeSystem';
+export type { AppliedUpgrade } from './UpgradeSystem';
 export { SpawnSystem } from './SpawnSystem';
 export { WaveSystem } from './WaveSystem';
 export type { WaveConfig, SpawnGroup, WaveState } from './WaveSystem';
