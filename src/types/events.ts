@@ -53,6 +53,7 @@ export type ProgressionEvent =
   | 'wave:boss'
   | 'combo:increase'
   | 'combo:break'
+  | 'combo:milestone'
   | 'upgrade:offered'
   | 'upgrade:selected'
   | 'item:drop'
@@ -152,6 +153,8 @@ export interface GameEventPayloads {
   'combo:increase': { multiplier: number; killStreak: number };
   /** Émis quand le combo est perdu */
   'combo:break': { previousMultiplier: number; totalPoints: number };
+  /** Émis quand le combo atteint un milestone (x2, x3, etc.) */
+  'combo:milestone': { level: number; multiplier: number };
 
   // --- Progression Events (Upgrades) ---
   /** Émis quand des choix d'upgrade sont proposés */

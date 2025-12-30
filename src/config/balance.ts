@@ -292,6 +292,14 @@ export const BALANCE = {
     invulnerabilityOnHit: 200,
   },
 
+  combo: {
+    timeoutMs: 3000, // Temps sans kill avant reset combo
+    incrementPerKill: 0.1, // +0.1 par kill
+    maxMultiplier: 10, // Plafond du multiplicateur
+    dropQualityBonusPerLevel: 0.05, // +5% qualité par niveau de combo
+    milestones: [2, 3, 4, 5, 6, 7, 8, 9, 10], // Seuils pour effets visuels
+  },
+
   covers: {
     pillar: {
       health: Infinity,

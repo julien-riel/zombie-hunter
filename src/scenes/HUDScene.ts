@@ -3,6 +3,8 @@ import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import type { GameScene } from './GameScene';
 import type { WaveConfig } from '@systems/WaveSystem';
 import type { Weapon } from '@weapons/Weapon';
+import { ComboMeter } from '@ui/ComboMeter';
+import type { GameEventPayloads } from '@/types/events';
 
 /**
  * Scène d'interface utilisateur (overlay)
@@ -31,6 +33,9 @@ export class HUDScene extends Phaser.Scene {
   private weaponAmmoTexts: Phaser.GameObjects.Text[] = [];
   private weaponKeyHints: Phaser.GameObjects.Text[] = [];
 
+  // Compteur de combo (Phase 6.1)
+  private comboMeter!: ComboMeter;
+
   constructor() {
     super({ key: SCENE_KEYS.HUD });
   }
@@ -53,6 +58,7 @@ export class HUDScene extends Phaser.Scene {
     this.createWaveAnnouncement();
     this.createControls();
     this.createWeaponInventory();
+    this.createComboMeter();
 
     // Écouter les événements de score
     this.gameScene.events.on('scoreUpdate', this.onScoreUpdate, this);
@@ -66,6 +72,11 @@ export class HUDScene extends Phaser.Scene {
     // Écouter les événements d'armes
     this.gameScene.events.on('weaponInventoryChanged', this.onWeaponInventoryChanged, this);
     this.gameScene.events.on('weaponChanged', this.onWeaponChanged, this);
+
+    // Écouter les événements de combo (Phase 6.1)
+    this.gameScene.events.on('combo:increase', this.onComboIncrease, this);
+    this.gameScene.events.on('combo:break', this.onComboBreak, this);
+    this.gameScene.events.on('combo:milestone', this.onComboMilestone, this);
   }
 
   /**
@@ -75,6 +86,7 @@ export class HUDScene extends Phaser.Scene {
     if (this.gameScene?.player) {
       this.updateHealthBar();
       this.updateAmmoCounter();
+      this.updateComboMeter();
     }
   }
 
@@ -471,6 +483,53 @@ export class HUDScene extends Phaser.Scene {
   }
 
   /**
+   * Crée le compteur de combo (Phase 6.1)
+   */
+  private createComboMeter(): void {
+    this.comboMeter = new ComboMeter(this, {
+      x: GAME_WIDTH - 100,
+      y: 150,
+      width: 120,
+      height: 60,
+    });
+    this.comboMeter.setDepth(100);
+  }
+
+  /**
+   * Met à jour le compteur de combo
+   */
+  private updateComboMeter(): void {
+    const comboSystem = this.gameScene.getComboSystem();
+    if (comboSystem) {
+      const multiplier = comboSystem.getMultiplier();
+      const streak = comboSystem.getKillStreak();
+      const timeoutProgress = comboSystem.getTimeoutProgress();
+      this.comboMeter.updateCombo(multiplier, streak, timeoutProgress);
+    }
+  }
+
+  /**
+   * Gère l'augmentation du combo
+   */
+  private onComboIncrease(payload: GameEventPayloads['combo:increase']): void {
+    this.comboMeter.onComboIncrease(payload);
+  }
+
+  /**
+   * Gère la rupture du combo
+   */
+  private onComboBreak(payload: GameEventPayloads['combo:break']): void {
+    this.comboMeter.onComboBreak(payload);
+  }
+
+  /**
+   * Gère les milestones de combo
+   */
+  private onComboMilestone(payload: GameEventPayloads['combo:milestone']): void {
+    this.comboMeter.onComboMilestone(payload);
+  }
+
+  /**
    * Nettoyage lors de la destruction de la scène
    */
   shutdown(): void {
@@ -482,5 +541,10 @@ export class HUDScene extends Phaser.Scene {
     this.gameScene.events.off('waveComplete', this.onWaveComplete, this);
     this.gameScene.events.off('weaponInventoryChanged', this.onWeaponInventoryChanged, this);
     this.gameScene.events.off('weaponChanged', this.onWeaponChanged, this);
+
+    // Retirer les listeners de combo (Phase 6.1)
+    this.gameScene.events.off('combo:increase', this.onComboIncrease, this);
+    this.gameScene.events.off('combo:break', this.onComboBreak, this);
+    this.gameScene.events.off('combo:milestone', this.onComboMilestone, this);
   }
 }

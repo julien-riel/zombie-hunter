@@ -11,7 +11,7 @@ Cette phase transforme le prototype en une expérience rejouable et addictive.
 
 ---
 
-## 6.1 Système de Combo
+## 6.1 Système de Combo ✅ COMPLÉTÉ
 
 ### Objectif
 Récompenser l'agressivité calculée et créer une tension entre sécurité et score.
@@ -74,6 +74,14 @@ class ComboSystem {
 - `DropSystem` → utilise `ComboSystem.getDropQualityBonus()`
 - `HUDScene` → affiche `ComboMeter`
 - `TelemetryManager` → log les combos pour analyse
+
+### Implémentation réalisée (2024-12-29)
+- ✅ `src/systems/ComboSystem.ts` - Gestion du multiplicateur, kill streak, timeout et événements
+- ✅ `src/ui/ComboMeter.ts` - Affichage visuel du combo avec animations et couleurs par niveau
+- ✅ `src/config/balance.ts` - Configuration du combo ajoutée
+- ✅ `src/types/events.ts` - Événement `combo:milestone` ajouté
+- ✅ Intégration dans `GameScene` et `HUDScene`
+- ✅ Export dans `src/systems/index.ts`
 
 ---
 

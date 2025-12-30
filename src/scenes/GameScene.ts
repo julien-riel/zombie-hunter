@@ -15,6 +15,7 @@ import { TelemetryManager } from '@managers/TelemetryManager';
 import { CorpseManager } from '@managers/CorpseManager';
 import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
+import { ComboSystem } from '@systems/ComboSystem';
 import { SpawnSystem } from '@systems/SpawnSystem';
 import { WaveSystem } from '@systems/WaveSystem';
 import { DDASystem } from '@systems/DDASystem';
@@ -41,6 +42,7 @@ export class GameScene extends Phaser.Scene {
   private poolManager!: PoolManager;
   private zombieFactory!: ZombieFactory;
   private combatSystem!: CombatSystem;
+  private comboSystem!: ComboSystem;
   private spawnSystem!: SpawnSystem;
   private waveSystem!: WaveSystem;
   private pathfinder!: Pathfinder;
@@ -137,6 +139,9 @@ export class GameScene extends Phaser.Scene {
 
     // Système de combat
     this.combatSystem = new CombatSystem(this, this.player, this.bulletPool);
+
+    // Système de combo (Phase 6.1)
+    this.comboSystem = new ComboSystem(this);
 
     // Enregistrer les groupes de zombies dans le système de combat
     for (const group of this.poolManager.getAllZombieGroups()) {
@@ -486,6 +491,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le système de combo (Phase 6.1)
+   */
+  public getComboSystem(): ComboSystem {
+    return this.comboSystem;
+  }
+
+  /**
    * Récupère le système de spawn
    */
   public getSpawnSystem(): SpawnSystem {
@@ -692,6 +704,7 @@ export class GameScene extends Phaser.Scene {
     this.waveSystem?.destroy();
     this.spawnSystem?.destroy();
     this.combatSystem?.destroy();
+    this.comboSystem?.destroy();
     this.poolManager?.destroy();
     this.ddaSystem?.reset();
     this.acidSpitPool?.destroy();
