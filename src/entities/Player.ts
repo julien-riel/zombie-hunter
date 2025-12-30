@@ -45,6 +45,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /** Indique si le joueur est étourdi (stun) */
   private isStunned: boolean = false;
 
+  /** Mode God (invincibilité + ammo infini) pour le debug */
+  private godMode: boolean = false;
+
   constructor(scene: GameScene, x: number, y: number) {
     super(scene, x, y, ASSET_KEYS.PLAYER);
     this.maxHealth = BALANCE.player.maxHealth;
@@ -354,6 +357,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Inflige des dégâts au joueur
    */
   public takeDamage(amount: number): void {
+    // Ignorer les dégâts en mode God
+    if (this.godMode) return;
+
     this.health = Math.max(0, this.health - amount);
 
     // Flash de dégâts
@@ -451,5 +457,36 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    */
   public getMaxHealth(): number {
     return this.maxHealth;
+  }
+
+  /**
+   * Active ou désactive le mode God (debug)
+   * En mode God: invincibilité et munitions infinies
+   */
+  public setGodMode(enabled: boolean): void {
+    this.godMode = enabled;
+    if (enabled) {
+      // Soigner complètement
+      this.health = this.maxHealth;
+    }
+  }
+
+  /**
+   * Vérifie si le mode God est actif
+   */
+  public isGodMode(): boolean {
+    return this.godMode;
+  }
+
+  /**
+   * Retire toutes les armes de l'inventaire (debug)
+   */
+  public clearWeapons(): void {
+    this.weapons = [];
+    this.currentWeapon = null;
+    this.currentWeaponIndex = 0;
+
+    // Émettre un événement pour le HUD
+    (this.scene as GameScene).events.emit('weaponInventoryChanged', this.weapons, this.currentWeaponIndex);
   }
 }

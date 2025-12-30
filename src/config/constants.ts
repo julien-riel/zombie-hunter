@@ -32,4 +32,5 @@ export const SCENE_KEYS = {
   PAUSE: 'PauseScene',
   UPGRADE: 'UpgradeScene',
   GAME_OVER: 'GameOverScene',
+  DEBUG: 'DebugScene',
 } as const;

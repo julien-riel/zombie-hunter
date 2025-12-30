@@ -32,7 +32,8 @@
       "@managers/*": ["./src/managers/*"],
       "@utils/*": ["./src/utils/*"],
       "@types/*": ["./src/types/*"],
-      "@ai/*": ["./src/ai/*"]
+      "@ai/*": ["./src/ai/*"],
+      "@debug/*": ["./src/debug/*"]
     },
     "baseUrl": "."
   },

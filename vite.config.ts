@@ -19,6 +19,7 @@ export default defineConfig({
       '@utils': resolve(__dirname, './src/utils'),
       '@types': resolve(__dirname, './src/types'),
       '@ai': resolve(__dirname, './src/ai'),
+      '@debug': resolve(__dirname, './src/debug'),
     },
   },
   server: {

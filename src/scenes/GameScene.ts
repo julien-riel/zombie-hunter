@@ -104,6 +104,11 @@ export class GameScene extends Phaser.Scene {
     // Lancer la scène HUD en parallèle
     this.scene.launch(SCENE_KEYS.HUD, { gameScene: this });
 
+    // Lancer la scène Debug en mode développement
+    if (import.meta.env.DEV) {
+      this.scene.launch(SCENE_KEYS.DEBUG, { gameScene: this });
+    }
+
     // Configuration de la caméra
     this.cameras.main.setBackgroundColor('#1a1a2e');
 

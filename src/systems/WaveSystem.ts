@@ -426,6 +426,57 @@ export class WaveSystem {
   }
 
   /**
+   * Force le passage à la vague suivante (debug).
+   * Annule les timers en cours et démarre immédiatement la prochaine vague.
+   */
+  public skipToNextWave(): void {
+    // Annuler tout timer en cours
+    if (this.transitionTimer) {
+      this.transitionTimer.destroy();
+      this.transitionTimer = null;
+    }
+
+    // Arrêter les spawns en cours
+    this.scene.getSpawnSystem().stopSpawning();
+
+    // Réinitialiser les compteurs
+    this.zombiesRemaining = 0;
+    this.zombiesSpawned = 0;
+    this.zombiesKilled = 0;
+    this.state = WaveState.COMPLETED;
+
+    // Émettre l'événement de fin de vague
+    this.scene.events.emit('waveComplete', this.currentWave);
+
+    // Démarrer la prochaine vague immédiatement
+    this.startNextWave();
+  }
+
+  /**
+   * Définit directement le numéro de vague (debug).
+   * @param waveNumber Le numéro de vague à définir (1-indexed)
+   */
+  public setWave(waveNumber: number): void {
+    if (waveNumber < 1) return;
+
+    // Annuler tout timer en cours
+    if (this.transitionTimer) {
+      this.transitionTimer.destroy();
+      this.transitionTimer = null;
+    }
+
+    // Arrêter les spawns en cours
+    this.scene.getSpawnSystem().stopSpawning();
+
+    // Définir la vague (sera incrémentée par startNextWave)
+    this.currentWave = waveNumber - 1;
+    this.state = WaveState.COMPLETED;
+
+    // Démarrer la vague demandée
+    this.startNextWave();
+  }
+
+  /**
    * Réinitialise le système de vagues à son état initial.
    * Annule les timers, remet les compteurs à zéro et retourne à l'état IDLE.
    * Utilisé lors d'un game over ou d'un restart.
