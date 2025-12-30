@@ -43,6 +43,10 @@ export class DebugScene extends Phaser.Scene {
   private godMode: boolean = false;
   private spawnPaused: boolean = false;
   private collisionDebugEnabled: boolean = false;
+  private gameWasPausedBeforePanel: boolean = false;
+  private spawnPointPlacementMode: boolean = false;
+  private gameSpeed: number = 1;
+  private gamePaused: boolean = false;
 
   constructor() {
     super({ key: SCENE_KEYS.DEBUG });
@@ -90,21 +94,24 @@ export class DebugScene extends Phaser.Scene {
       onEventStop: (type) => this.onEventStop(type),
       onEventStopAll: () => this.onEventStopAll(),
       getActiveEvents: () => this.getActiveEvents(),
+      // Wave control callbacks
+      onGoToWave: (wave) => this.goToWave(wave),
+      getCurrentWave: () => this.gameScene.getWaveSystem().getCurrentWave(),
+      // Spawn point placement
+      onEnterSpawnPointPlacement: () => this.enterSpawnPointPlacementMode(),
+      // Game speed control
+      onSetGameSpeed: (speed) => this.setGameSpeed(speed),
+      getGameSpeed: () => this.gameSpeed,
+      // Reload all weapons
+      onReloadWeapons: () => this.reloadAllWeapons(),
     });
 
-    // Créer les contrôles clavier
+    // Créer les contrôles clavier (minimal - F1, F2, F3, ESC)
     this.controls = new DebugControls(this, this.gameScene, this.spawner, {
       onTogglePanel: () => this.toggle(),
-      onToggleGodMode: () => this.toggleGodMode(),
-      onToggleCollisionDebug: () => this.toggleCollisionDebug(),
-      onKillAllZombies: () => this.killAllZombies(),
-      onReloadAllWeapons: () => this.reloadAllWeapons(),
-      onHealPlayer: () => this.healPlayerFull(),
-      onToggleSpawnPause: () => this.toggleSpawnPause(),
-      onNextWave: () => this.skipToNextWave(),
-      onSpawnRandomItem: () => this.spawnRandomItemAtPlayer(),
-      onAdjustWave: (delta) => this.adjustWave(delta),
-      onZombieTypeSelected: (type) => this.onZombieTypeSelected(type),
+      onTogglePause: () => this.toggleGamePause(),
+      onExitPlacementMode: () => this.panel.exitPlacementMode(),
+      onToggleFlowFieldDebug: () => this.toggleFlowFieldDebug(),
     });
 
     // Masquer le panneau au départ
@@ -170,15 +177,64 @@ export class DebugScene extends Phaser.Scene {
     if (this.godMode) {
       this.applyGodMode();
     }
+
+    // Dessiner le flowfield debug (fonctionne même si le jeu est en pause)
+    if (this.gameScene.showFlowFieldDebug) {
+      this.gameScene.drawFlowFieldDebug();
+    }
   }
 
   /**
    * Toggle la visibilité du panneau debug
+   * Quand le panneau s'ouvre, le jeu est mis sur pause
+   * Quand il se ferme, le jeu reprend (sauf si F2 pause est actif)
    */
   public toggle(): void {
     this.isVisible = !this.isVisible;
     this.panel.setVisible(this.isVisible);
     this.controls.setPlacementMode(this.isVisible);
+
+    if (this.isVisible) {
+      // Mémoriser si le jeu était déjà en pause (via F2 ou autre)
+      this.gameWasPausedBeforePanel = this.gameScene.scene.isPaused();
+      // Mettre le jeu sur pause
+      if (!this.gameWasPausedBeforePanel) {
+        this.gameScene.scene.pause();
+      }
+      console.log('[Debug] Panel opened - game paused');
+    } else {
+      // Reprendre le jeu seulement s'il n'était pas en pause avant ET si F2 pause n'est pas actif
+      if (!this.gameWasPausedBeforePanel && !this.gamePaused) {
+        this.gameScene.scene.resume();
+      }
+      console.log('[Debug] Panel closed - game resumed');
+    }
+  }
+
+  /**
+   * Active le mode de placement de spawn point
+   * Cache le panneau mais garde le jeu en pause
+   */
+  public enterSpawnPointPlacementMode(): void {
+    this.spawnPointPlacementMode = true;
+    this.panel.setVisible(false);
+    console.log('[Debug] Spawn point placement mode - click to place, ESC to cancel');
+  }
+
+  /**
+   * Quitte le mode de placement de spawn point
+   */
+  public exitSpawnPointPlacementMode(): void {
+    this.spawnPointPlacementMode = false;
+    this.panel.setVisible(true);
+    console.log('[Debug] Spawn point placement mode ended');
+  }
+
+  /**
+   * Vérifie si le mode placement de spawn point est actif
+   */
+  public isSpawnPointPlacementModeActive(): boolean {
+    return this.spawnPointPlacementMode;
   }
 
   /**
@@ -281,6 +337,37 @@ export class DebugScene extends Phaser.Scene {
   }
 
   /**
+   * Toggle la pause du jeu (F2)
+   * Met le jeu entièrement en pause/reprend
+   */
+  public toggleGamePause(): void {
+    this.gamePaused = !this.gamePaused;
+
+    if (this.gamePaused) {
+      this.gameScene.scene.pause();
+      console.log('[Debug] Game PAUSED (F2)');
+    } else {
+      this.gameScene.scene.resume();
+      console.log('[Debug] Game RESUMED (F2)');
+    }
+  }
+
+  /**
+   * Vérifie si le jeu est en pause
+   */
+  public isGamePaused(): boolean {
+    return this.gamePaused;
+  }
+
+  /**
+   * Toggle l'affichage de debug du flow field (F3)
+   */
+  public toggleFlowFieldDebug(): void {
+    this.gameScene.toggleFlowFieldDebug();
+    console.log(`[Debug] Flow field debug: ${this.gameScene.showFlowFieldDebug ? 'ON' : 'OFF'}`);
+  }
+
+  /**
    * Passe à la vague suivante
    */
   public skipToNextWave(): void {
@@ -310,6 +397,37 @@ export class DebugScene extends Phaser.Scene {
     if (delta > 0) {
       this.skipToNextWave();
     }
+  }
+
+  /**
+   * Aller directement à une vague spécifique
+   */
+  public goToWave(targetWave: number): void {
+    const waveSystem = this.gameScene.getWaveSystem();
+    const currentWave = waveSystem.getCurrentWave();
+
+    if (targetWave < 1) {
+      console.log('[Debug] Invalid wave number');
+      return;
+    }
+
+    console.log(`[Debug] Going to wave ${targetWave} from wave ${currentWave}`);
+
+    // Tuer tous les zombies
+    this.spawner.killAllZombies();
+
+    // Utiliser la méthode du WaveSystem pour aller à la vague
+    waveSystem.setWave(targetWave);
+  }
+
+  /**
+   * Définit la vitesse du jeu (time scale)
+   */
+  public setGameSpeed(speed: number): void {
+    this.gameSpeed = Math.max(0.25, Math.min(4, speed));
+    this.gameScene.time.timeScale = this.gameSpeed;
+    this.gameScene.physics.world.timeScale = 1 / this.gameSpeed;
+    console.log(`[Debug] Game speed set to ${this.gameSpeed}x`);
   }
 
   /**
@@ -372,14 +490,6 @@ export class DebugScene extends Phaser.Scene {
   private onDropSpawn(type: DropType, x: number, y: number): void {
     this.spawner.spawnDrop(type, x, y);
     console.log(`[Debug] Spawned drop ${type} at (${Math.round(x)}, ${Math.round(y)})`);
-  }
-
-  /**
-   * Handler pour sélection de type de zombie
-   */
-  private onZombieTypeSelected(type: ZombieType): void {
-    this.panel.updateState({ selectedZombieType: type });
-    console.log(`[Debug] Selected zombie type: ${type}`);
   }
 
   // =========================================================================

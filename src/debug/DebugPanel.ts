@@ -110,6 +110,16 @@ export interface DebugPanelCallbacks {
   onEventStop?: (type: SpecialEventType) => void;
   onEventStopAll?: () => void;
   getActiveEvents?: () => SpecialEventType[];
+  // Wave control
+  onGoToWave?: (wave: number) => void;
+  getCurrentWave?: () => number;
+  // Spawn point placement
+  onEnterSpawnPointPlacement?: () => void;
+  // Game speed control
+  onSetGameSpeed?: (speed: number) => void;
+  getGameSpeed?: () => number;
+  // Reload weapons
+  onReloadWeapons?: () => void;
 }
 
 /**
@@ -125,8 +135,8 @@ export interface DebugPanelState {
 }
 
 /**
- * Panneau UI de debug compact
- * Affiche les contrôles et l'état du jeu
+ * Panneau UI de debug compact et amélioré
+ * Layout en 2 colonnes avec sections bien organisées
  */
 export class DebugPanel {
   private scene: Phaser.Scene;
@@ -147,6 +157,8 @@ export class DebugPanel {
   private background!: Phaser.GameObjects.Rectangle;
   private headerText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
+  private waveInputText!: Phaser.GameObjects.Text;
+  private speedText!: Phaser.GameObjects.Text;
   private zombieButtons: Phaser.GameObjects.Container[] = [];
   private weaponButtons: Phaser.GameObjects.Container[] = [];
   private itemButtons: Phaser.GameObjects.Container[] = [];
@@ -165,114 +177,143 @@ export class DebugPanel {
   private eventButtons: Phaser.GameObjects.Container[] = [];
   private eventStatusText!: Phaser.GameObjects.Text;
 
-  private readonly PANEL_WIDTH = 320;
-  private readonly PANEL_X = 10;
-  private readonly PANEL_Y = 10;
-  private readonly BUTTON_HEIGHT = 24;
-  private readonly BUTTON_SPACING = 4;
+  // Wave selector state
+  private waveInputValue: number = 1;
+
+  // Placement mode
+  private placementMode: 'none' | 'zombie' | 'item' = 'none';
+  private placementType: string = '';
+  private placementIndicator: Phaser.GameObjects.Container | null = null;
+  private placementClickPending: boolean = false; // Flag to ignore the button click
+
+  private readonly PANEL_WIDTH = 620;
+  private readonly BUTTON_HEIGHT = 22;
+  private readonly BUTTON_SPACING = 3;
 
   constructor(scene: Phaser.Scene, spawner: DebugSpawner, callbacks: DebugPanelCallbacks = {}) {
     this.scene = scene;
     this.spawner = spawner;
     this.callbacks = callbacks;
 
-    this.container = scene.add.container(this.PANEL_X, this.PANEL_Y);
+    // Position will be set after panel is created (need to know height)
+    this.container = scene.add.container(0, 0);
     this.container.setDepth(1000);
     this.container.setScrollFactor(0);
 
     this.createPanel();
+    this.centerPanel();
   }
 
   /**
-   * Crée le panneau complet
+   * Centre le panneau à l'écran
+   */
+  private centerPanel(): void {
+    const camera = this.scene.cameras.main;
+    const panelHeight = this.background.height;
+
+    const x = (camera.width - this.PANEL_WIDTH) / 2;
+    const y = (camera.height - panelHeight) / 2;
+
+    this.container.setPosition(x, y);
+  }
+
+  /**
+   * Crée le panneau complet avec layout 2 colonnes
    */
   private createPanel(): void {
-    let currentY = 0;
+    const COL1_X = 10;
+    const COL2_X = 320;
+    let col1Y = 0;
+    let col2Y = 0;
 
     // Background
-    this.background = this.scene.add.rectangle(0, 0, this.PANEL_WIDTH, 400, 0x000000, 0.85);
+    this.background = this.scene.add.rectangle(0, 0, this.PANEL_WIDTH, 400, 0x000000, 0.9);
     this.background.setOrigin(0, 0);
-    this.background.setStrokeStyle(2, 0x444444);
+    this.background.setStrokeStyle(2, 0x00ff00);
     this.container.add(this.background);
 
-    // Header
-    currentY += 8;
-    this.headerText = this.createText(8, currentY, 'DEBUG [F1]                Wave: 1', 14, '#00ff00');
+    // ===== HEADER (full width) =====
+    col1Y += 6;
+    this.headerText = this.createText(10, col1Y, 'DEBUG PANEL (F1 close, F2 pause)', 12, '#00ff00');
     this.container.add(this.headerText);
-    currentY += 24;
+    col1Y += 18;
+    col2Y = col1Y;
 
-    // Separator
-    currentY = this.addSeparator(currentY);
-
-    // Status line
-    this.statusText = this.createText(8, currentY, '[God: OFF] [Pause: OFF] Zombies: 0', 11, '#ffffff');
+    // Status line (full width)
+    this.statusText = this.createText(10, col1Y, 'God: OFF | Pause: OFF | Zombies: 0 | Speed: 1x', 10, '#ffffff');
     this.container.add(this.statusText);
-    currentY += 20;
+    col1Y += 16;
+    col2Y = col1Y;
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    col1Y = this.addSeparator(col1Y);
+    col2Y = col1Y;
 
-    // Zombies section
-    currentY = this.addSectionHeader(currentY, 'ZOMBIES (click to spawn)');
-    currentY = this.createZombieButtons(currentY);
+    // =============== COLUMN 1 (left) ===============
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    // Quick actions
+    col1Y = this.addSectionHeader(col1Y, 'QUICK ACTIONS', COL1_X);
+    col1Y = this.createQuickActionButtons(col1Y, COL1_X);
 
-    // Weapons section
-    currentY = this.addSectionHeader(currentY, 'WEAPONS (click to give)');
-    currentY = this.createWeaponButtons(currentY);
+    col1Y = this.addSeparatorAt(col1Y, COL1_X, 290);
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    // Wave & Speed control (combined row)
+    col1Y = this.addSectionHeader(col1Y, 'WAVE & SPEED', COL1_X);
+    col1Y = this.createWaveAndSpeedControls(col1Y, COL1_X);
 
-    // Items section
-    currentY = this.addSectionHeader(currentY, 'ITEMS (click to spawn)');
-    currentY = this.createItemButtons(currentY);
+    col1Y = this.addSeparatorAt(col1Y, COL1_X, 290);
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    // Zombies
+    col1Y = this.addSectionHeader(col1Y, 'SPAWN ZOMBIES (click to place)', COL1_X);
+    col1Y = this.createZombieButtons(col1Y, COL1_X);
 
-    // Drops section (Phase 6.2)
-    currentY = this.addSectionHeader(currentY, 'DROPS (click to spawn at player)');
-    currentY = this.createDropButtons(currentY);
+    col1Y = this.addSeparatorAt(col1Y, COL1_X, 290);
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    // Items
+    col1Y = this.addSectionHeader(col1Y, 'SPAWN ITEMS (click to place)', COL1_X);
+    col1Y = this.createItemButtons(col1Y, COL1_X);
 
-    // Doors section
-    currentY = this.addSectionHeader(currentY, 'DOORS (barricade/trap/destroy)');
-    currentY = this.createDoorButtons(currentY);
+    col1Y = this.addSeparatorAt(col1Y, COL1_X, 290);
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    // Doors
+    col1Y = this.addSectionHeader(col1Y, 'DOORS', COL1_X);
+    col1Y = this.createDoorButtons(col1Y, COL1_X);
 
-    // Characters section (Phase 7.1)
-    currentY = this.addSectionHeader(currentY, 'CHARACTERS (click to switch)');
-    currentY = this.createCharacterButtons(currentY);
+    // =============== COLUMN 2 (right) ===============
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    // Weapons
+    col2Y = this.addSectionHeader(col2Y, 'GIVE WEAPONS', COL2_X);
+    col2Y = this.createWeaponButtons(col2Y, COL2_X);
 
-    // Bosses section (Phase 7.3)
-    currentY = this.addSectionHeader(currentY, 'BOSSES (click to spawn)');
-    currentY = this.createBossButtons(currentY);
+    col2Y = this.addSeparatorAt(col2Y, COL2_X, 290);
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    // Drops
+    col2Y = this.addSectionHeader(col2Y, 'SPAWN DROPS (at player)', COL2_X);
+    col2Y = this.createDropButtons(col2Y, COL2_X);
 
-    // Events section (Phase 7.4)
-    currentY = this.addSectionHeader(currentY, 'EVENTS (click to trigger)');
-    currentY = this.createEventButtons(currentY);
+    col2Y = this.addSeparatorAt(col2Y, COL2_X, 290);
 
-    // Separator
-    currentY = this.addSeparator(currentY);
+    // Characters
+    col2Y = this.addSectionHeader(col2Y, 'CHARACTERS', COL2_X);
+    col2Y = this.createCharacterButtons(col2Y, COL2_X);
 
-    // Action buttons
-    currentY = this.createActionButtons(currentY);
+    col2Y = this.addSeparatorAt(col2Y, COL2_X, 290);
+
+    // Bosses
+    col2Y = this.addSectionHeader(col2Y, 'BOSSES', COL2_X);
+    col2Y = this.createBossButtons(col2Y, COL2_X);
+
+    col2Y = this.addSeparatorAt(col2Y, COL2_X, 290);
+
+    // Events
+    col2Y = this.addSectionHeader(col2Y, 'SPECIAL EVENTS', COL2_X);
+    col2Y = this.createEventButtons(col2Y, COL2_X);
 
     // Resize background to fit content
-    this.background.setSize(this.PANEL_WIDTH, currentY + 10);
+    const maxY = Math.max(col1Y, col2Y);
+    this.background.setSize(this.PANEL_WIDTH, maxY + 10);
+
+    // Setup placement mode click handler
+    this.setupPlacementMode();
   }
 
   /**
@@ -282,7 +323,7 @@ export class DebugPanel {
     x: number,
     y: number,
     text: string,
-    size: number = 12,
+    size: number = 11,
     color: string = '#ffffff'
   ): Phaser.GameObjects.Text {
     return this.scene.add.text(x, y, text, {
@@ -293,22 +334,32 @@ export class DebugPanel {
   }
 
   /**
-   * Ajoute un séparateur horizontal
+   * Ajoute un séparateur horizontal (full width)
    */
   private addSeparator(y: number): number {
-    const line = this.scene.add.rectangle(8, y + 4, this.PANEL_WIDTH - 16, 1, 0x444444);
+    const line = this.scene.add.rectangle(10, y + 3, this.PANEL_WIDTH - 20, 1, 0x444444);
     line.setOrigin(0, 0);
     this.container.add(line);
-    return y + 10;
+    return y + 8;
+  }
+
+  /**
+   * Ajoute un séparateur horizontal à une position spécifique
+   */
+  private addSeparatorAt(y: number, x: number, width: number): number {
+    const line = this.scene.add.rectangle(x, y + 3, width, 1, 0x444444);
+    line.setOrigin(0, 0);
+    this.container.add(line);
+    return y + 8;
   }
 
   /**
    * Ajoute un header de section
    */
-  private addSectionHeader(y: number, text: string): number {
-    const header = this.createText(8, y, text, 10, '#888888');
+  private addSectionHeader(y: number, text: string, x: number = 10): number {
+    const header = this.createText(x, y, text, 9, '#888888');
     this.container.add(header);
-    return y + 16;
+    return y + 14;
   }
 
   /**
@@ -320,16 +371,21 @@ export class DebugPanel {
     width: number,
     label: string,
     onClick: () => void,
-    selected: boolean = false
+    selected: boolean = false,
+    color: string = '#ffffff'
   ): Phaser.GameObjects.Container {
     const container = this.scene.add.container(x, y);
 
-    const bg = this.scene.add.rectangle(0, 0, width, this.BUTTON_HEIGHT, selected ? 0x004400 : 0x333333);
+    const bgColor = selected ? 0x004400 : 0x333333;
+    const strokeColor = selected ? 0x00ff00 : 0x555555;
+    const textColor = selected ? '#00ff00' : color;
+
+    const bg = this.scene.add.rectangle(0, 0, width, this.BUTTON_HEIGHT, bgColor);
     bg.setOrigin(0, 0);
-    bg.setStrokeStyle(1, selected ? 0x00ff00 : 0x666666);
+    bg.setStrokeStyle(1, strokeColor);
     bg.setInteractive({ useHandCursor: true });
 
-    const text = this.createText(width / 2, this.BUTTON_HEIGHT / 2, label, 10, selected ? '#00ff00' : '#ffffff');
+    const text = this.createText(width / 2, this.BUTTON_HEIGHT / 2, label, 9, textColor);
     text.setOrigin(0.5, 0.5);
 
     container.add([bg, text]);
@@ -349,13 +405,138 @@ export class DebugPanel {
   }
 
   /**
+   * Crée les boutons d'actions rapides
+   */
+  private createQuickActionButtons(startY: number, startX: number = 10): number {
+    const y = startY;
+    const buttonWidth = 68;
+    let x = startX;
+
+    // God Mode toggle
+    const godBtn = this.createButton(x, y, buttonWidth, 'God Mode', () => {
+      this.callbacks.onToggleGodMode?.();
+    });
+    this.container.add(godBtn);
+    this.actionButtons.push(godBtn);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    // Pause toggle
+    const pauseBtn = this.createButton(x, y, buttonWidth, 'Pause', () => {
+      this.callbacks.onTogglePause?.();
+    });
+    this.container.add(pauseBtn);
+    this.actionButtons.push(pauseBtn);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    // Kill All
+    const killBtn = this.createButton(x, y, buttonWidth, 'Kill All', () => {
+      this.callbacks.onKillAll?.();
+    }, false, '#ff6666');
+    this.container.add(killBtn);
+    this.actionButtons.push(killBtn);
+    x += buttonWidth + this.BUTTON_SPACING;
+
+    // Heal
+    const healBtn = this.createButton(x, y, buttonWidth, 'Heal 100%', () => {
+      this.callbacks.onHealFull?.();
+    }, false, '#66ff66');
+    this.container.add(healBtn);
+    this.actionButtons.push(healBtn);
+
+    return y + this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+  }
+
+  /**
+   * Crée les contrôles de vague et vitesse combinés
+   */
+  private createWaveAndSpeedControls(startY: number, startX: number = 10): number {
+    let y = startY;
+    let x = startX;
+
+    // Wave controls
+    const waveLabel = this.createText(x, y + 4, 'Wave:', 10, '#ffff00');
+    this.container.add(waveLabel);
+    x += 40;
+
+    // Decrease button
+    const decBtn = this.createButton(x, y, 22, '-', () => {
+      this.waveInputValue = Math.max(1, this.waveInputValue - 1);
+      this.updateWaveInputDisplay();
+    });
+    this.container.add(decBtn);
+    x += 25;
+
+    // Wave number display
+    this.waveInputText = this.createText(x, y + 4, '1', 10, '#ffff00');
+    this.waveInputText.setFixedSize(24, 16);
+    this.container.add(this.waveInputText);
+    x += 28;
+
+    // Increase button
+    const incBtn = this.createButton(x, y, 22, '+', () => {
+      this.waveInputValue = Math.min(100, this.waveInputValue + 1);
+      this.updateWaveInputDisplay();
+    });
+    this.container.add(incBtn);
+    x += 25;
+
+    // +10 button
+    const inc10Btn = this.createButton(x, y, 32, '+10', () => {
+      this.waveInputValue = Math.min(100, this.waveInputValue + 10);
+      this.updateWaveInputDisplay();
+    });
+    this.container.add(inc10Btn);
+    x += 35;
+
+    // GO button
+    const goBtn = this.createButton(x, y, 35, 'GO!', () => {
+      this.callbacks.onGoToWave?.(this.waveInputValue);
+    }, false, '#00ffff');
+    this.container.add(goBtn);
+    x += 38;
+
+    // Next Wave button
+    const nextBtn = this.createButton(x, y, 40, 'Next', () => {
+      this.callbacks.onNextWave?.();
+    });
+    this.container.add(nextBtn);
+
+    // Speed controls on same row
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+    x = startX;
+
+    // Speed label
+    this.speedText = this.createText(x, y + 4, 'Speed:', 10, '#ffffff');
+    this.container.add(this.speedText);
+    x += 50;
+
+    // Speed buttons
+    const speeds = [
+      { label: '0.5x', value: 0.5 },
+      { label: '1x', value: 1 },
+      { label: '2x', value: 2 },
+      { label: '4x', value: 4 },
+    ];
+
+    for (const speed of speeds) {
+      const btn = this.createButton(x, y, 35, speed.label, () => {
+        this.callbacks.onSetGameSpeed?.(speed.value);
+      });
+      this.container.add(btn);
+      x += 38;
+    }
+
+    return y + this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+  }
+
+  /**
    * Crée les boutons de zombies
    */
-  private createZombieButtons(startY: number): number {
+  private createZombieButtons(startY: number, startX: number = 10): number {
     let y = startY;
-    const buttonWidth = 56;
+    const buttonWidth = 54;
     const buttonsPerRow = 5;
-    let x = 8;
+    let x = startX;
     let col = 0;
 
     // Raccourcis pour les labels
@@ -366,7 +547,7 @@ export class DebugPanel {
       tank: 'Tank',
       spitter: 'Spit',
       bomber: 'Bomb',
-      screamer: 'Scream',
+      screamer: 'Scrm',
       splitter: 'Split',
       invisible: 'Invis',
       necromancer: 'Necro',
@@ -379,7 +560,7 @@ export class DebugPanel {
         y,
         buttonWidth,
         shortLabels[type],
-        () => this.onZombieButtonClick(type),
+        () => this.enterPlacementMode('zombie', type),
         isSelected
       );
 
@@ -391,7 +572,42 @@ export class DebugPanel {
 
       if (col >= buttonsPerRow) {
         col = 0;
-        x = 8;
+        x = startX;
+        y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+      }
+    }
+
+    if (col > 0) {
+      y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+    }
+
+    return y;
+  }
+
+  /**
+   * Crée les boutons d'items (séparés des drops)
+   */
+  private createItemButtons(startY: number, startX: number = 10): number {
+    let y = startY;
+    const buttonWidth = 54;
+    const buttonsPerRow = 5;
+    let x = startX;
+    let col = 0;
+
+    for (const item of ITEM_TYPES) {
+      const button = this.createButton(x, y, buttonWidth, item.label, () =>
+        this.enterPlacementMode('item', item.id)
+      );
+
+      this.container.add(button);
+      this.itemButtons.push(button);
+
+      col++;
+      x += buttonWidth + this.BUTTON_SPACING;
+
+      if (col >= buttonsPerRow) {
+        col = 0;
+        x = startX;
         y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
       }
     }
@@ -406,11 +622,11 @@ export class DebugPanel {
   /**
    * Crée les boutons d'armes
    */
-  private createWeaponButtons(startY: number): number {
+  private createWeaponButtons(startY: number, startX: number = 10): number {
     let y = startY;
-    const buttonWidth = 56;
-    const buttonsPerRow = 5;
-    let x = 8;
+    const buttonWidth = 68;
+    const buttonsPerRow = 4;
+    let x = startX;
     let col = 0;
 
     for (const weapon of WEAPON_TYPES) {
@@ -426,7 +642,7 @@ export class DebugPanel {
 
       if (col >= buttonsPerRow) {
         col = 0;
-        x = 8;
+        x = startX;
         y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
       }
     }
@@ -435,75 +651,35 @@ export class DebugPanel {
       y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
     }
 
-    return y;
-  }
-
-  /**
-   * Crée les boutons d'items
-   */
-  private createItemButtons(startY: number): number {
-    let y = startY;
-    const buttonWidth = 70;
-    const buttonsPerRow = 4;
-    let x = 8;
-    let col = 0;
-
-    for (const item of ITEM_TYPES) {
-      const button = this.createButton(x, y, buttonWidth, item.label, () =>
-        this.onItemButtonClick(item.id)
-      );
-
-      this.container.add(button);
-      this.itemButtons.push(button);
-
-      col++;
-      x += buttonWidth + this.BUTTON_SPACING;
-
-      if (col >= buttonsPerRow) {
-        col = 0;
-        x = 8;
-        y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
-      }
-    }
-
-    if (col > 0) {
-      y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
-    }
+    // Reload All button
+    const reloadBtn = this.createButton(startX, y, 100, 'Reload All', () => {
+      this.callbacks.onReloadWeapons?.();
+    }, false, '#66ccff');
+    this.container.add(reloadBtn);
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
 
     return y;
   }
 
   /**
-   * Crée les boutons de drops (Phase 6.2)
+   * Crée les boutons de drops
    */
-  private createDropButtons(startY: number): number {
+  private createDropButtons(startY: number, startX: number = 10): number {
     let y = startY;
-    const buttonWidth = 70;
-    const buttonsPerRow = 4;
-    let x = 8;
-    let col = 0;
+    const buttonWidth = 68;
+    let x = startX;
 
     for (const drop of DROP_TYPES) {
       const button = this.createButton(x, y, buttonWidth, drop.label, () =>
         this.onDropButtonClick(drop.id)
-      );
+      , false, drop.color);
 
       this.container.add(button);
       this.dropButtons.push(button);
-
-      col++;
       x += buttonWidth + this.BUTTON_SPACING;
-
-      if (col >= buttonsPerRow) {
-        col = 0;
-        x = 8;
-        y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
-      }
     }
 
-    if (col > 0) {
-      y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
-    }
+    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
 
     return y;
   }
@@ -511,66 +687,56 @@ export class DebugPanel {
   /**
    * Crée les boutons de gestion des portes
    */
-  private createDoorButtons(startY: number): number {
+  private createDoorButtons(startY: number, startX: number = 10): number {
     let y = startY;
-    const buttonWidth = 48;
-    let x = 8;
+    let x = startX;
 
     // Door selector (< Door X >)
-    const prevBtn = this.createButton(x, y, 24, '<', () => this.selectPrevDoor());
+    const prevBtn = this.createButton(x, y, 22, '<', () => this.selectPrevDoor());
     this.container.add(prevBtn);
     this.doorButtons.push(prevBtn);
-    x += 28;
+    x += 25;
 
-    this.doorStatusText = this.createText(x, y + 4, 'Door 1: --', 10, '#ffff00');
+    this.doorStatusText = this.createText(x, y + 4, 'Door 1: --', 9, '#ffff00');
     this.container.add(this.doorStatusText);
     x += 130;
 
-    const nextBtn = this.createButton(x, y, 24, '>', () => this.selectNextDoor());
+    const nextBtn = this.createButton(x, y, 22, '>', () => this.selectNextDoor());
     this.container.add(nextBtn);
     this.doorButtons.push(nextBtn);
 
     y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
-    x = 8;
+    x = startX;
 
-    // Barricade buttons
-    const barricadeLight = this.createButton(x, y, buttonWidth, 'Bar.L', () => this.onBarricadeDoor(BarricadeType.LIGHT));
+    // Barricade & trap buttons (compact row)
+    const smallBtnWidth = 45;
+
+    const barricadeLight = this.createButton(x, y, smallBtnWidth, 'Bar.L', () => this.onBarricadeDoor(BarricadeType.LIGHT));
     this.container.add(barricadeLight);
     this.doorButtons.push(barricadeLight);
-    x += buttonWidth + this.BUTTON_SPACING;
+    x += smallBtnWidth + this.BUTTON_SPACING;
 
-    const barricadeHeavy = this.createButton(x, y, buttonWidth, 'Bar.R', () => this.onBarricadeDoor(BarricadeType.REINFORCED));
+    const barricadeHeavy = this.createButton(x, y, smallBtnWidth, 'Bar.R', () => this.onBarricadeDoor(BarricadeType.REINFORCED));
     this.container.add(barricadeHeavy);
     this.doorButtons.push(barricadeHeavy);
-    x += buttonWidth + this.BUTTON_SPACING;
+    x += smallBtnWidth + this.BUTTON_SPACING;
 
-    // Damage barricade
-    const damageBtn = this.createButton(x, y, buttonWidth, 'Dmg 50', () => this.onDamageBarricade(50));
-    this.container.add(damageBtn);
-    this.doorButtons.push(damageBtn);
-    x += buttonWidth + this.BUTTON_SPACING;
-
-    y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
-    x = 8;
-
-    // Trap buttons
-    const trapSpike = this.createButton(x, y, buttonWidth, 'T.Spike', () => this.onTrapDoor(DoorTrapType.SPIKE));
+    const trapSpike = this.createButton(x, y, smallBtnWidth, 'Spike', () => this.onTrapDoor(DoorTrapType.SPIKE));
     this.container.add(trapSpike);
     this.doorButtons.push(trapSpike);
-    x += buttonWidth + this.BUTTON_SPACING;
+    x += smallBtnWidth + this.BUTTON_SPACING;
 
-    const trapSlow = this.createButton(x, y, buttonWidth, 'T.Slow', () => this.onTrapDoor(DoorTrapType.SLOW));
+    const trapSlow = this.createButton(x, y, smallBtnWidth, 'Slow', () => this.onTrapDoor(DoorTrapType.SLOW));
     this.container.add(trapSlow);
     this.doorButtons.push(trapSlow);
-    x += buttonWidth + this.BUTTON_SPACING;
+    x += smallBtnWidth + this.BUTTON_SPACING;
 
-    const trapFire = this.createButton(x, y, buttonWidth, 'T.Fire', () => this.onTrapDoor(DoorTrapType.FIRE));
+    const trapFire = this.createButton(x, y, smallBtnWidth, 'Fire', () => this.onTrapDoor(DoorTrapType.FIRE));
     this.container.add(trapFire);
     this.doorButtons.push(trapFire);
-    x += buttonWidth + this.BUTTON_SPACING;
+    x += smallBtnWidth + this.BUTTON_SPACING;
 
-    // Destroy door
-    const destroyBtn = this.createButton(x, y, buttonWidth, 'Destroy', () => this.onDestroyDoor());
+    const destroyBtn = this.createButton(x, y, smallBtnWidth, 'Destr', () => this.onDestroyDoor());
     this.container.add(destroyBtn);
     this.doorButtons.push(destroyBtn);
 
@@ -667,17 +833,16 @@ export class DebugPanel {
   /**
    * Crée les boutons de personnages (Phase 7.1)
    */
-  private createCharacterButtons(startY: number): number {
+  private createCharacterButtons(startY: number, startX: number = 10): number {
     let y = startY;
-    const buttonWidth = 48;
-    const buttonsPerRow = 6;
-    let x = 8;
-    let col = 0;
+    const buttonWidth = 45;
+    let x = startX;
 
     // Ligne de statut du personnage actuel
-    this.characterStatusText = this.createText(x, y, `Char: ${this.state.selectedCharacter.toUpperCase()} [Q=Ability]`, 10, '#ff88ff');
+    this.characterStatusText = this.createText(x, y, `Current: ${this.state.selectedCharacter.toUpperCase()}`, 9, '#ff88ff');
     this.container.add(this.characterStatusText);
-    y += 16;
+    y += 14;
+    x = startX;
 
     for (const char of CHARACTER_TYPES) {
       const isSelected = char.id === this.state.selectedCharacter;
@@ -692,25 +857,8 @@ export class DebugPanel {
 
       this.container.add(button);
       this.characterButtons.push(button);
-
-      col++;
       x += buttonWidth + this.BUTTON_SPACING;
-
-      if (col >= buttonsPerRow) {
-        col = 0;
-        x = 8;
-        y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
-      }
     }
-
-    if (col > 0) {
-      y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
-    }
-
-    // Bouton pour reset le cooldown de la compétence
-    const resetAbilityBtn = this.createButton(8, y, 100, 'Reset Ability', () => this.onResetAbility());
-    this.container.add(resetAbilityBtn);
-    this.characterButtons.push(resetAbilityBtn);
 
     y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
 
@@ -728,24 +876,18 @@ export class DebugPanel {
   }
 
   /**
-   * Handler pour reset la compétence
-   */
-  private onResetAbility(): void {
-    this.callbacks.onAbilityReset?.();
-  }
-
-  /**
    * Crée les boutons de boss (Phase 7.3)
    */
-  private createBossButtons(startY: number): number {
+  private createBossButtons(startY: number, startX: number = 10): number {
     let y = startY;
-    const buttonWidth = 56;
-    let x = 8;
+    const buttonWidth = 52;
+    let x = startX;
 
     // Ligne de statut du boss actif
-    this.bossStatusText = this.createText(x, y, 'Boss: None', 10, '#ff4444');
+    this.bossStatusText = this.createText(x, y, 'Boss: None', 9, '#ff4444');
     this.container.add(this.bossStatusText);
-    y += 16;
+    y += 14;
+    x = startX;
 
     // Boutons de spawn de boss
     for (const boss of BOSS_TYPES) {
@@ -763,13 +905,13 @@ export class DebugPanel {
     }
 
     // Boutons de contrôle
-    x += 10;
-    const killBtn = this.createButton(x, y, 48, 'Kill', () => this.onBossKill());
+    x += 3;
+    const killBtn = this.createButton(x, y, 40, 'Kill', () => this.onBossKill(), false, '#ff6666');
     this.container.add(killBtn);
     this.bossButtons.push(killBtn);
-    x += 52;
+    x += 43;
 
-    const dmgBtn = this.createButton(x, y, 48, 'Dmg', () => this.onBossDamage());
+    const dmgBtn = this.createButton(x, y, 50, 'Dmg100', () => this.onBossDamage());
     this.container.add(dmgBtn);
     this.bossButtons.push(dmgBtn);
 
@@ -815,15 +957,16 @@ export class DebugPanel {
   /**
    * Crée les boutons d'événements (Phase 7.4)
    */
-  private createEventButtons(startY: number): number {
+  private createEventButtons(startY: number, startX: number = 10): number {
     let y = startY;
-    const buttonWidth = 56;
-    let x = 8;
+    const buttonWidth = 52;
+    let x = startX;
 
     // Ligne de statut des événements actifs
-    this.eventStatusText = this.createText(x, y, 'Events: None', 10, '#ffaa00');
+    this.eventStatusText = this.createText(x, y, 'Events: None', 9, '#ffaa00');
     this.container.add(this.eventStatusText);
-    y += 16;
+    y += 14;
+    x = startX;
 
     // Boutons de déclenchement d'événements
     for (const event of EVENT_TYPES) {
@@ -841,8 +984,8 @@ export class DebugPanel {
     }
 
     // Bouton Stop All
-    x += 10;
-    const stopAllBtn = this.createButton(x, y, 56, 'StopAll', () => this.onStopAllEvents());
+    x += 3;
+    const stopAllBtn = this.createButton(x, y, 55, 'Stop All', () => this.onStopAllEvents(), false, '#ff6666');
     this.container.add(stopAllBtn);
     this.eventButtons.push(stopAllBtn);
 
@@ -903,7 +1046,7 @@ export class DebugPanel {
 
       if (bg && text) {
         bg.setFillStyle(isSelected ? 0x440044 : 0x333333);
-        bg.setStrokeStyle(1, isSelected ? 0xff00ff : 0x666666);
+        bg.setStrokeStyle(1, isSelected ? 0xff00ff : 0x555555);
         text.setColor(isSelected ? '#ff00ff' : '#ffffff');
       }
     }
@@ -914,54 +1057,113 @@ export class DebugPanel {
    */
   private updateCharacterStatusDisplay(): void {
     const currentChar = this.callbacks.getCurrentCharacter?.() || this.state.selectedCharacter;
-    this.characterStatusText?.setText(`Char: ${currentChar.toUpperCase()} [Q=Ability]`);
+    this.characterStatusText?.setText(`Current: ${currentChar.toUpperCase()}`);
   }
 
   /**
-   * Handler dégâts barricade
+   * Setup placement mode click handler
    */
-  private onDamageBarricade(damage: number): void {
-    const door = this.getSelectedDoor();
-    if (!door) return;
-    this.callbacks.onDoorDamageBarricade?.(door, damage);
-    this.updateDoorStatusDisplay();
+  private setupPlacementMode(): void {
+    // Create placement indicator (hidden by default)
+    this.placementIndicator = this.scene.add.container(0, 0);
+    this.placementIndicator.setDepth(999);
+    this.placementIndicator.setVisible(false);
+
+    const circle = this.scene.add.circle(0, 0, 16, 0x00ff00, 0.5);
+    circle.setStrokeStyle(2, 0x00ff00);
+    const text = this.scene.add.text(0, 25, 'Click to place', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#00ff00',
+    });
+    text.setOrigin(0.5, 0);
+
+    this.placementIndicator.add([circle, text]);
+
+    // Click handler for placement
+    this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.placementMode === 'none') return;
+      if (!pointer.leftButtonDown()) return;
+
+      // Ignore the click that activated placement mode (same click as button)
+      if (this.placementClickPending) {
+        this.placementClickPending = false;
+        return;
+      }
+
+      this.completePlacement(pointer.worldX, pointer.worldY);
+    });
+
+    // Update indicator position
+    this.scene.events.on('update', () => {
+      if (this.placementMode !== 'none' && this.placementIndicator) {
+        const pointer = this.scene.input.activePointer;
+        this.placementIndicator.setPosition(pointer.worldX, pointer.worldY);
+      }
+    });
   }
 
   /**
-   * Crée les boutons d'action
+   * Enter placement mode - hide panel, show indicator
    */
-  private createActionButtons(startY: number): number {
-    const y = startY;
-    const buttonWidth = 95;
-    let x = 8;
+  private enterPlacementMode(mode: 'zombie' | 'item', type: string): void {
+    this.placementMode = mode;
+    this.placementType = type;
+    this.placementClickPending = true; // Ignore the current click (button click)
 
-    const actions = [
-      { label: 'Kill All [F5]', onClick: () => this.callbacks.onKillAll?.() },
-      { label: 'Next Wave [F9]', onClick: () => this.callbacks.onNextWave?.() },
-      { label: 'Heal 100% [F7]', onClick: () => this.callbacks.onHealFull?.() },
-    ];
-
-    for (const action of actions) {
-      const button = this.createButton(x, y, buttonWidth, action.label, action.onClick);
-      this.container.add(button);
-      this.actionButtons.push(button);
-      x += buttonWidth + this.BUTTON_SPACING;
+    // Update selected type
+    if (mode === 'zombie') {
+      this.spawner.setSelectedZombieType(type as ZombieType);
+      this.state.selectedZombieType = type as ZombieType;
+      this.updateZombieButtonStyles();
     }
 
-    return y + this.BUTTON_HEIGHT + this.BUTTON_SPACING;
+    // Hide panel, show indicator
+    this.container.setVisible(false);
+    if (this.placementIndicator) {
+      const text = this.placementIndicator.getAt(1) as Phaser.GameObjects.Text;
+      text.setText(`Click to place: ${type}`);
+      this.placementIndicator.setVisible(true);
+    }
+
+    console.log(`[Debug] Placement mode: ${mode} - ${type}`);
   }
 
   /**
-   * Handler pour clic sur bouton zombie
+   * Complete placement - spawn entity and show panel again
    */
-  private onZombieButtonClick(type: ZombieType): void {
-    this.spawner.setSelectedZombieType(type);
-    this.state.selectedZombieType = type;
-    this.updateZombieButtonStyles();
+  private completePlacement(x: number, y: number): void {
+    if (this.placementMode === 'zombie') {
+      this.callbacks.onZombieSpawn?.(this.placementType as ZombieType, x, y);
+    } else if (this.placementMode === 'item') {
+      this.callbacks.onItemSpawn?.(this.placementType as DebugItemType, x, y);
+    }
 
-    // Spawn à la position du joueur si panneau visible
-    const pointer = this.scene.input.activePointer;
-    this.callbacks.onZombieSpawn?.(type, pointer.worldX, pointer.worldY);
+    console.log(`[Debug] Placed ${this.placementType} at (${Math.round(x)}, ${Math.round(y)})`);
+
+    // Exit placement mode
+    this.exitPlacementMode();
+  }
+
+  /**
+   * Exit placement mode - show panel again
+   */
+  public exitPlacementMode(): void {
+    this.placementMode = 'none';
+    this.placementType = '';
+    this.placementClickPending = false;
+
+    if (this.placementIndicator) {
+      this.placementIndicator.setVisible(false);
+    }
+    this.container.setVisible(true);
+  }
+
+  /**
+   * Check if in placement mode
+   */
+  public isInPlacementMode(): boolean {
+    return this.placementMode !== 'none';
   }
 
   /**
@@ -969,15 +1171,6 @@ export class DebugPanel {
    */
   private onWeaponButtonClick(weaponId: string): void {
     this.callbacks.onWeaponGive?.(weaponId);
-  }
-
-  /**
-   * Handler pour clic sur bouton item
-   */
-  private onItemButtonClick(type: DebugItemType): void {
-    this.spawner.setSelectedItemType(type);
-    const pointer = this.scene.input.activePointer;
-    this.callbacks.onItemSpawn?.(type, pointer.worldX, pointer.worldY);
   }
 
   /**
@@ -1002,10 +1195,17 @@ export class DebugPanel {
 
       if (bg && text) {
         bg.setFillStyle(isSelected ? 0x004400 : 0x333333);
-        bg.setStrokeStyle(1, isSelected ? 0x00ff00 : 0x666666);
+        bg.setStrokeStyle(1, isSelected ? 0x00ff00 : 0x555555);
         text.setColor(isSelected ? '#00ff00' : '#ffffff');
       }
     }
+  }
+
+  /**
+   * Met à jour l'affichage de l'input de vague
+   */
+  private updateWaveInputDisplay(): void {
+    this.waveInputText?.setText(String(this.waveInputValue));
   }
 
   /**
@@ -1021,12 +1221,12 @@ export class DebugPanel {
    */
   private updateDisplay(): void {
     // Update header
-    this.headerText.setText(`DEBUG [F1]              Wave: ${this.state.currentWave}`);
+    this.headerText.setText(`DEBUG PANEL (F1 to close)  Wave: ${this.state.currentWave}`);
 
     // Update status
     const godStatus = this.state.godMode ? 'ON' : 'OFF';
     const pauseStatus = this.state.spawnPaused ? 'ON' : 'OFF';
-    this.statusText.setText(`[God: ${godStatus}] [Pause: ${pauseStatus}] Zombies: ${this.state.zombieCount}`);
+    this.statusText.setText(`God: ${godStatus} | Pause: ${pauseStatus} | Zombies: ${this.state.zombieCount}`);
 
     // Update zombie button selection
     if (this.state.selectedZombieType !== this.spawner.getSelectedZombieType()) {
@@ -1047,6 +1247,10 @@ export class DebugPanel {
 
     // Update event display (Phase 7.4)
     this.updateEventStatusDisplay();
+
+    // Update speed display
+    const gameSpeed = this.callbacks.getGameSpeed?.() || 1;
+    this.speedText?.setText(`Speed: ${gameSpeed}x`);
   }
 
   /**

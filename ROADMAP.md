@@ -283,50 +283,50 @@ Implémenter les systèmes de progression pendant et entre les parties.
 ### Tâches
 
 #### 6.1 Système de Combo
-- [ ] Créer `ComboSystem`
-- [ ] Multiplicateur basé sur kills enchaînés
-- [ ] Affichage HUD du combo
-- [ ] Bonus de points et qualité de loot
+- [x] Créer `ComboSystem`
+- [x] Multiplicateur basé sur kills enchaînés
+- [x] Affichage HUD du combo
+- [x] Bonus de points et qualité de loot
 
 #### 6.2 Drops et Items
-- [ ] Créer `DropSystem`
-- [ ] Drops de munitions
-- [ ] Drops de soins
-- [ ] Table de loot par type de zombie
+- [x] Créer `DropSystem`
+- [x] Drops de munitions
+- [x] Drops de soins
+- [x] Table de loot par type de zombie
 
 #### 6.3 Power-ups
-- [ ] Implémenter `Rage` (double dégâts)
-- [ ] Implémenter `Freeze` (ralentit ennemis)
-- [ ] Implémenter `Ghost` (intangibilité)
-- [ ] Implémenter `Magnet` (attire drops)
-- [ ] Implémenter `Nuke` (tue tout)
+- [x] Implémenter `Rage` (double dégâts)
+- [x] Implémenter `Freeze` (ralentit ennemis)
+- [x] Implémenter `Ghost` (intangibilité)
+- [x] Implémenter `Magnet` (attire drops)
+- [x] Implémenter `Nuke` (tue tout)
 
 #### 6.4 Objets Actifs
-- [ ] Implémenter `PortableTurret`
-- [ ] Implémenter `ProximityMine`
-- [ ] Implémenter `AttackDrone`
-- [ ] Implémenter `HolographicDecoy`
-- [ ] Implémenter `DiscoBallGrenade`
+- [x] Implémenter `PortableTurret`
+- [x] Implémenter `ProximityMine`
+- [x] Implémenter `AttackDrone`
+- [x] Implémenter `HolographicDecoy`
+- [x] Implémenter `DiscoBallGrenade`
 
 #### 6.5 Upgrades Roguelite
-- [ ] Créer `UpgradeSystem`
-- [ ] Créer `UpgradeScene` (entre les vagues)
-- [ ] Pool d'améliorations par catégorie
-- [ ] Système de rareté et pondération
-- [ ] UI de sélection (3 cartes)
+- [x] Créer `UpgradeSystem`
+- [x] Créer `UpgradeScene` (entre les vagues)
+- [x] Pool d'améliorations par catégorie
+- [x] Système de rareté et pondération
+- [x] UI de sélection (3 cartes)
 
 #### 6.6 Menu Tactique
-- [ ] Interface d'achat entre vagues
-- [ ] Barricader les portes
-- [ ] Poser des pièges
-- [ ] Acheter munitions/soins
+- [x] Interface d'achat entre vagues
+- [x] Barricader les portes
+- [x] Poser des pièges
+- [x] Acheter munitions/soins
 
 #### 6.7 Progression Permanente
-- [ ] Créer `ProgressionManager`
-- [ ] Arbre d'améliorations permanentes
-- [ ] Déblocage de personnages
-- [ ] Déblocage d'armes de départ
-- [ ] Système de sauvegarde (localStorage)
+- [x] Créer `ProgressionManager`
+- [x] Arbre d'améliorations permanentes
+- [x] Déblocage de personnages
+- [x] Déblocage d'armes de départ
+- [x] Système de sauvegarde (localStorage)
 
 ### Livrable
 Boucle de gameplay complète avec progression court et long terme.
@@ -341,46 +341,46 @@ Implémenter les personnages jouables et les boss.
 ### Tâches
 
 #### 7.1 Système de Personnages
-- [ ] Créer classe de base `Character`
-- [ ] Système de stats par personnage
-- [ ] Compétences actives
+- [x] Créer classe de base `Character`
+- [x] Système de stats par personnage
+- [x] Compétences actives
 
 #### 7.2 Personnages
-- [ ] Implémenter Le Flic (Marcus Webb)
+- [x] Implémenter Le Flic (Marcus Webb)
   - Bonus précision, tir critique
   - Compétence : Concentration (ralenti temps)
-- [ ] Implémenter La Médecin (Elena Vasquez)
+- [x] Implémenter La Médecin (Elena Vasquez)
   - Régénération passive, soins améliorés
   - Compétence : Vaccination (immunité statuts)
-- [ ] Implémenter Le Mécano (Frank Morrison)
+- [x] Implémenter Le Mécano (Frank Morrison)
   - Tourelles, bonus explosifs
   - Compétence : Poser tourelle
-- [ ] Implémenter L'Athlète (Jade Chen)
+- [x] Implémenter L'Athlète (Jade Chen)
   - Vitesse, dash amélioré
   - Compétence : Sprint (vitesse + intangibilité)
-- [ ] Implémenter Le Pyromane (Victor Ash)
+- [x] Implémenter Le Pyromane (Victor Ash)
   - Résistance feu, bonus incendiaire
   - Compétence : Nova (explosion de flammes)
-- [ ] Implémenter La Gamine (Lily + Max)
+- [x] Implémenter La Gamine (Lily + Max)
   - Hitbox réduite, chien compagnon
   - Compétence : Flair (révèle ennemis)
 
 #### 7.3 Boss
-- [ ] Créer classe de base `Boss`
-- [ ] Cinématique d'entrée
-- [ ] Implémenter Abomination
+- [x] Créer classe de base `Boss`
+- [x] Cinématique d'entrée
+- [x] Implémenter Abomination
   - Charge destructrice, libère parasites
   - Points faibles : têtes
-- [ ] Implémenter Patient Zéro
+- [x] Implémenter Patient Zéro
   - Esquive, utilise couvertures, commande horde
-- [ ] Implémenter Colosse Blindé
+- [x] Implémenter Colosse Blindé
   - Armure à détruire, points faibles révélés
 
 #### 7.4 Événements Spéciaux
-- [ ] Implémenter Blackout (obscurité)
-- [ ] Implémenter Horde (triple spawns)
-- [ ] Implémenter Porte Surchauffée
-- [ ] Implémenter Boss Rush
+- [x] Implémenter Blackout (obscurité)
+- [x] Implémenter Horde (triple spawns)
+- [x] Implémenter Porte Surchauffée
+- [x] Implémenter Boss Rush
 
 ### Livrable
 6 personnages jouables avec styles distincts, 3 boss, événements spéciaux.

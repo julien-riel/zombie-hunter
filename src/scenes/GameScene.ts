@@ -135,12 +135,15 @@ export class GameScene extends Phaser.Scene {
       this.waveSystem.start();
     });
 
-    // Debug: touche F3 pour afficher le flow field
-    if (this.input.keyboard) {
-      this.debugFlowFieldKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F3);
-      this.debugFlowFieldGraphics = this.add.graphics();
-      this.debugFlowFieldGraphics.setDepth(1000);
-    }
+    // Debug: créer les graphics et texte pour le flow field (F3 géré par DebugScene)
+    this.debugFlowFieldGraphics = this.add.graphics();
+    this.debugFlowFieldGraphics.setDepth(1000);
+    this.debugFlowFieldText = this.add.text(15, 55, '', {
+      fontSize: '14px',
+      color: '#ffffff',
+    });
+    this.debugFlowFieldText.setDepth(1001);
+    this.debugFlowFieldText.setVisible(false);
   }
 
   /**
@@ -362,72 +365,7 @@ export class GameScene extends Phaser.Scene {
       this.player.getMaxHealth()
     );
 
-    // Debug flow field (F3)
-    this.updateFlowFieldDebug();
-  }
-
-  /**
-   * Met à jour l'affichage de debug du flow field
-   */
-  private updateFlowFieldDebug(): void {
-    if (!this.debugFlowFieldKey || !this.debugFlowFieldGraphics) return;
-
-    // Toggle avec F3
-    if (Phaser.Input.Keyboard.JustDown(this.debugFlowFieldKey)) {
-      this.showFlowFieldDebug = !this.showFlowFieldDebug;
-      if (!this.showFlowFieldDebug) {
-        this.debugFlowFieldGraphics.clear();
-      }
-    }
-
-    if (!this.showFlowFieldDebug) return;
-
-    this.debugFlowFieldGraphics.clear();
-
-    const flowField = this.flowFieldManager.getFlowField();
-    if (!flowField || !flowField.isFieldValid()) {
-      // Afficher un message si le flow field n'est pas prêt
-      this.debugFlowFieldGraphics.lineStyle(2, 0xff0000);
-      this.debugFlowFieldGraphics.strokeRect(10, 10, 200, 30);
-      return;
-    }
-
-    const flowMap = flowField.getFlowMap();
-    const gridSize = flowField.getGridSize();
-    const tileSize = 32;
-
-    // Dessiner les directions
-    for (let y = 0; y < gridSize.height; y++) {
-      for (let x = 0; x < gridSize.width; x++) {
-        const dir = flowMap[y][x];
-        if (dir.x === 0 && dir.y === 0) continue;
-
-        const worldX = x * tileSize + tileSize / 2;
-        const worldY = y * tileSize + tileSize / 2;
-
-        // Ligne de direction
-        const lineLength = 12;
-        const endX = worldX + dir.x * lineLength;
-        const endY = worldY + dir.y * lineLength;
-
-        // Couleur basée sur la direction (vert = vers joueur)
-        this.debugFlowFieldGraphics.lineStyle(1, 0x00ff00, 0.6);
-        this.debugFlowFieldGraphics.beginPath();
-        this.debugFlowFieldGraphics.moveTo(worldX, worldY);
-        this.debugFlowFieldGraphics.lineTo(endX, endY);
-        this.debugFlowFieldGraphics.strokePath();
-
-        // Petit point au centre
-        this.debugFlowFieldGraphics.fillStyle(0x00ff00, 0.4);
-        this.debugFlowFieldGraphics.fillCircle(worldX, worldY, 2);
-      }
-    }
-
-    // Indicateur que le flow field est actif (rectangle vert en haut à gauche)
-    this.debugFlowFieldGraphics.lineStyle(2, 0x00ff00);
-    this.debugFlowFieldGraphics.strokeRect(10, 10, 20, 20);
-    this.debugFlowFieldGraphics.fillStyle(0x00ff00, 0.5);
-    this.debugFlowFieldGraphics.fillRect(10, 10, 20, 20);
+    // Note: Le flow field debug (F3) est géré par DebugScene qui dessine via drawFlowFieldDebug()
   }
 
   /**
@@ -682,6 +620,91 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Toggle l'affichage de debug du flow field
+   * Appelé depuis DebugScene via F3
+   */
+  public toggleFlowFieldDebug(): void {
+    this.showFlowFieldDebug = !this.showFlowFieldDebug;
+    if (!this.showFlowFieldDebug) {
+      if (this.debugFlowFieldGraphics) {
+        this.debugFlowFieldGraphics.clear();
+      }
+      if (this.debugFlowFieldText) {
+        this.debugFlowFieldText.setVisible(false);
+      }
+    }
+  }
+
+  /**
+   * Dessine le flow field debug (peut être appelé depuis DebugScene)
+   */
+  public drawFlowFieldDebug(): void {
+    if (!this.showFlowFieldDebug || !this.debugFlowFieldGraphics) return;
+
+    this.debugFlowFieldGraphics.clear();
+
+    const flowField = this.flowFieldManager.getFlowField();
+    if (!flowField || !flowField.isFieldValid()) {
+      // Afficher un indicateur rouge si le flow field n'est pas prêt
+      // (besoin de plus de zombies pour l'activer)
+      this.debugFlowFieldGraphics.fillStyle(0xff0000, 0.8);
+      this.debugFlowFieldGraphics.fillRect(10, 50, 250, 30);
+      this.debugFlowFieldGraphics.lineStyle(2, 0xff0000);
+      this.debugFlowFieldGraphics.strokeRect(10, 50, 250, 30);
+
+      // Texte d'indication
+      const activeZombies = this.poolManager.getActiveZombies().length;
+      if (this.debugFlowFieldText) {
+        this.debugFlowFieldText.setText(`FlowField: ${activeZombies} zombies (min 5)`);
+        this.debugFlowFieldText.setVisible(true);
+      }
+      return;
+    }
+
+    // Cacher le texte si le flow field est valide
+    if (this.debugFlowFieldText) {
+      this.debugFlowFieldText.setVisible(false);
+    }
+
+    const flowMap = flowField.getFlowMap();
+    const gridSize = flowField.getGridSize();
+    const tileSize = 32;
+
+    // Dessiner les directions
+    for (let y = 0; y < gridSize.height; y++) {
+      for (let x = 0; x < gridSize.width; x++) {
+        const dir = flowMap[y][x];
+        if (dir.x === 0 && dir.y === 0) continue;
+
+        const worldX = x * tileSize + tileSize / 2;
+        const worldY = y * tileSize + tileSize / 2;
+
+        // Ligne de direction
+        const lineLength = 12;
+        const endX = worldX + dir.x * lineLength;
+        const endY = worldY + dir.y * lineLength;
+
+        // Couleur basée sur la direction (vert = vers joueur)
+        this.debugFlowFieldGraphics.lineStyle(1, 0x00ff00, 0.6);
+        this.debugFlowFieldGraphics.beginPath();
+        this.debugFlowFieldGraphics.moveTo(worldX, worldY);
+        this.debugFlowFieldGraphics.lineTo(endX, endY);
+        this.debugFlowFieldGraphics.strokePath();
+
+        // Petit point au centre
+        this.debugFlowFieldGraphics.fillStyle(0x00ff00, 0.4);
+        this.debugFlowFieldGraphics.fillCircle(worldX, worldY, 2);
+      }
+    }
+
+    // Indicateur que le flow field est actif (rectangle vert en haut à gauche)
+    this.debugFlowFieldGraphics.lineStyle(2, 0x00ff00);
+    this.debugFlowFieldGraphics.strokeRect(10, 50, 20, 20);
+    this.debugFlowFieldGraphics.fillStyle(0x00ff00, 0.5);
+    this.debugFlowFieldGraphics.fillRect(10, 50, 20, 20);
+  }
+
+  /**
    * Vérifie les effets de terrain sur le joueur et les zombies
    */
   private checkTerrainZoneEffects(): void {
@@ -747,9 +770,9 @@ export class GameScene extends Phaser.Scene {
   private interactCooldown: number = 300; // ms
 
   /** Debug flow field */
-  private debugFlowFieldKey: Phaser.Input.Keyboard.Key | null = null;
   private debugFlowFieldGraphics: Phaser.GameObjects.Graphics | null = null;
-  private showFlowFieldDebug: boolean = false;
+  private debugFlowFieldText: Phaser.GameObjects.Text | null = null;
+  public showFlowFieldDebug: boolean = false;
 
   /**
    * Vérifie si le joueur interagit avec un élément (touche E)
