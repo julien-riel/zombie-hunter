@@ -11,7 +11,7 @@ La Phase 7 introduit la variété de gameplay à travers 6 personnages jouables 
 | Phase | Statut | Description |
 |-------|--------|-------------|
 | 7.1 | ✅ Complété | Système de personnages (infrastructure) |
-| 7.2 | 🔲 À faire | Les 6 personnages |
+| 7.2 | ✅ Complété | Les 6 personnages |
 | 7.3 | 🔲 À faire | Système de Boss |
 | 7.4 | 🔲 À faire | Événements spéciaux |
 
@@ -451,14 +451,25 @@ class CompanionDog extends Phaser.GameObjects.Sprite {
 ### Tâches par personnage
 
 Pour chaque personnage :
-- [ ] Créer le fichier de classe
-- [ ] Implémenter les stats
-- [ ] Implémenter les passifs
-- [ ] Implémenter la compétence active
-- [ ] Créer/assigner le sprite placeholder
-- [ ] Ajouter au CharacterFactory
+- [x] Créer le fichier de classe
+- [x] Implémenter les stats
+- [x] Implémenter les passifs
+- [x] Implémenter la compétence active
+- [x] Créer/assigner le sprite placeholder
+- [x] Ajouter au CharacterFactory
 - [ ] Tester l'équilibrage
-- [ ] Ajouter les conditions de déblocage
+- [x] Ajouter les conditions de déblocage
+
+### Personnages implémentés
+
+| Personnage | Fichier | Compétence | Entité associée |
+|------------|---------|------------|-----------------|
+| Marcus Webb (Cop) | `Cop.ts` | Concentration | - |
+| Dr. Elena Vasquez (Doctor) | `Doctor.ts` | Vaccination | - |
+| Frank "Gears" Morrison (Mechanic) | `Mechanic.ts` | Tourelle Automatique | `AutoTurret.ts` |
+| Jade Chen (Athlete) | `Athlete.ts` | Sprint | - |
+| Victor Ash (Pyromaniac) | `Pyromaniac.ts` | Nova | - |
+| Lily + Max (Kid) | `Kid.ts` | Flair | `CompanionDog.ts` |
 
 ---
 

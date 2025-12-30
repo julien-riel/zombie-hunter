@@ -33,3 +33,8 @@ export {
 
 // Personnages individuels
 export { Cop } from './Cop';
+export { Doctor } from './Doctor';
+export { Mechanic } from './Mechanic';
+export { Athlete } from './Athlete';
+export { Pyromaniac } from './Pyromaniac';
+export { Kid } from './Kid';

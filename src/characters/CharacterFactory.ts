@@ -8,17 +8,22 @@
 import type { CharacterType } from '@/types/entities';
 import { Character, getCharacterInfo, type CharacterInfo } from './Character';
 import { Cop } from './Cop';
+import { Doctor } from './Doctor';
+import { Mechanic } from './Mechanic';
+import { Athlete } from './Athlete';
+import { Pyromaniac } from './Pyromaniac';
+import { Kid } from './Kid';
 
 /**
  * Map des constructeurs de personnages
  */
 const CHARACTER_CONSTRUCTORS: Record<CharacterType, new () => Character> = {
   cop: Cop,
-  doctor: Cop, // Placeholder - sera remplacé par Doctor
-  mechanic: Cop, // Placeholder - sera remplacé par Mechanic
-  athlete: Cop, // Placeholder - sera remplacé par Athlete
-  pyromaniac: Cop, // Placeholder - sera remplacé par Pyromaniac
-  kid: Cop, // Placeholder - sera remplacé par Kid
+  doctor: Doctor,
+  mechanic: Mechanic,
+  athlete: Athlete,
+  pyromaniac: Pyromaniac,
+  kid: Kid,
 };
 
 /**
