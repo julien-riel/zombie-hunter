@@ -33,11 +33,15 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     },
   },
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    mode: Phaser.Scale.HEIGHT_CONTROLS_WIDTH,
+    autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
     min: {
       width: 320,
       height: 480,
+    },
+    max: {
+      width: 1920,
+      height: 1080,
     },
   },
   input: {
