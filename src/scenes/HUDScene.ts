@@ -7,6 +7,7 @@ import { ComboMeter } from '@ui/ComboMeter';
 import { PowerUpDisplay } from '@ui/PowerUpDisplay';
 import { ActiveItemDisplay } from '@ui/ActiveItemDisplay';
 import type { GameEventPayloads } from '@/types/events';
+import { DeviceDetector } from '@utils/DeviceDetector';
 
 /**
  * Scène d'interface utilisateur (overlay)
@@ -45,6 +46,9 @@ export class HUDScene extends Phaser.Scene {
   // Affichage des objets actifs (Phase 6.4)
   private activeItemDisplay!: ActiveItemDisplay;
 
+  // Détection mobile
+  private isMobile: boolean = false;
+
   constructor() {
     super({ key: SCENE_KEYS.HUD });
   }
@@ -60,6 +64,9 @@ export class HUDScene extends Phaser.Scene {
    * Crée les éléments d'interface
    */
   create(): void {
+    // Détecter le mode mobile
+    this.isMobile = !DeviceDetector.isDesktop();
+
     this.createHealthBar();
     this.createAmmoCounter();
     this.createScoreDisplay();
@@ -122,8 +129,9 @@ export class HUDScene extends Phaser.Scene {
   private createHealthBar(): void {
     const x = 20;
     const y = 20;
-    const width = 200;
-    const height = 20;
+    // Barre plus grande sur mobile pour meilleure visibilité
+    const width = this.isMobile ? 250 : 200;
+    const height = this.isMobile ? 28 : 20;
 
     // Fond de la barre
     this.healthBarBg = this.add.rectangle(x, y, width, height, 0x333333);
@@ -134,21 +142,27 @@ export class HUDScene extends Phaser.Scene {
     this.healthBar = this.add.rectangle(x + 2, y + 2, width - 4, height - 4, 0xe74c3c);
     this.healthBar.setOrigin(0, 0);
 
-    // Texte de santé
+    // Texte de santé (masqué sur mobile pour simplifier)
     this.healthText = this.add.text(x + width / 2, y + height / 2, '100/100', {
-      fontSize: '14px',
+      fontSize: this.isMobile ? '16px' : '14px',
       color: '#ffffff',
       fontStyle: 'bold',
     });
     this.healthText.setOrigin(0.5);
+    // Sur mobile, on ne montre pas les valeurs numériques
+    this.healthText.setVisible(!this.isMobile);
   }
 
   /**
    * Crée le compteur de munitions
    */
   private createAmmoCounter(): void {
-    this.ammoText = this.add.text(20, 50, 'Munitions: --/--', {
-      fontSize: '16px',
+    // Position et taille adaptées pour mobile
+    const y = this.isMobile ? 55 : 50;
+    const fontSize = this.isMobile ? '20px' : '16px';
+
+    this.ammoText = this.add.text(20, y, 'Munitions: --/--', {
+      fontSize,
       color: '#ffffff',
     });
   }
@@ -157,14 +171,19 @@ export class HUDScene extends Phaser.Scene {
    * Crée l'affichage du score et des kills
    */
   private createScoreDisplay(): void {
-    this.scoreText = this.add.text(20, 80, 'Score: 0', {
-      fontSize: '20px',
+    // Positions et tailles adaptées pour mobile
+    const baseY = this.isMobile ? 85 : 80;
+    const scoreFontSize = this.isMobile ? '24px' : '20px';
+    const killsFontSize = this.isMobile ? '20px' : '16px';
+
+    this.scoreText = this.add.text(20, baseY, 'Score: 0', {
+      fontSize: scoreFontSize,
       color: '#ffff00',
       fontStyle: 'bold',
     });
 
-    this.killsText = this.add.text(20, 105, 'Kills: 0', {
-      fontSize: '16px',
+    this.killsText = this.add.text(20, baseY + 30, 'Kills: 0', {
+      fontSize: killsFontSize,
       color: '#ff6666',
     });
   }
@@ -176,8 +195,11 @@ export class HUDScene extends Phaser.Scene {
     const economySystem = this.gameScene.getEconomySystem();
     const points = economySystem ? economySystem.getPoints() : 0;
 
-    this.pointsText = this.add.text(GAME_WIDTH - 20, 80, `Points: ${points}`, {
-      fontSize: '20px',
+    // Sur mobile, positionnement différent (en haut à droite, avant la zone des contrôles)
+    const fontSize = this.isMobile ? '24px' : '20px';
+
+    this.pointsText = this.add.text(GAME_WIDTH - 20, this.isMobile ? 20 : 80, `Points: ${points}`, {
+      fontSize,
       color: '#ffdd00',
       fontStyle: 'bold',
     });
@@ -188,17 +210,21 @@ export class HUDScene extends Phaser.Scene {
    * Crée l'affichage de la vague
    */
   private createWaveDisplay(): void {
+    // Textes plus grands sur mobile pour meilleure lisibilité
+    const waveFontSize = this.isMobile ? '28px' : '24px';
+    const progressFontSize = this.isMobile ? '18px' : '14px';
+
     // Numéro de vague (en haut au centre)
     this.waveText = this.add.text(GAME_WIDTH / 2, 20, 'Vague 1', {
-      fontSize: '24px',
+      fontSize: waveFontSize,
       color: '#ffffff',
       fontStyle: 'bold',
     });
     this.waveText.setOrigin(0.5, 0);
 
     // Progression de la vague
-    this.waveProgressText = this.add.text(GAME_WIDTH / 2, 50, '', {
-      fontSize: '14px',
+    this.waveProgressText = this.add.text(GAME_WIDTH / 2, this.isMobile ? 55 : 50, '', {
+      fontSize: progressFontSize,
       color: '#aaaaaa',
     });
     this.waveProgressText.setOrigin(0.5, 0);
@@ -235,8 +261,14 @@ export class HUDScene extends Phaser.Scene {
 
   /**
    * Crée l'affichage des contrôles
+   * Masqué sur mobile car les contrôles sont tactiles
    */
   private createControls(): void {
+    // Ne pas afficher les contrôles clavier sur mobile
+    if (this.isMobile) {
+      return;
+    }
+
     const controlsText = [
       'Contrôles:',
       'WASD/Flèches - Déplacement',
@@ -258,8 +290,14 @@ export class HUDScene extends Phaser.Scene {
 
   /**
    * Crée l'affichage de l'inventaire d'armes
+   * Sur mobile, les slots sont masqués car le changement d'arme se fait via MobileControls
    */
   private createWeaponInventory(): void {
+    // Sur mobile, on masque l'inventaire d'armes car il y a des boutons dédiés
+    if (this.isMobile) {
+      return;
+    }
+
     const slotWidth = 100;
     const slotHeight = 50;
     const slotSpacing = 10;
@@ -527,11 +565,18 @@ export class HUDScene extends Phaser.Scene {
    * Crée le compteur de combo (Phase 6.1)
    */
   private createComboMeter(): void {
+    // Sur mobile, le combo meter est positionné différemment
+    // pour ne pas gêner les contrôles tactiles
+    const meterX = this.isMobile ? GAME_WIDTH - 80 : GAME_WIDTH - 100;
+    const meterY = this.isMobile ? 60 : 150;
+    const meterWidth = this.isMobile ? 100 : 120;
+    const meterHeight = this.isMobile ? 50 : 60;
+
     this.comboMeter = new ComboMeter(this, {
-      x: GAME_WIDTH - 100,
-      y: 150,
-      width: 120,
-      height: 60,
+      x: meterX,
+      y: meterY,
+      width: meterWidth,
+      height: meterHeight,
     });
     this.comboMeter.setDepth(100);
   }
@@ -574,12 +619,17 @@ export class HUDScene extends Phaser.Scene {
    * Crée l'affichage des power-ups actifs (Phase 6.3)
    */
   private createPowerUpDisplay(): void {
+    // Sur mobile, position adaptée pour ne pas gêner les contrôles
+    const displayY = this.isMobile ? 150 : 140;
+    const displayHeight = this.isMobile ? 100 : 120;
+    const maxDisplayed = this.isMobile ? 3 : 4;
+
     this.powerUpDisplay = new PowerUpDisplay(this, {
       x: 20,
-      y: 140,
+      y: displayY,
       width: 150,
-      height: 120,
-      maxDisplayed: 4,
+      height: displayHeight,
+      maxDisplayed,
     });
     this.powerUpDisplay.setDepth(100);
   }
@@ -614,12 +664,17 @@ export class HUDScene extends Phaser.Scene {
    * Crée l'affichage des objets actifs (Phase 6.4)
    */
   private createActiveItemDisplay(): void {
+    // Sur mobile, l'affichage est adapté pour ne pas gêner les contrôles
+    const displayY = this.isMobile ? 260 : 280;
+    const slotSize = this.isMobile ? 35 : 40;
+    const maxSlots = this.isMobile ? 4 : 5;
+
     this.activeItemDisplay = new ActiveItemDisplay(this, {
       x: 20,
-      y: 280,
-      slotSize: 40,
+      y: displayY,
+      slotSize,
       slotSpacing: 5,
-      maxSlots: 5,
+      maxSlots,
     });
     this.activeItemDisplay.setDepth(100);
   }

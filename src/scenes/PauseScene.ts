@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import type { GameScene } from './GameScene';
+import { DeviceDetector } from '@utils/DeviceDetector';
 
 /**
  * Données passées à la scène de pause
@@ -17,6 +18,7 @@ interface PauseSceneData {
  */
 export class PauseScene extends Phaser.Scene {
   private gameScene!: GameScene;
+  private isMobile: boolean = false;
 
   // Éléments visuels
   private overlay!: Phaser.GameObjects.Rectangle;
@@ -36,6 +38,7 @@ export class PauseScene extends Phaser.Scene {
     this.gameScene = data.gameScene;
     this.buttons = [];
     this.selectedButtonIndex = 0;
+    this.isMobile = !DeviceDetector.isDesktop();
   }
 
   /**
@@ -49,7 +52,10 @@ export class PauseScene extends Phaser.Scene {
     this.createTitle();
     this.createStats();
     this.createButtons();
-    this.setupKeyboardControls();
+    // Contrôles clavier uniquement sur desktop
+    if (!this.isMobile) {
+      this.setupKeyboardControls();
+    }
     this.animateIn();
   }
 
@@ -78,12 +84,16 @@ export class PauseScene extends Phaser.Scene {
    * Crée le titre PAUSE
    */
   private createTitle(): void {
-    this.pauseText = this.add.text(GAME_WIDTH / 2, 100, 'PAUSE', {
-      fontSize: '72px',
+    // Taille adaptée pour mobile
+    const fontSize = this.isMobile ? '56px' : '72px';
+    const titleY = this.isMobile ? 80 : 100;
+
+    this.pauseText = this.add.text(GAME_WIDTH / 2, titleY, 'PAUSE', {
+      fontSize,
       color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: this.isMobile ? 3 : 4,
     });
     this.pauseText.setOrigin(0.5);
     this.pauseText.setAlpha(0);
@@ -93,7 +103,9 @@ export class PauseScene extends Phaser.Scene {
    * Crée l'affichage des stats de la run en cours
    */
   private createStats(): void {
-    this.statsContainer = this.add.container(GAME_WIDTH / 2, 200);
+    // Position adaptée pour mobile
+    const containerY = this.isMobile ? 170 : 200;
+    this.statsContainer = this.add.container(GAME_WIDTH / 2, containerY);
 
     const waveSystem = this.gameScene.getWaveSystem();
     const telemetry = this.gameScene.getTelemetryManager();
@@ -108,8 +120,10 @@ export class PauseScene extends Phaser.Scene {
     const timeSeconds = Math.floor((gameTime % 60000) / 1000);
     const timeStr = `${timeMinutes}:${timeSeconds.toString().padStart(2, '0')}`;
 
-    // Fond des stats
-    const statsBg = this.add.rectangle(0, 0, 400, 120, 0x2c3e50, 0.8);
+    // Fond des stats (plus compact sur mobile)
+    const bgWidth = this.isMobile ? 350 : 400;
+    const bgHeight = this.isMobile ? 100 : 120;
+    const statsBg = this.add.rectangle(0, 0, bgWidth, bgHeight, 0x2c3e50, 0.8);
     statsBg.setStrokeStyle(2, 0x34495e);
     this.statsContainer.add(statsBg);
 
@@ -121,21 +135,24 @@ export class PauseScene extends Phaser.Scene {
       { label: 'Meilleur combo', value: `x${bestCombo}` },
     ];
 
-    const colWidth = 100;
-    const startX = -150;
+    const colWidth = this.isMobile ? 80 : 100;
+    const startX = this.isMobile ? -130 : -150;
+    const colSpacing = this.isMobile ? 170 : 200;
+    const labelFontSize = this.isMobile ? '12px' : '14px';
+    const valueFontSize = this.isMobile ? '16px' : '18px';
 
     stats.forEach((stat, index) => {
-      const x = startX + (index % 2) * 200;
-      const y = Math.floor(index / 2) * 45 - 30;
+      const x = startX + (index % 2) * colSpacing;
+      const y = Math.floor(index / 2) * (this.isMobile ? 35 : 45) - (this.isMobile ? 20 : 30);
 
       const labelText = this.add.text(x, y, stat.label, {
-        fontSize: '14px',
+        fontSize: labelFontSize,
         color: '#95a5a6',
       });
       labelText.setOrigin(0, 0.5);
 
       const valueText = this.add.text(x + colWidth, y, stat.value, {
-        fontSize: '18px',
+        fontSize: valueFontSize,
         color: '#ffffff',
         fontStyle: 'bold',
       });
@@ -157,8 +174,9 @@ export class PauseScene extends Phaser.Scene {
       { text: 'QUITTER', onClick: () => this.quitToMenu() },
     ];
 
-    const startY = 350;
-    const buttonSpacing = 60;
+    // Positions adaptées pour mobile
+    const startY = this.isMobile ? 290 : 350;
+    const buttonSpacing = this.isMobile ? 70 : 60;
 
     buttonConfigs.forEach((config, index) => {
       const button = this.createButton(
@@ -184,8 +202,10 @@ export class PauseScene extends Phaser.Scene {
   ): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
 
-    const buttonWidth = 240;
-    const buttonHeight = 45;
+    // Boutons plus grands sur mobile pour meilleur toucher tactile
+    const buttonWidth = this.isMobile ? 280 : 240;
+    const buttonHeight = this.isMobile ? 55 : 45;
+    const fontSize = this.isMobile ? '24px' : '20px';
 
     const bgColor = isDanger ? 0x8b0000 : 0x2c3e50;
     const borderColor = isDanger ? 0xff4444 : 0x3498db;
@@ -198,7 +218,7 @@ export class PauseScene extends Phaser.Scene {
 
     // Texte du bouton
     const buttonText = this.add.text(0, 0, text, {
-      fontSize: '20px',
+      fontSize,
       color: '#ffffff',
       fontStyle: 'bold',
     });

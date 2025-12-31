@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ASSET_KEYS } from '@config/assets.manifest';
 import type { GameScene } from '@scenes/GameScene';
+import { getPerformanceConfig } from '@config/MobilePerformanceConfig';
 
 /**
  * Pool de projectiles pour optimiser les performances
@@ -12,14 +13,20 @@ export class BulletPool {
 
   constructor(scene: GameScene) {
     this.scene = scene;
+
+    // Récupérer les paramètres de performance optimisés pour l'appareil
+    const perfConfig = getPerformanceConfig();
+    const poolSize = perfConfig.getBulletPoolSize();
+    const prewarmSize = perfConfig.getPerformanceSettings().bulletPoolPrewarm;
+
     this.pool = scene.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
-      maxSize: 100,
+      maxSize: poolSize,
       runChildUpdate: false,
     });
 
     // Pré-créer les bullets
-    this.prewarm(50);
+    this.prewarm(prewarmSize);
   }
 
   /**

@@ -74,6 +74,11 @@ export interface UnlockData {
 }
 
 /**
+ * Mode de contrôle du jeu
+ */
+export type InputModePreference = 'auto' | 'keyboard' | 'touch';
+
+/**
  * Paramètres du jeu
  */
 export interface SettingsData {
@@ -81,6 +86,7 @@ export interface SettingsData {
   sfxVolume: number;
   ddaEnabled: boolean;
   showTutorials: boolean;
+  inputMode: InputModePreference;
 }
 
 /**
@@ -128,6 +134,7 @@ const DEFAULT_SAVE_DATA: SaveData = {
     sfxVolume: 0.8,
     ddaEnabled: true,
     showTutorials: true,
+    inputMode: 'auto',
   },
   modeHighScores: {
     survival: {

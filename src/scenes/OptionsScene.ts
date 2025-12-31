@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import { SaveManager, type SettingsData } from '@managers/SaveManager';
+import { DeviceDetector } from '@utils/DeviceDetector';
 
 /**
  * Configuration d'un slider
@@ -36,6 +37,7 @@ interface ToggleConfig {
 export class OptionsScene extends Phaser.Scene {
   private saveManager!: SaveManager;
   private settings!: SettingsData;
+  private isMobile: boolean = false;
 
   // Éléments visuels
   private titleText!: Phaser.GameObjects.Text;
@@ -57,6 +59,7 @@ export class OptionsScene extends Phaser.Scene {
   create(): void {
     this.saveManager = SaveManager.getInstance();
     this.settings = { ...this.saveManager.getSettings() };
+    this.isMobile = !DeviceDetector.isDesktop();
 
     this.createBackground();
     this.createTitle();
@@ -96,8 +99,12 @@ export class OptionsScene extends Phaser.Scene {
    * Crée le titre
    */
   private createTitle(): void {
-    this.titleText = this.add.text(GAME_WIDTH / 2, 50, 'OPTIONS', {
-      fontSize: '48px',
+    // Taille adaptée pour mobile
+    const fontSize = this.isMobile ? '40px' : '48px';
+    const titleY = this.isMobile ? 40 : 50;
+
+    this.titleText = this.add.text(GAME_WIDTH / 2, titleY, 'OPTIONS', {
+      fontSize,
       color: '#ffffff',
       fontStyle: 'bold',
     });
@@ -115,13 +122,15 @@ export class OptionsScene extends Phaser.Scene {
       { id: 'gameplay', label: 'GAMEPLAY' },
     ];
 
-    const tabWidth = 180;
-    const tabHeight = 45;
-    const startX = GAME_WIDTH / 2 - (categories.length - 1) * (tabWidth / 2 + 10);
-    const tabY = 120;
+    // Tailles adaptées pour mobile
+    const tabWidth = this.isMobile ? 140 : 180;
+    const tabHeight = this.isMobile ? 40 : 45;
+    const tabSpacing = this.isMobile ? 10 : 20;
+    const startX = GAME_WIDTH / 2 - (categories.length - 1) * (tabWidth / 2 + tabSpacing / 2);
+    const tabY = this.isMobile ? 100 : 120;
 
     categories.forEach((cat, index) => {
-      const x = startX + index * (tabWidth + 20);
+      const x = startX + index * (tabWidth + tabSpacing);
       const tab = this.createCategoryTab(x, tabY, tabWidth, tabHeight, cat.label, cat.id);
       this.categoryTabs.push(tab);
     });
@@ -147,8 +156,10 @@ export class OptionsScene extends Phaser.Scene {
     const bg = this.add.rectangle(0, 0, width, height, bgColor, 1);
     bg.setStrokeStyle(2, borderColor);
 
+    // Taille de texte adaptée pour mobile
+    const fontSize = this.isMobile ? '14px' : '16px';
     const text = this.add.text(0, 0, label, {
-      fontSize: '16px',
+      fontSize,
       color: isActive ? '#ffffff' : '#95a5a6',
       fontStyle: 'bold',
     });
@@ -179,10 +190,14 @@ export class OptionsScene extends Phaser.Scene {
    * Crée le conteneur de contenu
    */
   private createContentContainer(): void {
-    this.contentContainer = this.add.container(GAME_WIDTH / 2, 380);
+    // Position adaptée pour mobile
+    const containerY = this.isMobile ? 350 : 380;
+    this.contentContainer = this.add.container(GAME_WIDTH / 2, containerY);
 
-    // Fond du contenu
-    const contentBg = this.add.rectangle(0, 0, 600, 360, 0x222236, 0.9);
+    // Fond du contenu (taille adaptée pour mobile)
+    const bgWidth = this.isMobile ? 550 : 600;
+    const bgHeight = this.isMobile ? 320 : 360;
+    const contentBg = this.add.rectangle(0, 0, bgWidth, bgHeight, 0x222236, 0.9);
     contentBg.setStrokeStyle(2, 0x34495e);
     this.contentContainer.add(contentBg);
 
@@ -322,13 +337,17 @@ export class OptionsScene extends Phaser.Scene {
    * Crée le contenu gameplay
    */
   private createGameplayContent(): void {
-    const startY = -100;
-    const spacing = 80;
+    const startY = this.isMobile ? -120 : -100;
+    const spacing = this.isMobile ? 65 : 80;
+    const descFontSize = this.isMobile ? '11px' : '12px';
+
+    // Mode de contrôle
+    this.createInputModeSelector(0, startY);
 
     // Difficulté adaptative (DDA)
     this.createToggle({
       x: 0,
-      y: startY,
+      y: startY + spacing,
       label: 'Difficulté Adaptative',
       value: this.settings.ddaEnabled,
       onChange: (value) => {
@@ -340,10 +359,10 @@ export class OptionsScene extends Phaser.Scene {
     // Description DDA
     const ddaDesc = this.add.text(
       0,
-      startY + 40,
+      startY + spacing + 35,
       'Ajuste automatiquement la difficulté en fonction de vos performances.',
       {
-        fontSize: '12px',
+        fontSize: descFontSize,
         color: '#7f8c8d',
       }
     );
@@ -353,7 +372,7 @@ export class OptionsScene extends Phaser.Scene {
     // Afficher tutoriels
     this.createToggle({
       x: 0,
-      y: startY + spacing,
+      y: startY + spacing * 2,
       label: 'Afficher Tutoriels',
       value: this.settings.showTutorials,
       onChange: (value) => {
@@ -365,29 +384,121 @@ export class OptionsScene extends Phaser.Scene {
     // Description tutoriels
     const tutorialDesc = this.add.text(
       0,
-      startY + spacing + 40,
+      startY + spacing * 2 + 35,
       'Affiche des conseils pour les nouveaux joueurs.',
       {
-        fontSize: '12px',
+        fontSize: descFontSize,
         color: '#7f8c8d',
       }
     );
     tutorialDesc.setOrigin(0.5);
     this.contentContainer.add(tutorialDesc);
 
-    // Contrôles (info)
-    const controlsInfo = this.add.text(
-      0,
-      startY + spacing * 2 + 20,
-      'Contrôles: WASD/Flèches pour se déplacer, Souris pour viser/tirer\nESPACE pour esquiver, R pour recharger, E pour interagir',
-      {
-        fontSize: '12px',
-        color: '#95a5a6',
-        align: 'center',
-      }
-    );
-    controlsInfo.setOrigin(0.5);
-    this.contentContainer.add(controlsInfo);
+    // Contrôles (info) - seulement sur desktop
+    if (!this.isMobile) {
+      const controlsInfo = this.add.text(
+        0,
+        startY + spacing * 3,
+        'Contrôles: WASD/Flèches pour se déplacer, Souris pour viser/tirer\nESPACE pour esquiver, R pour recharger, E pour interagir',
+        {
+          fontSize: descFontSize,
+          color: '#95a5a6',
+          align: 'center',
+        }
+      );
+      controlsInfo.setOrigin(0.5);
+      this.contentContainer.add(controlsInfo);
+    }
+  }
+
+  /**
+   * Crée le sélecteur de mode de contrôle
+   */
+  private createInputModeSelector(x: number, y: number): void {
+    const modes: { id: 'auto' | 'keyboard' | 'touch'; label: string }[] = [
+      { id: 'auto', label: 'Auto' },
+      { id: 'keyboard', label: 'Clavier' },
+      { id: 'touch', label: 'Tactile' },
+    ];
+
+    // Label
+    const labelFontSize = this.isMobile ? '14px' : '16px';
+    const labelText = this.add.text(x - 150, y, 'Mode de contrôle', {
+      fontSize: labelFontSize,
+      color: '#ffffff',
+    });
+    labelText.setOrigin(0, 0.5);
+    this.contentContainer.add(labelText);
+
+    // Boutons de sélection
+    const buttonWidth = this.isMobile ? 70 : 80;
+    const buttonHeight = this.isMobile ? 30 : 35;
+    const buttonSpacing = this.isMobile ? 8 : 10;
+    const startX = x + 40;
+
+    const buttons: Phaser.GameObjects.Container[] = [];
+
+    modes.forEach((mode, index) => {
+      const buttonX = startX + index * (buttonWidth + buttonSpacing);
+      const isActive = this.settings.inputMode === mode.id;
+
+      const container = this.add.container(buttonX, y);
+
+      const bg = this.add.rectangle(0, 0, buttonWidth, buttonHeight, isActive ? 0x27ae60 : 0x2c3e50);
+      bg.setStrokeStyle(2, isActive ? 0x2ecc71 : 0x34495e);
+
+      const btnFontSize = this.isMobile ? '12px' : '14px';
+      const text = this.add.text(0, 0, mode.label, {
+        fontSize: btnFontSize,
+        color: isActive ? '#ffffff' : '#95a5a6',
+        fontStyle: isActive ? 'bold' : 'normal',
+      });
+      text.setOrigin(0.5);
+
+      container.add([bg, text]);
+      container.setData('mode', mode.id);
+      container.setData('bg', bg);
+      container.setData('text', text);
+
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerover', () => {
+        if (this.settings.inputMode !== mode.id) {
+          bg.setFillStyle(0x3d566e);
+        }
+      });
+      bg.on('pointerout', () => {
+        if (this.settings.inputMode !== mode.id) {
+          bg.setFillStyle(0x2c3e50);
+        }
+      });
+      bg.on('pointerdown', () => {
+        this.selectInputMode(mode.id, buttons);
+      });
+
+      buttons.push(container);
+      this.contentContainer.add(container);
+    });
+  }
+
+  /**
+   * Sélectionne un mode de contrôle
+   */
+  private selectInputMode(mode: 'auto' | 'keyboard' | 'touch', buttons: Phaser.GameObjects.Container[]): void {
+    this.settings.inputMode = mode;
+    this.saveSettings();
+
+    // Mettre à jour l'apparence des boutons
+    buttons.forEach((btn) => {
+      const btnMode = btn.getData('mode') as string;
+      const bg = btn.getData('bg') as Phaser.GameObjects.Rectangle;
+      const text = btn.getData('text') as Phaser.GameObjects.Text;
+      const isActive = btnMode === mode;
+
+      bg.setFillStyle(isActive ? 0x27ae60 : 0x2c3e50);
+      bg.setStrokeStyle(2, isActive ? 0x2ecc71 : 0x34495e);
+      text.setColor(isActive ? '#ffffff' : '#95a5a6');
+      text.setFontStyle(isActive ? 'bold' : 'normal');
+    });
   }
 
   /**

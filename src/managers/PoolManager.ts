@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { GameScene } from '@scenes/GameScene';
 import type { Zombie } from '@entities/zombies/Zombie';
 import type { ZombieType } from '@/types/entities';
+import { getPerformanceConfig } from '@config/MobilePerformanceConfig';
 
 /**
  * Type de constructeur pour les zombies concrets
@@ -18,11 +19,13 @@ export class PoolManager {
   private zombieConstructors: Map<ZombieType, ZombieConstructor>;
   private maxPoolSize: number;
 
-  constructor(scene: GameScene, maxPoolSize: number = 100) {
+  constructor(scene: GameScene, maxPoolSize?: number) {
     this.scene = scene;
     this.zombiePools = new Map();
     this.zombieConstructors = new Map();
-    this.maxPoolSize = maxPoolSize;
+
+    // Utiliser la limite optimisée pour l'appareil si non spécifiée
+    this.maxPoolSize = maxPoolSize ?? getPerformanceConfig().getMaxZombies();
   }
 
   /**

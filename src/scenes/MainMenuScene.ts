@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import { SaveManager } from '@managers/SaveManager';
+import { DeviceDetector } from '@utils/DeviceDetector';
+import { OrientationOverlay } from '@ui/OrientationOverlay';
 
 /**
  * Configuration d'un bouton de menu
@@ -24,6 +26,8 @@ export class MainMenuScene extends Phaser.Scene {
   private versionText!: Phaser.GameObjects.Text;
   private backgroundZombies: Phaser.GameObjects.Rectangle[] = [];
   private selectedButtonIndex: number = 0;
+  private isMobile: boolean = false;
+  private orientationOverlay: OrientationOverlay | null = null;
 
   constructor() {
     super({ key: SCENE_KEYS.MENU });
@@ -33,6 +37,21 @@ export class MainMenuScene extends Phaser.Scene {
    * Crée les éléments de la scène
    */
   create(): void {
+    // Détecter le mode mobile
+    this.isMobile = !DeviceDetector.isDesktop();
+
+    // Créer l'overlay d'orientation pour mobile (Phase 5)
+    if (this.isMobile) {
+      this.orientationOverlay = new OrientationOverlay(this);
+
+      // Essayer de verrouiller l'orientation en mode paysage
+      this.orientationOverlay.tryLockLandscape().then((locked) => {
+        if (locked) {
+          console.log('[MainMenuScene] Orientation locked to landscape');
+        }
+      });
+    }
+
     // Fond animé
     this.createBackground();
 
@@ -45,8 +64,10 @@ export class MainMenuScene extends Phaser.Scene {
     // Version du jeu
     this.createVersionText();
 
-    // Configuration des contrôles clavier
-    this.setupKeyboardControls();
+    // Configuration des contrôles clavier (uniquement sur desktop)
+    if (!this.isMobile) {
+      this.setupKeyboardControls();
+    }
 
     // Animation d'entrée
     this.animateIn();
@@ -146,20 +167,26 @@ export class MainMenuScene extends Phaser.Scene {
    * Crée le titre du jeu
    */
   private createTitle(): void {
+    // Tailles adaptées pour mobile
+    const titleFontSize = this.isMobile ? '48px' : '64px';
+    const subtitleFontSize = this.isMobile ? '20px' : '24px';
+    const titleY = this.isMobile ? 100 : 120;
+    const subtitleY = this.isMobile ? 150 : 180;
+
     // Titre principal
-    this.titleText = this.add.text(GAME_WIDTH / 2, 120, 'ZOMBIE HUNTER', {
-      fontSize: '64px',
+    this.titleText = this.add.text(GAME_WIDTH / 2, titleY, 'ZOMBIE HUNTER', {
+      fontSize: titleFontSize,
       color: '#e74c3c',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 6,
+      strokeThickness: this.isMobile ? 4 : 6,
     });
     this.titleText.setOrigin(0.5);
     this.titleText.setAlpha(0);
 
     // Sous-titre
-    this.subtitleText = this.add.text(GAME_WIDTH / 2, 180, 'Survivez aux hordes', {
-      fontSize: '24px',
+    this.subtitleText = this.add.text(GAME_WIDTH / 2, subtitleY, 'Survivez aux hordes', {
+      fontSize: subtitleFontSize,
       color: '#bdc3c7',
     });
     this.subtitleText.setOrigin(0.5);
@@ -188,8 +215,9 @@ export class MainMenuScene extends Phaser.Scene {
       { text: 'CREDITS', onClick: () => this.showCredits(), enabled: false },
     ];
 
-    const startY = 300;
-    const buttonSpacing = 70;
+    // Positions adaptées pour mobile (boutons plus grands, plus espacés)
+    const startY = this.isMobile ? 220 : 300;
+    const buttonSpacing = this.isMobile ? 80 : 70;
 
     buttonConfigs.forEach((config, index) => {
       const button = this.createMenuButton(
@@ -215,8 +243,10 @@ export class MainMenuScene extends Phaser.Scene {
   ): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
 
-    const buttonWidth = 280;
-    const buttonHeight = 50;
+    // Boutons plus grands sur mobile pour meilleur toucher tactile
+    const buttonWidth = this.isMobile ? 320 : 280;
+    const buttonHeight = this.isMobile ? 60 : 50;
+    const fontSize = this.isMobile ? '28px' : '24px';
 
     // Fond du bouton
     const bg = this.add.rectangle(0, 0, buttonWidth, buttonHeight, enabled ? 0x2c3e50 : 0x1a1a2e, 1);
@@ -224,7 +254,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // Texte du bouton
     const buttonText = this.add.text(0, 0, text, {
-      fontSize: '24px',
+      fontSize,
       color: enabled ? '#ffffff' : '#666666',
       fontStyle: 'bold',
     });
@@ -525,5 +555,9 @@ export class MainMenuScene extends Phaser.Scene {
   shutdown(): void {
     this.buttons = [];
     this.backgroundZombies = [];
+
+    // Nettoyer l'overlay d'orientation (Phase 5)
+    this.orientationOverlay?.destroy();
+    this.orientationOverlay = null;
   }
 }

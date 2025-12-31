@@ -9,6 +9,7 @@ import { SniperRifle } from '@weapons/firearms/SniperRifle';
 import type { GameScene } from '@scenes/GameScene';
 import { Character, CharacterFactory, AbilityManager } from '@characters/index';
 import type { CharacterType } from '@/types/entities';
+import type { InputManager } from '@/managers/InputManager';
 
 /** Nombre maximum d'armes que le joueur peut porter */
 const MAX_WEAPONS = 4;
@@ -27,20 +28,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /** Index de l'arme actuellement équipée */
   private currentWeaponIndex: number = 0;
 
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasd!: {
+  /** Gestionnaire d'entrées abstrait (support mobile) */
+  private inputManager: InputManager | null = null;
+
+  // Contrôles clavier legacy (utilisés uniquement si inputManager n'est pas fourni)
+  private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
+  private wasd: {
     W: Phaser.Input.Keyboard.Key;
     A: Phaser.Input.Keyboard.Key;
     S: Phaser.Input.Keyboard.Key;
     D: Phaser.Input.Keyboard.Key;
-  };
-  private spaceKey!: Phaser.Input.Keyboard.Key;
+  } | null = null;
+  private spaceKey: Phaser.Input.Keyboard.Key | null = null;
   /** Touches pour changer d'arme (1, 2, 3, 4) */
-  private weaponKeys!: Phaser.Input.Keyboard.Key[];
+  private weaponKeys: Phaser.Input.Keyboard.Key[] = [];
   /** Touche R pour recharger manuellement */
-  private reloadKey!: Phaser.Input.Keyboard.Key;
+  private reloadKey: Phaser.Input.Keyboard.Key | null = null;
   /** Touche Q pour utiliser la compétence */
-  private abilityKey!: Phaser.Input.Keyboard.Key;
+  private abilityKey: Phaser.Input.Keyboard.Key | null = null;
 
   private isDashing: boolean = false;
   private canDash: boolean = true;
@@ -61,8 +66,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   /** Multiplicateur de vitesse (pour les effets temporaires) */
   public speedMultiplier: number = 1.0;
 
-  constructor(scene: GameScene, x: number, y: number, characterType?: CharacterType) {
+  constructor(scene: GameScene, x: number, y: number, characterType?: CharacterType, inputManager?: InputManager) {
     super(scene, x, y, ASSET_KEYS.PLAYER);
+
+    // Stocker l'InputManager s'il est fourni
+    this.inputManager = inputManager || null;
 
     // Initialiser le personnage
     this.character = characterType
@@ -100,6 +108,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Configure les contrôles du joueur
    */
   private setupInput(): void {
+    // Si on utilise l'InputManager, configurer les callbacks pour les actions
+    if (this.inputManager) {
+      this.setupInputManagerCallbacks();
+      return;
+    }
+
+    // Mode legacy : contrôles clavier directs
     if (!this.scene.input.keyboard) return;
 
     this.cursors = this.scene.input.keyboard.createCursorKeys();
@@ -121,7 +136,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
     ];
 
-    // Molette de souris pour cycler les armes
+    // Molette de souris pour cycler les armes (géré par InputManager sinon)
     this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gx: number[], _gy: number[], deltaY: number) => {
       if (deltaY > 0) {
         this.cycleWeapon(1);
@@ -129,6 +144,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.cycleWeapon(-1);
       }
     });
+  }
+
+  /**
+   * Configure les callbacks pour l'InputManager
+   */
+  private setupInputManagerCallbacks(): void {
+    if (!this.inputManager) return;
+
+    // Callbacks pour les changements d'armes
+    this.inputManager.onActionTriggered('weapon1', () => this.switchWeapon(0));
+    this.inputManager.onActionTriggered('weapon2', () => this.switchWeapon(1));
+    this.inputManager.onActionTriggered('weapon3', () => this.switchWeapon(2));
+    this.inputManager.onActionTriggered('weapon4', () => this.switchWeapon(3));
+    this.inputManager.onActionTriggered('weaponNext', () => this.cycleWeapon(1));
+    this.inputManager.onActionTriggered('weaponPrev', () => this.cycleWeapon(-1));
   }
 
   /**
@@ -165,37 +195,56 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.isDashing) return;
 
     const speed = this.moveSpeed * this.speedMultiplier;
+
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      const movement = this.inputManager.getMovementVector();
+      this.setVelocity(movement.x * speed, movement.y * speed);
+      return;
+    }
+
+    // Mode legacy : contrôles clavier directs
     let velocityX = 0;
     let velocityY = 0;
 
-    // Mouvement horizontal
-    if (this.cursors.left.isDown || this.wasd.A.isDown) {
-      velocityX = -speed;
-    } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
-      velocityX = speed;
-    }
+    if (this.cursors && this.wasd) {
+      // Mouvement horizontal
+      if (this.cursors.left.isDown || this.wasd.A.isDown) {
+        velocityX = -speed;
+      } else if (this.cursors.right.isDown || this.wasd.D.isDown) {
+        velocityX = speed;
+      }
 
-    // Mouvement vertical
-    if (this.cursors.up.isDown || this.wasd.W.isDown) {
-      velocityY = -speed;
-    } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
-      velocityY = speed;
-    }
+      // Mouvement vertical
+      if (this.cursors.up.isDown || this.wasd.W.isDown) {
+        velocityY = -speed;
+      } else if (this.cursors.down.isDown || this.wasd.S.isDown) {
+        velocityY = speed;
+      }
 
-    // Normaliser pour le mouvement diagonal
-    if (velocityX !== 0 && velocityY !== 0) {
-      const factor = Math.SQRT1_2; // 1/sqrt(2)
-      velocityX *= factor;
-      velocityY *= factor;
+      // Normaliser pour le mouvement diagonal
+      if (velocityX !== 0 && velocityY !== 0) {
+        const factor = Math.SQRT1_2; // 1/sqrt(2)
+        velocityX *= factor;
+        velocityY *= factor;
+      }
     }
 
     this.setVelocity(velocityX, velocityY);
   }
 
   /**
-   * Gère la rotation du joueur vers la souris
+   * Gère la rotation du joueur vers la souris ou la direction de visée tactile
    */
   private handleRotation(): void {
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      const angle = this.inputManager.getAimAngle(this.x, this.y);
+      this.setRotation(angle);
+      return;
+    }
+
+    // Mode legacy : rotation vers la souris
     const pointer = this.scene.input.activePointer;
     const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
     this.setRotation(angle);
@@ -205,7 +254,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Gère le dash du joueur
    */
   private handleDash(): void {
-    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) && this.canDash && !this.isDashing) {
+    if (!this.canDash || this.isDashing) return;
+
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      if (this.inputManager.isActionJustPressed('dash') || this.inputManager.isActionPressed('dash')) {
+        this.performDash();
+      }
+      return;
+    }
+
+    // Mode legacy : touche espace
+    if (this.spaceKey && Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       this.performDash();
     }
   }
@@ -214,6 +274,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Gère le tir du joueur
    */
   private handleShooting(): void {
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      if (this.inputManager.isShooting()) {
+        this.shoot();
+      }
+      return;
+    }
+
+    // Mode legacy : clic souris
     const pointer = this.scene.input.activePointer;
     if (pointer.isDown && pointer.leftButtonDown()) {
       this.shoot();
@@ -230,22 +299,37 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Émettre l'événement pour la télémétrie
     (this.scene as GameScene).events.emit('playerDash');
 
-    // Direction du dash basée sur le mouvement actuel ou la direction de la souris
+    // Direction du dash basée sur le mouvement actuel ou la direction de visée
     let dashX = 0;
     let dashY = 0;
 
-    if (this.cursors.left.isDown || this.wasd.A.isDown) dashX = -1;
-    else if (this.cursors.right.isDown || this.wasd.D.isDown) dashX = 1;
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      const movement = this.inputManager.getMovementVector();
+      dashX = movement.x;
+      dashY = movement.y;
 
-    if (this.cursors.up.isDown || this.wasd.W.isDown) dashY = -1;
-    else if (this.cursors.down.isDown || this.wasd.S.isDown) dashY = 1;
+      // Si pas de direction de mouvement, dash vers la direction de visée
+      if (dashX === 0 && dashY === 0) {
+        const aimDir = this.inputManager.getAimDirection(this.x, this.y);
+        dashX = aimDir.x;
+        dashY = aimDir.y;
+      }
+    } else if (this.cursors && this.wasd) {
+      // Mode legacy : contrôles clavier directs
+      if (this.cursors.left.isDown || this.wasd.A.isDown) dashX = -1;
+      else if (this.cursors.right.isDown || this.wasd.D.isDown) dashX = 1;
 
-    // Si pas de direction, dash vers la souris
-    if (dashX === 0 && dashY === 0) {
-      const pointer = this.scene.input.activePointer;
-      const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
-      dashX = Math.cos(angle);
-      dashY = Math.sin(angle);
+      if (this.cursors.up.isDown || this.wasd.W.isDown) dashY = -1;
+      else if (this.cursors.down.isDown || this.wasd.S.isDown) dashY = 1;
+
+      // Si pas de direction, dash vers la souris
+      if (dashX === 0 && dashY === 0) {
+        const pointer = this.scene.input.activePointer;
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY);
+        dashX = Math.cos(angle);
+        dashY = Math.sin(angle);
+      }
     }
 
     // Normaliser
@@ -278,11 +362,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public shoot(): void {
     if (!this.currentWeapon) return;
 
-    const pointer = this.scene.input.activePointer;
-    const direction = new Phaser.Math.Vector2(
-      pointer.worldX - this.x,
-      pointer.worldY - this.y
-    ).normalize();
+    let direction: Phaser.Math.Vector2;
+
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      const aimDir = this.inputManager.getAimDirection(this.x, this.y);
+      direction = new Phaser.Math.Vector2(aimDir.x, aimDir.y);
+    } else {
+      // Mode legacy : direction vers la souris
+      const pointer = this.scene.input.activePointer;
+      direction = new Phaser.Math.Vector2(
+        pointer.worldX - this.x,
+        pointer.worldY - this.y
+      ).normalize();
+    }
 
     this.currentWeapon.fire(direction);
   }
@@ -291,8 +384,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Gère le changement d'arme via les touches 1-4
    */
   private handleWeaponSwitch(): void {
+    // Si InputManager, le changement est géré via les callbacks
+    if (this.inputManager) {
+      // Vérifier quand même les JustPressed pour le clavier
+      if (this.inputManager.isActionJustPressed('weapon1')) this.switchWeapon(0);
+      else if (this.inputManager.isActionJustPressed('weapon2')) this.switchWeapon(1);
+      else if (this.inputManager.isActionJustPressed('weapon3')) this.switchWeapon(2);
+      else if (this.inputManager.isActionJustPressed('weapon4')) this.switchWeapon(3);
+      return;
+    }
+
+    // Mode legacy : touches 1-4
     for (let i = 0; i < this.weaponKeys.length; i++) {
-      if (Phaser.Input.Keyboard.JustDown(this.weaponKeys[i])) {
+      if (this.weaponKeys[i] && Phaser.Input.Keyboard.JustDown(this.weaponKeys[i])) {
         this.switchWeapon(i);
         break;
       }
@@ -303,7 +407,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Gère le rechargement manuel via touche R
    */
   private handleReload(): void {
-    if (Phaser.Input.Keyboard.JustDown(this.reloadKey)) {
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      if (this.inputManager.isActionJustPressed('reload') || this.inputManager.isActionPressed('reload')) {
+        this.currentWeapon?.reload();
+      }
+      return;
+    }
+
+    // Mode legacy : touche R
+    if (this.reloadKey && Phaser.Input.Keyboard.JustDown(this.reloadKey)) {
       this.currentWeapon?.reload();
     }
   }
@@ -312,7 +425,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Gère l'utilisation de la compétence via touche Q
    */
   private handleAbility(): void {
-    if (Phaser.Input.Keyboard.JustDown(this.abilityKey)) {
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      if (this.inputManager.isActionJustPressed('ability') || this.inputManager.isActionPressed('ability')) {
+        this.useAbility();
+      }
+      return;
+    }
+
+    // Mode legacy : touche Q
+    if (this.abilityKey && Phaser.Input.Keyboard.JustDown(this.abilityKey)) {
       this.useAbility();
     }
   }
@@ -655,5 +777,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    */
   public resetAbilityCooldown(): void {
     this.abilityManager.resetCooldown();
+  }
+
+  // ==================== MÉTHODES INPUT MANAGER (Phase 3 Mobile) ====================
+
+  /**
+   * Définit l'InputManager pour les contrôles
+   * Permet l'injection après la création du Player
+   */
+  public setInputManager(inputManager: InputManager): void {
+    this.inputManager = inputManager;
+    this.setupInputManagerCallbacks();
+  }
+
+  /**
+   * Récupère l'InputManager actuel
+   */
+  public getInputManager(): InputManager | null {
+    return this.inputManager;
+  }
+
+  /**
+   * Vérifie si le Player utilise l'InputManager
+   */
+  public hasInputManager(): boolean {
+    return this.inputManager !== null;
   }
 }

@@ -4,6 +4,7 @@ import { UPGRADE_SYSTEM_CONFIG } from '@config/upgrades';
 import { UpgradeCard } from '@ui/UpgradeCard';
 import type { UpgradeDefinition } from '@config/upgrades';
 import type { GameScene } from './GameScene';
+import { DeviceDetector } from '@utils/DeviceDetector';
 
 /**
  * Données passées à la scène d'upgrade
@@ -24,6 +25,7 @@ export class UpgradeScene extends Phaser.Scene {
   private gameScene!: GameScene;
   private waveNumber: number = 0;
   private choices: UpgradeDefinition[] = [];
+  private isMobile: boolean = false;
 
   // Éléments visuels
   private overlay!: Phaser.GameObjects.Rectangle;
@@ -47,6 +49,7 @@ export class UpgradeScene extends Phaser.Scene {
     this.choices = data.choices;
     this.selectionMade = false;
     this.cards = [];
+    this.isMobile = !DeviceDetector.isDesktop();
   }
 
   /**
@@ -87,9 +90,15 @@ export class UpgradeScene extends Phaser.Scene {
    * Crée le titre et sous-titre
    */
   private createTitle(): void {
+    // Tailles adaptées pour mobile
+    const titleFontSize = this.isMobile ? '28px' : '36px';
+    const subtitleFontSize = this.isMobile ? '16px' : '18px';
+    const titleY = this.isMobile ? 60 : 80;
+    const subtitleY = this.isMobile ? 95 : 120;
+
     // Titre principal
-    this.titleText = this.add.text(GAME_WIDTH / 2, 80, 'CHOISISSEZ UNE AMÉLIORATION', {
-      fontSize: '36px',
+    this.titleText = this.add.text(GAME_WIDTH / 2, titleY, 'CHOISISSEZ UNE AMÉLIORATION', {
+      fontSize: titleFontSize,
       color: '#ffffff',
       fontStyle: 'bold',
     });
@@ -97,8 +106,8 @@ export class UpgradeScene extends Phaser.Scene {
     this.titleText.setAlpha(0);
 
     // Sous-titre avec numéro de vague
-    this.subtitleText = this.add.text(GAME_WIDTH / 2, 120, `Vague ${this.waveNumber} terminée`, {
-      fontSize: '18px',
+    this.subtitleText = this.add.text(GAME_WIDTH / 2, subtitleY, `Vague ${this.waveNumber} terminée`, {
+      fontSize: subtitleFontSize,
       color: '#aaaaaa',
     });
     this.subtitleText.setOrigin(0.5);
@@ -119,12 +128,13 @@ export class UpgradeScene extends Phaser.Scene {
    * Crée les cartes d'upgrade
    */
   private createCards(): void {
-    const cardWidth = 220;
-    const cardHeight = 300;
-    const cardSpacing = 40;
+    // Tailles adaptées pour mobile (cartes plus petites mais plus grandes zones tactiles)
+    const cardWidth = this.isMobile ? 180 : 220;
+    const cardHeight = this.isMobile ? 260 : 300;
+    const cardSpacing = this.isMobile ? 20 : 40;
     const totalWidth = this.choices.length * cardWidth + (this.choices.length - 1) * cardSpacing;
     const startX = (GAME_WIDTH - totalWidth) / 2 + cardWidth / 2;
-    const cardY = GAME_HEIGHT / 2 + 20;
+    const cardY = this.isMobile ? GAME_HEIGHT / 2 + 40 : GAME_HEIGHT / 2 + 20;
 
     for (let i = 0; i < this.choices.length; i++) {
       const x = startX + i * (cardWidth + cardSpacing);

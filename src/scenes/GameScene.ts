@@ -14,6 +14,7 @@ import { PoolManager } from '@managers/PoolManager';
 import { TelemetryManager } from '@managers/TelemetryManager';
 import { CorpseManager } from '@managers/CorpseManager';
 import { SaveManager } from '@managers/SaveManager';
+import { InputManager } from '@managers/InputManager';
 import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
 import { ComboSystem } from '@systems/ComboSystem';
@@ -36,6 +37,9 @@ import { BossFactory } from '@entities/bosses/BossFactory';
 import { EventSystem } from '@systems/events/EventSystem';
 import { CampaignManager } from '@modes/CampaignManager';
 import { DailyChallengeManager } from '@modes/DailyChallengeManager';
+import { MobileControls } from '@ui/MobileControls';
+import { OrientationOverlay } from '@ui/OrientationOverlay';
+import { DeviceDetector } from '@utils/DeviceDetector';
 import type {
   ModeConfig,
   CampaignModeConfig,
@@ -84,6 +88,11 @@ export class GameScene extends Phaser.Scene {
   private campaignManager: CampaignManager | null = null;
   private dailyChallengeManager: DailyChallengeManager | null = null;
 
+  // Gestionnaire d'entrées et contrôles mobiles (Phase 3 Mobile)
+  private inputManager!: InputManager;
+  private mobileControls: MobileControls | null = null;
+  private orientationOverlay: OrientationOverlay | null = null;
+
   constructor() {
     super({ key: SCENE_KEYS.GAME });
   }
@@ -131,10 +140,13 @@ export class GameScene extends Phaser.Scene {
     // Créer le pool de projectiles
     this.bulletPool = new BulletPool(this);
 
-    // Créer le joueur au centre
+    // Créer le gestionnaire d'entrées (Phase 3 Mobile)
+    this.inputManager = new InputManager(this);
+
+    // Créer le joueur au centre avec l'InputManager
     const centerX = GAME_WIDTH / 2;
     const centerY = GAME_HEIGHT / 2;
-    this.player = new Player(this, centerX, centerY);
+    this.player = new Player(this, centerX, centerY, undefined, this.inputManager);
 
     // Créer le pool de projectiles acides (pour les Spitters)
     this.acidSpitPool = new AcidSpitPool(this);
@@ -172,6 +184,9 @@ export class GameScene extends Phaser.Scene {
 
     // Configurer les contrôles de pause
     this.setupPauseControls();
+
+    // Créer les contrôles mobiles si nécessaire (Phase 3 Mobile)
+    this.setupMobileControls();
 
     // Écouter l'événement de mort du joueur
     this.events.on('playerDeath', this.onPlayerDeath, this);
@@ -806,6 +821,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Récupère le gestionnaire d'entrées (Phase 3 Mobile)
+   */
+  public getInputManager(): InputManager {
+    return this.inputManager;
+  }
+
+  /**
+   * Récupère les contrôles mobiles (Phase 3 Mobile)
+   * Retourne null si on n'est pas en mode tactile
+   */
+  public getMobileControls(): MobileControls | null {
+    return this.mobileControls;
+  }
+
+  /**
    * Toggle l'affichage de debug du flow field
    * Appelé depuis DebugScene via F3
    */
@@ -1040,6 +1070,42 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Configure les contrôles mobiles (Phase 3 Mobile)
+   * Crée les joysticks et boutons tactiles si on est sur mobile
+   */
+  private setupMobileControls(): void {
+    // Créer l'overlay d'orientation pour mobile (Phase 5)
+    if (!DeviceDetector.isDesktop()) {
+      this.orientationOverlay = new OrientationOverlay(this);
+
+      // Essayer de verrouiller l'orientation en mode paysage
+      this.orientationOverlay.tryLockLandscape().then((locked) => {
+        if (locked) {
+          console.log('[GameScene] Orientation locked to landscape');
+        }
+      });
+    }
+
+    // Vérifier si on est en mode tactile
+    if (DeviceDetector.getRecommendedInputMode() !== 'touch') {
+      console.log('[GameScene] Desktop mode - skipping mobile controls');
+      return;
+    }
+
+    console.log('[GameScene] Mobile mode - creating touch controls');
+
+    // Créer les contrôles mobiles
+    this.mobileControls = new MobileControls(this, {
+      inputManager: this.inputManager,
+    });
+
+    // Enregistrer le callback pour la pause via InputManager
+    this.inputManager.onActionTriggered('pause', () => {
+      this.openPauseMenu();
+    });
+  }
+
+  /**
    * Vérifie si la touche pause est pressée (appelé dans update)
    */
   private checkPauseInput(): void {
@@ -1189,6 +1255,14 @@ export class GameScene extends Phaser.Scene {
     this.flowFieldManager?.destroy();
     this.eventSystem?.destroy();
     this.arena?.destroy();
+
+    // Nettoyer les contrôles mobiles et l'InputManager (Phase 3 Mobile)
+    this.mobileControls?.destroy();
+    this.mobileControls = null;
+    this.orientationOverlay?.destroy();
+    this.orientationOverlay = null;
+    this.inputManager?.destroy();
+
     this.events.off('miniZombieSpawned', this.onMiniZombieSpawned, this);
     this.events.off('arena:obstacleRemoved', this.onObstacleRemoved, this);
     this.events.off('playerDeath', this.onPlayerDeath, this);

@@ -1,0 +1,335 @@
+import Phaser from 'phaser';
+
+/**
+ * Configuration du joystick virtuel
+ */
+export interface VirtualJoystickConfig {
+  x: number;
+  y: number;
+  baseRadius?: number;
+  stickRadius?: number;
+  baseColor?: number;
+  stickColor?: number;
+  baseAlpha?: number;
+  stickAlpha?: number;
+  deadZone?: number;
+  fixed?: boolean;
+}
+
+/**
+ * Joystick virtuel tactile pour le contrôle du mouvement ou de la visée
+ *
+ * Caractéristiques:
+ * - Zone de capture configurable
+ * - Stick interne mobile
+ * - Zone morte centrale
+ * - Affichage semi-transparent
+ * - Peut apparaître où le pouce touche (mode dynamique)
+ */
+export class VirtualJoystick extends Phaser.GameObjects.Container {
+  private config: Required<VirtualJoystickConfig>;
+
+  // Éléments visuels
+  private base!: Phaser.GameObjects.Arc;
+  private stick!: Phaser.GameObjects.Arc;
+
+  // État
+  private isActive: boolean = false;
+  private pointerId: number = -1;
+  private baseOriginX: number;
+  private baseOriginY: number;
+
+  // Valeurs de sortie
+  private outputVector: { x: number; y: number } = { x: 0, y: 0 };
+  private outputAngle: number = 0;
+  private outputForce: number = 0;
+
+  // Callbacks
+  private onMoveCallback?: (x: number, y: number, angle: number) => void;
+  private onStartCallback?: () => void;
+  private onEndCallback?: () => void;
+
+  constructor(scene: Phaser.Scene, config: VirtualJoystickConfig) {
+    super(scene, config.x, config.y);
+
+    // Configuration par défaut
+    this.config = {
+      x: config.x,
+      y: config.y,
+      baseRadius: config.baseRadius ?? 75,
+      stickRadius: config.stickRadius ?? 30,
+      baseColor: config.baseColor ?? 0x333333,
+      stickColor: config.stickColor ?? 0x888888,
+      baseAlpha: config.baseAlpha ?? 0.5,
+      stickAlpha: config.stickAlpha ?? 0.7,
+      deadZone: config.deadZone ?? 0.15,
+      fixed: config.fixed ?? true,
+    };
+
+    this.baseOriginX = config.x;
+    this.baseOriginY = config.y;
+
+    this.createJoystick();
+    this.setupInput();
+
+    scene.add.existing(this);
+  }
+
+  /**
+   * Crée les éléments visuels du joystick
+   */
+  private createJoystick(): void {
+    const { baseRadius, stickRadius, baseColor, stickColor, baseAlpha, stickAlpha } = this.config;
+
+    // Base extérieure
+    this.base = this.scene.add.circle(0, 0, baseRadius, baseColor, baseAlpha);
+    this.base.setStrokeStyle(2, 0xffffff, 0.3);
+    this.add(this.base);
+
+    // Stick intérieur
+    this.stick = this.scene.add.circle(0, 0, stickRadius, stickColor, stickAlpha);
+    this.stick.setStrokeStyle(2, 0xffffff, 0.5);
+    this.add(this.stick);
+  }
+
+  /**
+   * Configure les entrées tactiles
+   */
+  private setupInput(): void {
+    // Rendre la base interactive
+    this.base.setInteractive({
+      hitArea: new Phaser.Geom.Circle(0, 0, this.config.baseRadius),
+      hitAreaCallback: Phaser.Geom.Circle.Contains,
+      draggable: false,
+    });
+
+    // Pointer down sur la base
+    this.base.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.isActive) return;
+
+      this.isActive = true;
+      this.pointerId = pointer.id;
+
+      // Mode dynamique: déplacer le joystick où le doigt touche
+      if (!this.config.fixed) {
+        this.setPosition(pointer.x, pointer.y);
+        this.baseOriginX = pointer.x;
+        this.baseOriginY = pointer.y;
+      }
+
+      this.updateStickPosition(pointer.x, pointer.y);
+
+      if (this.onStartCallback) {
+        this.onStartCallback();
+      }
+    });
+
+    // Pointer move global
+    this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!this.isActive || pointer.id !== this.pointerId) return;
+      this.updateStickPosition(pointer.x, pointer.y);
+    });
+
+    // Pointer up global
+    this.scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (!this.isActive || pointer.id !== this.pointerId) return;
+      this.releaseStick();
+    });
+  }
+
+  /**
+   * Met à jour la position du stick en fonction du pointeur
+   */
+  private updateStickPosition(pointerX: number, pointerY: number): void {
+    // Calculer le déplacement par rapport au centre du joystick
+    const dx = pointerX - this.baseOriginX;
+    const dy = pointerY - this.baseOriginY;
+
+    // Calculer la distance et l'angle
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+    const maxDistance = this.config.baseRadius - this.config.stickRadius / 2;
+
+    // Limiter au rayon de la base
+    const clampedDistance = Math.min(distance, maxDistance);
+
+    // Calculer la position du stick
+    const stickX = Math.cos(angle) * clampedDistance;
+    const stickY = Math.sin(angle) * clampedDistance;
+
+    // Mettre à jour la position visuelle
+    this.stick.setPosition(stickX, stickY);
+
+    // Calculer la force normalisée (0-1)
+    const normalizedForce = clampedDistance / maxDistance;
+
+    // Appliquer la zone morte
+    if (normalizedForce < this.config.deadZone) {
+      this.outputVector = { x: 0, y: 0 };
+      this.outputForce = 0;
+    } else {
+      // Remapper la force pour exclure la zone morte
+      const adjustedForce = (normalizedForce - this.config.deadZone) / (1 - this.config.deadZone);
+      this.outputVector = {
+        x: Math.cos(angle) * adjustedForce,
+        y: Math.sin(angle) * adjustedForce,
+      };
+      this.outputForce = adjustedForce;
+    }
+
+    this.outputAngle = angle;
+
+    // Appeler le callback
+    if (this.onMoveCallback) {
+      this.onMoveCallback(this.outputVector.x, this.outputVector.y, this.outputAngle);
+    }
+  }
+
+  /**
+   * Relâche le stick et le recentre
+   */
+  private releaseStick(): void {
+    this.isActive = false;
+    this.pointerId = -1;
+
+    // Animation de retour au centre
+    this.scene.tweens.add({
+      targets: this.stick,
+      x: 0,
+      y: 0,
+      duration: 100,
+      ease: 'Power2',
+    });
+
+    // Réinitialiser les valeurs
+    this.outputVector = { x: 0, y: 0 };
+    this.outputForce = 0;
+
+    // Mode dynamique: revenir à la position d'origine
+    if (!this.config.fixed) {
+      this.scene.tweens.add({
+        targets: this,
+        x: this.config.x,
+        y: this.config.y,
+        duration: 150,
+        ease: 'Power2',
+      });
+      this.baseOriginX = this.config.x;
+      this.baseOriginY = this.config.y;
+    }
+
+    if (this.onMoveCallback) {
+      this.onMoveCallback(0, 0, this.outputAngle);
+    }
+
+    if (this.onEndCallback) {
+      this.onEndCallback();
+    }
+  }
+
+  /**
+   * Définit le callback appelé lors du mouvement
+   */
+  public onMove(callback: (x: number, y: number, angle: number) => void): this {
+    this.onMoveCallback = callback;
+    return this;
+  }
+
+  /**
+   * Définit le callback appelé au début du toucher
+   */
+  public onStart(callback: () => void): this {
+    this.onStartCallback = callback;
+    return this;
+  }
+
+  /**
+   * Définit le callback appelé à la fin du toucher
+   */
+  public onEnd(callback: () => void): this {
+    this.onEndCallback = callback;
+    return this;
+  }
+
+  /**
+   * Retourne le vecteur de mouvement normalisé
+   */
+  public getVector(): { x: number; y: number } {
+    return { ...this.outputVector };
+  }
+
+  /**
+   * Retourne l'angle en radians
+   */
+  public getAngle(): number {
+    return this.outputAngle;
+  }
+
+  /**
+   * Retourne la force (0-1)
+   */
+  public getForce(): number {
+    return this.outputForce;
+  }
+
+  /**
+   * Vérifie si le joystick est actuellement utilisé
+   */
+  public isPressed(): boolean {
+    return this.isActive;
+  }
+
+  /**
+   * Change la visibilité avec animation
+   */
+  public setVisibility(visible: boolean, animate: boolean = true): void {
+    if (animate) {
+      this.scene.tweens.add({
+        targets: this,
+        alpha: visible ? 1 : 0,
+        duration: 200,
+        ease: 'Power2',
+      });
+    } else {
+      this.setAlpha(visible ? 1 : 0);
+    }
+  }
+
+  /**
+   * Redimensionne le joystick
+   */
+  public resize(baseRadius: number, stickRadius: number): void {
+    this.config.baseRadius = baseRadius;
+    this.config.stickRadius = stickRadius;
+
+    this.base.setRadius(baseRadius);
+    this.stick.setRadius(stickRadius);
+
+    // Recréer la zone interactive
+    this.base.setInteractive({
+      hitArea: new Phaser.Geom.Circle(0, 0, baseRadius),
+      hitAreaCallback: Phaser.Geom.Circle.Contains,
+      draggable: false,
+    });
+  }
+
+  /**
+   * Définit la position d'origine (pour le mode dynamique)
+   */
+  public setOrigin(x: number, y: number): void {
+    this.config.x = x;
+    this.config.y = y;
+    this.baseOriginX = x;
+    this.baseOriginY = y;
+    this.setPosition(x, y);
+  }
+
+  /**
+   * Nettoyage
+   */
+  public destroy(fromScene?: boolean): void {
+    this.scene.input.off('pointermove');
+    this.scene.input.off('pointerup');
+    super.destroy(fromScene);
+  }
+}
