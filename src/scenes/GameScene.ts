@@ -516,6 +516,9 @@ export class GameScene extends Phaser.Scene {
     // Vérifier les interactions joueur (touche E)
     this.checkPlayerInteraction();
 
+    // Vérifier les inputs pour les objets actifs (touche F/Tab)
+    this.checkItemInput();
+
     // Mettre à jour les pools de projectiles
     this.bulletPool.update();
     this.acidSpitPool.update();
@@ -1049,6 +1052,41 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Vérifie les inputs pour les objets actifs (touche F pour utiliser, Tab pour cycler)
+   */
+  private checkItemInput(): void {
+    // Utiliser l'item équipé (touche F)
+    if (this.inputManager.isActionJustPressed('useItem')) {
+      const success = this.activeItemSystem.useEquippedItem();
+      if (success) {
+        // Feedback visuel
+        this.createItemUseFeedback();
+      }
+    }
+
+    // Cycler vers l'item suivant (touche Tab)
+    if (this.inputManager.isActionJustPressed('itemNext')) {
+      this.activeItemSystem.cycleEquipped(1);
+    }
+  }
+
+  /**
+   * Crée un feedback visuel pour l'utilisation d'un item
+   */
+  private createItemUseFeedback(): void {
+    const feedback = this.add.circle(this.player.x, this.player.y, 30, 0x8844aa, 0.4);
+    feedback.setDepth(100);
+
+    this.tweens.add({
+      targets: feedback,
+      scale: 2,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => feedback.destroy(),
+    });
+  }
+
+  /**
    * Gère la suppression d'un obstacle (cover détruit)
    * Met à jour le pathfinder et le flow field pour que les zombies puissent passer
    */
@@ -1099,9 +1137,33 @@ export class GameScene extends Phaser.Scene {
       inputManager: this.inputManager,
     });
 
+    // Mettre à jour l'affichage de l'arme quand elle change
+    this.events.on('weaponChanged', (_index: number, weapon: { getName: () => string }) => {
+      if (this.mobileControls && weapon) {
+        this.mobileControls.setCurrentWeapon(weapon.getName());
+      }
+    });
+
+    // Initialiser avec l'arme actuelle
+    if (this.player?.currentWeapon) {
+      this.mobileControls.setCurrentWeapon(this.player.currentWeapon.getName());
+    }
+
     // Enregistrer le callback pour la pause via InputManager
     this.inputManager.onActionTriggered('pause', () => {
       this.openPauseMenu();
+    });
+
+    // Enregistrer les callbacks pour les objets actifs
+    this.inputManager.onActionTriggered('useItem', () => {
+      const success = this.activeItemSystem.useEquippedItem();
+      if (success) {
+        this.createItemUseFeedback();
+      }
+    });
+
+    this.inputManager.onActionTriggered('itemNext', () => {
+      this.activeItemSystem.cycleEquipped(1);
     });
   }
 

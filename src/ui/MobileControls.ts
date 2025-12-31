@@ -50,9 +50,15 @@ export class MobileControls extends Phaser.GameObjects.Container {
   private dashButton!: TouchButton;
   private reloadButton!: TouchButton;
   private abilityButton!: TouchButton;
+  private interactButton!: TouchButton;
+  private useItemButton!: TouchButton;
+  private itemNextButton!: TouchButton;
   private weaponNextButton!: TouchButton;
   private weaponPrevButton!: TouchButton;
   private pauseButton!: TouchButton;
+
+  // Affichage de l'arme actuelle
+  private weaponNameText!: Phaser.GameObjects.Text;
 
   // État
   private isVisible: boolean = true;
@@ -194,6 +200,36 @@ export class MobileControls extends Phaser.GameObjects.Container {
       showCooldown: true,
     });
 
+    // ========== BOUTON INTERACT (au-dessus du bouton ability) ==========
+    this.interactButton = new TouchButton(this.scene, {
+      x: width - margin - joystickSize * 2 - buttonSize - margin / 2,
+      y: height - margin - joystickSize - buttonSize * 2 - margin / 2,
+      radius: buttonSize * 0.85,
+      icon: '👆',
+      iconSize: 22,
+      color: 0x8844aa,
+    });
+
+    // ========== BOUTON UTILISER ITEM (au-dessus du bouton reload) ==========
+    this.useItemButton = new TouchButton(this.scene, {
+      x: width - margin - joystickSize,
+      y: height - margin - joystickSize * 2 - buttonSize * 2.5,
+      radius: buttonSize * 0.85,
+      icon: '📦',
+      iconSize: 22,
+      color: 0xaa8844,
+    });
+
+    // ========== BOUTON CYCLER ITEM (à côté du bouton utiliser) ==========
+    this.itemNextButton = new TouchButton(this.scene, {
+      x: width - margin - joystickSize - buttonSize * 2,
+      y: height - margin - joystickSize * 2 - buttonSize * 2.5,
+      radius: buttonSize * 0.7,
+      icon: '↻',
+      iconSize: 18,
+      color: 0x666688,
+    });
+
     // ========== BOUTONS ARME (haut droite) ==========
     this.weaponNextButton = new TouchButton(this.scene, {
       x: width - margin - buttonSize,
@@ -212,6 +248,21 @@ export class MobileControls extends Phaser.GameObjects.Container {
       iconSize: 18,
       color: 0x666666,
     });
+
+    // ========== AFFICHAGE NOM DE L'ARME (entre les boutons +/-) ==========
+    this.weaponNameText = this.scene.add.text(
+      width - margin - buttonSize * 2.5,
+      margin + buttonSize * 1.75,
+      '',
+      {
+        fontSize: '14px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+        align: 'right',
+      }
+    );
+    this.weaponNameText.setOrigin(1, 0.5);
+    this.weaponNameText.setDepth(1000);
 
     // ========== BOUTON PAUSE (haut gauche) ==========
     this.pauseButton = new TouchButton(this.scene, {
@@ -270,6 +321,18 @@ export class MobileControls extends Phaser.GameObjects.Container {
       this.inputManager.setTouchAction('ability', false);
     });
 
+    this.interactButton.onPress(() => {
+      this.inputManager.triggerAction('interact');
+    });
+
+    this.useItemButton.onPress(() => {
+      this.inputManager.triggerAction('useItem');
+    });
+
+    this.itemNextButton.onPress(() => {
+      this.inputManager.triggerAction('itemNext');
+    });
+
     this.weaponNextButton.onPress(() => {
       this.inputManager.triggerAction('weaponNext');
     });
@@ -303,6 +366,9 @@ export class MobileControls extends Phaser.GameObjects.Container {
       this.dashButton,
       this.reloadButton,
       this.abilityButton,
+      this.interactButton,
+      this.useItemButton,
+      this.itemNextButton,
       this.weaponNextButton,
       this.weaponPrevButton,
       this.pauseButton,
@@ -456,9 +522,29 @@ export class MobileControls extends Phaser.GameObjects.Container {
       height - margin - joystickSize
     );
 
+    this.interactButton.setPosition(
+      width - margin - joystickSize * 2 - buttonSize - margin / 2,
+      height - margin - joystickSize - buttonSize * 2 - margin / 2
+    );
+
+    this.useItemButton.setPosition(
+      width - margin - joystickSize,
+      height - margin - joystickSize * 2 - buttonSize * 2.5
+    );
+
+    this.itemNextButton.setPosition(
+      width - margin - joystickSize - buttonSize * 2,
+      height - margin - joystickSize * 2 - buttonSize * 2.5
+    );
+
     this.weaponNextButton.setPosition(width - margin - buttonSize, margin + buttonSize);
 
     this.weaponPrevButton.setPosition(width - margin - buttonSize, margin + buttonSize * 2.5);
+
+    this.weaponNameText.setPosition(
+      width - margin - buttonSize * 2.5,
+      margin + buttonSize * 1.75
+    );
 
     this.pauseButton.setPosition(margin + buttonSize, margin + buttonSize);
   }
@@ -483,10 +569,12 @@ export class MobileControls extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Met à jour l'affichage de l'arme actuelle (optionnel)
+   * Met à jour l'affichage de l'arme actuelle
    */
-  public setCurrentWeapon(_weaponIndex: number): void {
-    // Pourrait mettre à jour l'affichage entre les boutons d'arme
+  public setCurrentWeapon(weaponName: string): void {
+    if (this.weaponNameText) {
+      this.weaponNameText.setText(weaponName);
+    }
   }
 
   /**
@@ -501,10 +589,16 @@ export class MobileControls extends Phaser.GameObjects.Container {
       this.dashButton,
       this.reloadButton,
       this.abilityButton,
+      this.interactButton,
+      this.useItemButton,
+      this.itemNextButton,
       this.weaponNextButton,
       this.weaponPrevButton,
       this.pauseButton,
     ];
+
+    // Gérer la visibilité du texte d'arme séparément
+    this.weaponNameText.setVisible(show);
 
     elements.forEach((element) => {
       if (element.setVisibility) {
@@ -571,6 +665,9 @@ export class MobileControls extends Phaser.GameObjects.Container {
     this.dashButton.resize(baseButtonSize);
     this.reloadButton.resize(baseButtonSize * 0.85);
     this.abilityButton.resize(baseButtonSize);
+    this.interactButton.resize(baseButtonSize * 0.85);
+    this.useItemButton.resize(baseButtonSize * 0.85);
+    this.itemNextButton.resize(baseButtonSize * 0.7);
     this.weaponNextButton.resize(baseButtonSize * 0.7);
     this.weaponPrevButton.resize(baseButtonSize * 0.7);
     this.pauseButton.resize(baseButtonSize * 0.8);
@@ -607,9 +704,13 @@ export class MobileControls extends Phaser.GameObjects.Container {
     this.dashButton.destroy();
     this.reloadButton.destroy();
     this.abilityButton.destroy();
+    this.interactButton.destroy();
+    this.useItemButton.destroy();
+    this.itemNextButton.destroy();
     this.weaponNextButton.destroy();
     this.weaponPrevButton.destroy();
     this.pauseButton.destroy();
+    this.weaponNameText.destroy();
 
     super.destroy(fromScene);
   }

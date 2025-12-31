@@ -51,8 +51,9 @@ Couche d'abstraction qui unifie les inputs desktop et mobile. Le code du jeu n'a
 | `triggerAction(action)` | Déclenche manuellement une action |
 
 **Actions supportées:**
-- `shoot`, `dash`, `reload`, `ability`
-- `interact`, `pause`
+- `shoot`, `dash`, `reload`, `ability`, `interact`
+- `useItem`, `itemNext` (objets actifs)
+- `pause`
 - `weapon1` à `weapon4`, `weaponNext`, `weaponPrev`
 
 **Détection automatique du mode:**
@@ -69,16 +70,20 @@ Conteneur principal des contrôles tactiles. Gère le dispatch centralisé des �
 **Layout visuel:**
 ```
 ┌────────────────────────────────────────────────┐
-│ [Pause]                          [Arme +]      │
+│ [Pause]               [Nom arme] [Arme +]      │
 │                                  [Arme -]      │
 │                                                │
-│                                                │
-│                                                │
+│                          [↻Item] [📦Use]       │
+│                                  [Interact]    │
 │ [Dash]                    [Ability] [Reload]   │
 │    ◯ Joystick              ◯ Joystick          │
 │    Mouvement                 Visée             │
 └────────────────────────────────────────────────┘
 ```
+
+**Contrôles objets actifs:**
+- Desktop: `F` = Utiliser l'item équipé, `Tab` = Cycler vers l'item suivant
+- Mobile: Boutons 📦 (utiliser) et ↻ (cycler)
 
 **Zones de capture:**
 
@@ -281,6 +286,14 @@ class GameScene extends Phaser.Scene {
 
     if (this.inputManager.isActionPressed('shoot')) {
       this.player.shoot();
+    }
+
+    // Objets actifs (mines, drones, etc.)
+    if (this.inputManager.isActionJustPressed('useItem')) {
+      this.activeItemSystem.useEquippedItem();
+    }
+    if (this.inputManager.isActionJustPressed('itemNext')) {
+      this.activeItemSystem.cycleEquipped(1);
     }
   }
 }

@@ -10,6 +10,8 @@ export type InputAction =
   | 'reload'
   | 'ability'
   | 'interact'
+  | 'useItem'
+  | 'itemNext'
   | 'weapon1'
   | 'weapon2'
   | 'weapon3'
@@ -51,6 +53,8 @@ export class InputManager {
   private reloadKey: Phaser.Input.Keyboard.Key | null = null;
   private abilityKey: Phaser.Input.Keyboard.Key | null = null;
   private interactKey: Phaser.Input.Keyboard.Key | null = null;
+  private useItemKey: Phaser.Input.Keyboard.Key | null = null;
+  private itemNextKey: Phaser.Input.Keyboard.Key | null = null;
   private pauseKeys: Phaser.Input.Keyboard.Key[] = [];
   private weaponKeys: Phaser.Input.Keyboard.Key[] = [];
 
@@ -76,6 +80,7 @@ export class InputManager {
     // Initialiser les actions tactiles à false
     const actions: InputAction[] = [
       'shoot', 'dash', 'reload', 'ability', 'interact',
+      'useItem', 'itemNext',
       'weapon1', 'weapon2', 'weapon3', 'weapon4',
       'weaponNext', 'weaponPrev', 'pause'
     ];
@@ -102,6 +107,15 @@ export class InputManager {
     this.reloadKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.abilityKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.interactKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    this.useItemKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    this.itemNextKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+
+    // Empêcher Tab de changer le focus du navigateur
+    if (this.itemNextKey) {
+      this.itemNextKey.on('down', (event: KeyboardEvent) => {
+        event.preventDefault();
+      });
+    }
 
     // Touches de pause
     this.pauseKeys = [
@@ -255,6 +269,10 @@ export class InputManager {
         return this.abilityKey?.isDown || false;
       case 'interact':
         return this.interactKey?.isDown || false;
+      case 'useItem':
+        return this.useItemKey?.isDown || false;
+      case 'itemNext':
+        return this.itemNextKey?.isDown || false;
       case 'pause':
         return this.pauseKeys.some(key => key.isDown);
       case 'weapon1':
@@ -289,6 +307,10 @@ export class InputManager {
         return this.abilityKey ? Phaser.Input.Keyboard.JustDown(this.abilityKey) : false;
       case 'interact':
         return this.interactKey ? Phaser.Input.Keyboard.JustDown(this.interactKey) : false;
+      case 'useItem':
+        return this.useItemKey ? Phaser.Input.Keyboard.JustDown(this.useItemKey) : false;
+      case 'itemNext':
+        return this.itemNextKey ? Phaser.Input.Keyboard.JustDown(this.itemNextKey) : false;
       case 'pause':
         return this.pauseKeys.some(key => Phaser.Input.Keyboard.JustDown(key));
       case 'weapon1':

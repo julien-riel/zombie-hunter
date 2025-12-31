@@ -20,7 +20,6 @@ interface ActiveItemSlot {
   background: Phaser.GameObjects.Rectangle;
   icon: Phaser.GameObjects.Graphics;
   chargesText: Phaser.GameObjects.Text;
-  keyText: Phaser.GameObjects.Text;
   selectionBorder: Phaser.GameObjects.Rectangle;
 }
 
@@ -64,7 +63,7 @@ export class ActiveItemDisplay extends Phaser.GameObjects.Container {
    * Crée le titre de la section
    */
   private createTitle(): void {
-    const title = this.scene.add.text(0, -20, 'OBJETS ACTIFS', {
+    const title = this.scene.add.text(0, -20, 'OBJETS [F=Utiliser, Tab=Cycler]', {
       fontSize: '10px',
       color: '#888888',
     });
@@ -125,14 +124,8 @@ export class ActiveItemDisplay extends Phaser.GameObjects.Container {
     );
     chargesText.setOrigin(1, 1);
 
-    // Texte du raccourci clavier
-    const keyText = this.scene.add.text(3, 3, `${index + 1}`, {
-      fontSize: '8px',
-      color: '#666666',
-    });
-
     // Ajouter tous les éléments au container
-    container.add([background, selectionBorder, icon, chargesText, keyText]);
+    container.add([background, selectionBorder, icon, chargesText]);
 
     // Cacher initialement
     container.setVisible(false);
@@ -146,7 +139,6 @@ export class ActiveItemDisplay extends Phaser.GameObjects.Container {
       background,
       icon,
       chargesText,
-      keyText,
       selectionBorder,
     });
   }
