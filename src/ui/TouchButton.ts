@@ -108,31 +108,35 @@ export class TouchButton extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Configure les entrées tactiles
+   * Configure les entrées tactiles (non utilisé - géré par MobileControls)
    */
   private setupInput(): void {
-    this.background.setInteractive({
-      hitArea: new Phaser.Geom.Circle(0, 0, this.config.radius),
-      hitAreaCallback: Phaser.Geom.Circle.Contains,
-    });
+    // Note: Les touch events sont gérés par MobileControls pour éviter les conflits sur iOS
+  }
 
-    // Pointer down
-    this.background.on('pointerdown', () => {
-      if (this.isOnCooldown) return;
-      this.press();
-    });
+  /**
+   * Vérifie si un point est dans le bouton
+   */
+  public containsPoint(x: number, y: number): boolean {
+    const dx = x - this.x;
+    const dy = y - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance <= this.config.radius;
+  }
 
-    // Pointer up
-    this.background.on('pointerup', () => {
-      this.release();
-    });
+  /**
+   * Active le bouton (appelé par MobileControls)
+   */
+  public activate(): void {
+    if (this.isOnCooldown) return;
+    this.press();
+  }
 
-    // Pointer out (quand le doigt quitte le bouton)
-    this.background.on('pointerout', () => {
-      if (this.isPressed) {
-        this.release();
-      }
-    });
+  /**
+   * Désactive le bouton (appelé par MobileControls)
+   */
+  public deactivate(): void {
+    this.release();
   }
 
   /**
@@ -345,6 +349,13 @@ export class TouchButton extends Phaser.GameObjects.Container {
    */
   public getIsOnCooldown(): boolean {
     return this.isOnCooldown;
+  }
+
+  /**
+   * Retourne le rayon du bouton
+   */
+  public getRadius(): number {
+    return this.config.radius;
   }
 
   /**

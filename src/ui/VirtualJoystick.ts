@@ -37,8 +37,7 @@ export class VirtualJoystick extends Phaser.GameObjects.Container {
 
   // État
   private isActive: boolean = false;
-  private pointerId: number = -1;
-  private touchIdentifier: number = -1; // Pour iOS touch events
+  private touchIdentifier: number = -1;
   private baseOriginX: number;
   private baseOriginY: number;
 
@@ -74,8 +73,7 @@ export class VirtualJoystick extends Phaser.GameObjects.Container {
     this.baseOriginY = config.y;
 
     this.createJoystick();
-    this.setupInput();
-    this.setupTouchEvents(); // Support iOS natif
+    // Note: Les touch events sont gérés par MobileControls pour éviter les conflits
 
     scene.add.existing(this);
   }
@@ -98,155 +96,49 @@ export class VirtualJoystick extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Configure les entrées tactiles via Phaser
+   * Active le joystick à une position donnée (appelé par MobileControls)
    */
-  private setupInput(): void {
-    // Rendre la base interactive
-    this.base.setInteractive({
-      hitArea: new Phaser.Geom.Circle(0, 0, this.config.baseRadius),
-      hitAreaCallback: Phaser.Geom.Circle.Contains,
-      draggable: false,
-    });
+  public activate(x: number, y: number, touchId: number): void {
+    if (this.isActive) return;
 
-    // Handler commun pour pointer down
-    const handlePointerDown = (pointer: Phaser.Input.Pointer) => {
-      if (this.isActive) return;
+    this.isActive = true;
+    this.touchIdentifier = touchId;
 
-      this.isActive = true;
-      this.pointerId = pointer.id;
+    // Mode dynamique: déplacer le joystick où le doigt touche
+    if (!this.config.fixed) {
+      this.setPosition(x, y);
+      this.baseOriginX = x;
+      this.baseOriginY = y;
+    }
 
-      // Mode dynamique: déplacer le joystick où le doigt touche
-      if (!this.config.fixed) {
-        this.setPosition(pointer.x, pointer.y);
-        this.baseOriginX = pointer.x;
-        this.baseOriginY = pointer.y;
-      }
+    this.updateStickPosition(x, y);
 
-      this.updateStickPosition(pointer.x, pointer.y);
-
-      if (this.onStartCallback) {
-        this.onStartCallback();
-      }
-    };
-
-    // Pointer down sur la base (pour desktop/souris)
-    this.base.on('pointerdown', handlePointerDown);
-
-    // Pointer move global
-    this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (!this.isActive || pointer.id !== this.pointerId) return;
-      this.updateStickPosition(pointer.x, pointer.y);
-    });
-
-    // Pointer up global
-    this.scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-      if (!this.isActive || pointer.id !== this.pointerId) return;
-      this.releaseStick();
-    });
+    if (this.onStartCallback) {
+      this.onStartCallback();
+    }
   }
 
   /**
-   * Configure les événements touch natifs pour iOS
-   * iOS Safari gère mieux les événements touch natifs que les pointer events
+   * Met à jour la position du joystick (appelé par MobileControls lors du touchmove)
    */
-  private setupTouchEvents(): void {
-    const canvas = this.scene.game.canvas;
-    if (!canvas) return;
+  public handleMove(x: number, y: number, touchId: number): void {
+    if (!this.isActive || this.touchIdentifier !== touchId) return;
+    this.updateStickPosition(x, y);
+  }
 
-    // Vérifier si on a une zone de capture pour le mode dynamique
-    const zone = this.config.captureZone;
+  /**
+   * Désactive le joystick (appelé par MobileControls lors du touchend)
+   */
+  public deactivate(touchId: number): void {
+    if (!this.isActive || this.touchIdentifier !== touchId) return;
+    this.releaseStick();
+  }
 
-    const handleTouchStart = (e: TouchEvent) => {
-      if (this.isActive) return;
-
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const x = (touch.clientX - rect.left) * scaleX;
-        const y = (touch.clientY - rect.top) * scaleY;
-
-        // Vérifier si le touch est dans notre zone
-        let isInZone = false;
-
-        if (zone && !this.config.fixed) {
-          // Mode dynamique avec zone de capture
-          isInZone = x >= zone.x && x <= zone.x + zone.width &&
-                     y >= zone.y && y <= zone.y + zone.height;
-        } else {
-          // Mode fixe - vérifier si dans le cercle de base
-          const dx = x - this.baseOriginX;
-          const dy = y - this.baseOriginY;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          isInZone = distance <= this.config.baseRadius;
-        }
-
-        if (isInZone) {
-          this.isActive = true;
-          this.touchIdentifier = touch.identifier;
-          this.pointerId = -1; // Invalider le pointerId Phaser
-
-          // Mode dynamique: déplacer le joystick
-          if (!this.config.fixed) {
-            this.setPosition(x, y);
-            this.baseOriginX = x;
-            this.baseOriginY = y;
-          }
-
-          this.updateStickPosition(x, y);
-
-          if (this.onStartCallback) {
-            this.onStartCallback();
-          }
-
-          e.preventDefault();
-          break;
-        }
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!this.isActive || this.touchIdentifier === -1) return;
-
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === this.touchIdentifier) {
-          const rect = canvas.getBoundingClientRect();
-          const scaleX = canvas.width / rect.width;
-          const scaleY = canvas.height / rect.height;
-          const x = (touch.clientX - rect.left) * scaleX;
-          const y = (touch.clientY - rect.top) * scaleY;
-
-          this.updateStickPosition(x, y);
-          e.preventDefault();
-          break;
-        }
-      }
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (!this.isActive || this.touchIdentifier === -1) return;
-
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === this.touchIdentifier) {
-          this.releaseStick();
-          e.preventDefault();
-          break;
-        }
-      }
-    };
-
-    // Stocker les références pour pouvoir les supprimer
-    (this as any)._touchStartHandler = handleTouchStart;
-    (this as any)._touchMoveHandler = handleTouchMove;
-    (this as any)._touchEndHandler = handleTouchEnd;
-
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-    canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+  /**
+   * Retourne le touchIdentifier actif
+   */
+  public getTouchIdentifier(): number {
+    return this.touchIdentifier;
   }
 
   /**
@@ -302,7 +194,6 @@ export class VirtualJoystick extends Phaser.GameObjects.Container {
    */
   private releaseStick(): void {
     this.isActive = false;
-    this.pointerId = -1;
     this.touchIdentifier = -1;
 
     // Animation de retour au centre
@@ -448,24 +339,6 @@ export class VirtualJoystick extends Phaser.GameObjects.Container {
    * Nettoyage
    */
   public destroy(fromScene?: boolean): void {
-    this.scene.input.off('pointermove');
-    this.scene.input.off('pointerup');
-
-    // Supprimer les event listeners touch natifs
-    const canvas = this.scene.game.canvas;
-    if (canvas) {
-      if ((this as any)._touchStartHandler) {
-        canvas.removeEventListener('touchstart', (this as any)._touchStartHandler);
-      }
-      if ((this as any)._touchMoveHandler) {
-        canvas.removeEventListener('touchmove', (this as any)._touchMoveHandler);
-      }
-      if ((this as any)._touchEndHandler) {
-        canvas.removeEventListener('touchend', (this as any)._touchEndHandler);
-        canvas.removeEventListener('touchcancel', (this as any)._touchEndHandler);
-      }
-    }
-
     super.destroy(fromScene);
   }
 }

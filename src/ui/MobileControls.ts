@@ -58,6 +58,14 @@ export class MobileControls extends Phaser.GameObjects.Container {
   private isVisible: boolean = true;
   private isShooting: boolean = false;
 
+  // Tracking des touches actives
+  private activeTouches: Map<number, { element: 'moveJoystick' | 'aimJoystick' | 'button'; button?: TouchButton }> = new Map();
+
+  // Handlers pour cleanup
+  private touchStartHandler?: (e: TouchEvent) => void;
+  private touchMoveHandler?: (e: TouchEvent) => void;
+  private touchEndHandler?: (e: TouchEvent) => void;
+
   constructor(scene: Phaser.Scene, config: MobileControlsConfig) {
     super(scene, 0, 0);
 
@@ -84,6 +92,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
     this.createControls();
     this.setupConnections();
     this.setupResizeHandler();
+    this.setupTouchHandler();
 
     scene.add.existing(this);
 
@@ -282,6 +291,137 @@ export class MobileControls extends Phaser.GameObjects.Container {
   }
 
   /**
+   * Configure le gestionnaire d'événements tactiles centralisé
+   * Gère tous les touch events et les distribue aux bons éléments
+   */
+  private setupTouchHandler(): void {
+    const canvas = this.scene.game.canvas;
+    if (!canvas) return;
+
+    // Liste de tous les boutons pour la détection
+    const buttons = [
+      this.dashButton,
+      this.reloadButton,
+      this.abilityButton,
+      this.weaponNextButton,
+      this.weaponPrevButton,
+      this.pauseButton,
+    ];
+
+    /**
+     * Convertit les coordonnées touch en coordonnées canvas
+     */
+    const getTouchCoords = (touch: Touch): { x: number; y: number } => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY,
+      };
+    };
+
+    /**
+     * Vérifie si un point est dans une zone rectangulaire
+     */
+    const isInZone = (x: number, y: number, zone: { x: number; y: number; width: number; height: number }): boolean => {
+      return x >= zone.x && x <= zone.x + zone.width && y >= zone.y && y <= zone.y + zone.height;
+    };
+
+    // ========== TOUCH START ==========
+    this.touchStartHandler = (e: TouchEvent) => {
+      const zones = this.getCaptureZones();
+
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        const { x, y } = getTouchCoords(touch);
+        const touchId = touch.identifier;
+
+        // Déjà tracké?
+        if (this.activeTouches.has(touchId)) continue;
+
+        // 1. Vérifier les boutons EN PREMIER (haute priorité)
+        let buttonFound = false;
+        for (const button of buttons) {
+          if (button.containsPoint(x, y)) {
+            this.activeTouches.set(touchId, { element: 'button', button });
+            button.activate();
+            buttonFound = true;
+            e.preventDefault();
+            break;
+          }
+        }
+        if (buttonFound) continue;
+
+        // 2. Vérifier le joystick de mouvement (zone gauche)
+        if (isInZone(x, y, zones.left) && !this.moveJoystick.isPressed()) {
+          this.activeTouches.set(touchId, { element: 'moveJoystick' });
+          this.moveJoystick.activate(x, y, touchId);
+          e.preventDefault();
+          continue;
+        }
+
+        // 3. Vérifier le joystick de visée (zone droite)
+        if (isInZone(x, y, zones.right) && !this.aimJoystick.isPressed()) {
+          this.activeTouches.set(touchId, { element: 'aimJoystick' });
+          this.aimJoystick.activate(x, y, touchId);
+          e.preventDefault();
+          continue;
+        }
+      }
+    };
+
+    // ========== TOUCH MOVE ==========
+    this.touchMoveHandler = (e: TouchEvent) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        const { x, y } = getTouchCoords(touch);
+        const touchId = touch.identifier;
+
+        const tracked = this.activeTouches.get(touchId);
+        if (!tracked) continue;
+
+        if (tracked.element === 'moveJoystick') {
+          this.moveJoystick.handleMove(x, y, touchId);
+          e.preventDefault();
+        } else if (tracked.element === 'aimJoystick') {
+          this.aimJoystick.handleMove(x, y, touchId);
+          e.preventDefault();
+        }
+        // Les boutons n'ont pas besoin de tracking du mouvement
+      }
+    };
+
+    // ========== TOUCH END / CANCEL ==========
+    this.touchEndHandler = (e: TouchEvent) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        const touchId = touch.identifier;
+
+        const tracked = this.activeTouches.get(touchId);
+        if (!tracked) continue;
+
+        if (tracked.element === 'moveJoystick') {
+          this.moveJoystick.deactivate(touchId);
+        } else if (tracked.element === 'aimJoystick') {
+          this.aimJoystick.deactivate(touchId);
+        } else if (tracked.element === 'button' && tracked.button) {
+          tracked.button.deactivate();
+        }
+
+        this.activeTouches.delete(touchId);
+        e.preventDefault();
+      }
+    };
+
+    // Ajouter les listeners
+    canvas.addEventListener('touchstart', this.touchStartHandler, { passive: false });
+    canvas.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
+    canvas.addEventListener('touchend', this.touchEndHandler, { passive: false });
+    canvas.addEventListener('touchcancel', this.touchEndHandler, { passive: false });
+  }
+
+  /**
    * Gère le redimensionnement de l'écran
    */
   private handleResize(gameSize: Phaser.Structs.Size): void {
@@ -444,6 +584,23 @@ export class MobileControls extends Phaser.GameObjects.Container {
    */
   public destroy(fromScene?: boolean): void {
     this.scene.scale.off('resize', this.handleResize, this);
+
+    // Supprimer les touch event listeners
+    const canvas = this.scene.game.canvas;
+    if (canvas) {
+      if (this.touchStartHandler) {
+        canvas.removeEventListener('touchstart', this.touchStartHandler);
+      }
+      if (this.touchMoveHandler) {
+        canvas.removeEventListener('touchmove', this.touchMoveHandler);
+      }
+      if (this.touchEndHandler) {
+        canvas.removeEventListener('touchend', this.touchEndHandler);
+        canvas.removeEventListener('touchcancel', this.touchEndHandler);
+      }
+    }
+
+    this.activeTouches.clear();
 
     this.moveJoystick.destroy();
     this.aimJoystick.destroy();
