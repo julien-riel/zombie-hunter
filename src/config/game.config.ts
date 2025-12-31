@@ -17,6 +17,23 @@ import {
 } from '@scenes/index';
 
 /**
+ * Détermine le meilleur mode de scale en fonction de l'écran
+ * - Si l'écran est plus large que le ratio du jeu (16:9) → HEIGHT_CONTROLS_WIDTH
+ * - Sinon → FIT pour ne pas déborder
+ */
+function getOptimalScaleMode(): Phaser.Scale.ScaleModeType {
+  const gameRatio = 1280 / 720; // ~1.78 (16:9)
+  const screenRatio = window.innerWidth / window.innerHeight;
+
+  // Si l'écran est plus large que le jeu, on peut utiliser HEIGHT_CONTROLS_WIDTH
+  // Sinon on utilise FIT pour ne pas déborder horizontalement
+  if (screenRatio >= gameRatio) {
+    return Phaser.Scale.HEIGHT_CONTROLS_WIDTH;
+  }
+  return Phaser.Scale.FIT;
+}
+
+/**
  * Configuration principale du jeu Phaser
  */
 export const gameConfig: Phaser.Types.Core.GameConfig = {
@@ -33,8 +50,8 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     },
   },
   scale: {
-    mode: Phaser.Scale.HEIGHT_CONTROLS_WIDTH,
-    autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
+    mode: getOptimalScaleMode(),
+    autoCenter: Phaser.Scale.CENTER_BOTH,
     min: {
       width: 320,
       height: 480,
