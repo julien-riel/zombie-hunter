@@ -15,32 +15,23 @@ import {
   ProgressionScene,
   DebugScene,
 } from '@scenes/index';
-
-/**
- * Détermine le meilleur mode de scale en fonction de l'écran
- * - Si l'écran est plus large que le ratio du jeu (16:9) → HEIGHT_CONTROLS_WIDTH
- * - Sinon → FIT pour ne pas déborder
- */
-function getOptimalScaleMode(): Phaser.Scale.ScaleModeType {
-  const gameRatio = 1280 / 720; // ~1.78 (16:9)
-  const screenRatio = window.innerWidth / window.innerHeight;
-
-  // Si l'écran est plus large que le jeu, on peut utiliser HEIGHT_CONTROLS_WIDTH
-  // Sinon on utilise FIT pour ne pas déborder horizontalement
-  if (screenRatio >= gameRatio) {
-    return Phaser.Scale.HEIGHT_CONTROLS_WIDTH;
-  }
-  return Phaser.Scale.FIT;
-}
+import { GAME_WIDTH, GAME_HEIGHT } from './constants';
 
 /**
  * Configuration principale du jeu Phaser
+ *
+ * Stratégie de scaling:
+ * - Le jeu a un ratio fixe de 16:9 (1280x720)
+ * - Mode FIT: s'adapte à l'écran sans jamais déborder
+ * - Sur écrans plus larges (iPhone paysage): hauteur 100%, bandes noires sur les côtés
+ * - Sur écrans plus étroits: largeur 100%, bandes noires en haut/bas
+ * - Toujours centré
  */
 export const gameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: 1280,
-  height: 720,
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
   backgroundColor: '#1a1a2e',
   physics: {
     default: 'arcade',
@@ -50,16 +41,8 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     },
   },
   scale: {
-    mode: getOptimalScaleMode(),
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    min: {
-      width: 320,
-      height: 480,
-    },
-    max: {
-      width: 1920,
-      height: 1080,
-    },
   },
   input: {
     activePointers: 3, // Support multi-touch (2 joysticks + 1 bouton)
