@@ -164,4 +164,64 @@ export const DeviceDetector = {
       screen.orientation.unlock();
     }
   },
+
+  /**
+   * Vérifie si on est sur iOS (iPhone, iPad, iPod)
+   */
+  isIOS(): boolean {
+    const userAgent = navigator.userAgent || '';
+    return (
+      /iPad|iPhone|iPod/.test(userAgent) ||
+      // iPad avec iOS 13+ se présente comme Mac
+      (/Macintosh/i.test(userAgent) && this.hasTouchSupport())
+    );
+  },
+
+  /**
+   * Vérifie si on est sur Safari
+   */
+  isSafari(): boolean {
+    const userAgent = navigator.userAgent || '';
+    return /Safari/i.test(userAgent) && !/Chrome|CriOS|FxiOS/i.test(userAgent);
+  },
+
+  /**
+   * Vérifie si on est sur Safari iOS (ne supporte pas l'API Fullscreen)
+   */
+  isIOSSafari(): boolean {
+    return this.isIOS() && this.isSafari();
+  },
+
+  /**
+   * Vérifie si le navigateur supporte l'API Fullscreen
+   */
+  supportsFullscreen(): boolean {
+    const doc = document.documentElement;
+    return !!(
+      doc.requestFullscreen ||
+      // @ts-expect-error - webkit prefix
+      doc.webkitRequestFullscreen ||
+      // @ts-expect-error - moz prefix
+      doc.mozRequestFullScreen ||
+      // @ts-expect-error - ms prefix
+      doc.msRequestFullscreen
+    );
+  },
+
+  /**
+   * Vérifie si l'app est lancée depuis l'écran d'accueil (mode standalone)
+   * C'est la seule façon d'avoir un "plein écran" sur iOS Safari
+   */
+  isStandalone(): boolean {
+    // iOS Safari
+    // @ts-expect-error - navigator.standalone est spécifique à iOS Safari
+    if (navigator.standalone === true) {
+      return true;
+    }
+    // Chrome/Edge etc.
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      return true;
+    }
+    return false;
+  },
 };

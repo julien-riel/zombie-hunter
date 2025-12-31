@@ -301,27 +301,55 @@ export class OptionsScene extends Phaser.Scene {
     const startY = -100;
     const spacing = 70;
 
-    // Plein écran (info)
-    const fullscreenInfo = this.add.text(0, startY, 'Plein écran: F11 ou touche dédiée du navigateur', {
-      fontSize: '14px',
-      color: '#7f8c8d',
-    });
-    fullscreenInfo.setOrigin(0.5);
-    this.contentContainer.add(fullscreenInfo);
+    // Vérifier si on est sur iOS Safari (ne supporte pas l'API Fullscreen)
+    const isIOSSafari = DeviceDetector.isIOSSafari();
+    const isStandalone = DeviceDetector.isStandalone();
 
-    // Bouton plein écran
-    const fullscreenBtn = this.createActionButton(
-      0,
-      startY + 40,
-      'Basculer Plein Écran',
-      () => this.toggleFullscreen()
-    );
-    this.contentContainer.add(fullscreenBtn);
+    if (isIOSSafari && !isStandalone) {
+      // iOS Safari - Afficher les instructions pour "Ajouter à l'écran d'accueil"
+      this.createIOSFullscreenInstructions(startY);
+    } else if (isStandalone) {
+      // Mode standalone (ajouté à l'écran d'accueil)
+      const standaloneInfo = this.add.text(
+        0,
+        startY,
+        '✓ Mode plein écran actif\nVous jouez depuis l\'écran d\'accueil.',
+        {
+          fontSize: '16px',
+          color: '#27ae60',
+          align: 'center',
+        }
+      );
+      standaloneInfo.setOrigin(0.5);
+      this.contentContainer.add(standaloneInfo);
+    } else {
+      // Desktop et autres navigateurs - Mode normal
+      const fullscreenInfo = this.add.text(
+        0,
+        startY,
+        'Plein écran: F11 ou touche dédiée du navigateur',
+        {
+          fontSize: '14px',
+          color: '#7f8c8d',
+        }
+      );
+      fullscreenInfo.setOrigin(0.5);
+      this.contentContainer.add(fullscreenInfo);
+
+      // Bouton plein écran
+      const fullscreenBtn = this.createActionButton(
+        0,
+        startY + 40,
+        'Basculer Plein Écran',
+        () => this.toggleFullscreen()
+      );
+      this.contentContainer.add(fullscreenBtn);
+    }
 
     // Qualité graphique (info pour futur)
     const qualityInfo = this.add.text(
       0,
-      startY + spacing + 40,
+      startY + spacing + 60,
       'Qualité graphique: Haute (par défaut)\nLes options de qualité seront disponibles dans une future mise à jour.',
       {
         fontSize: '14px',
@@ -331,6 +359,66 @@ export class OptionsScene extends Phaser.Scene {
     );
     qualityInfo.setOrigin(0.5);
     this.contentContainer.add(qualityInfo);
+  }
+
+  /**
+   * Crée les instructions pour iOS Safari (ajouter à l'écran d'accueil)
+   */
+  private createIOSFullscreenInstructions(startY: number): void {
+    // Titre
+    const title = this.add.text(0, startY, 'Plein écran sur Safari iOS', {
+      fontSize: '18px',
+      color: '#e74c3c',
+      fontStyle: 'bold',
+    });
+    title.setOrigin(0.5);
+    this.contentContainer.add(title);
+
+    // Explication
+    const explanation = this.add.text(
+      0,
+      startY + 30,
+      'Safari iOS ne supporte pas le mode plein écran standard.\nPour une expérience immersive, ajoutez le jeu à votre écran d\'accueil:',
+      {
+        fontSize: '13px',
+        color: '#bdc3c7',
+        align: 'center',
+        wordWrap: { width: 400 },
+      }
+    );
+    explanation.setOrigin(0.5);
+    this.contentContainer.add(explanation);
+
+    // Instructions étape par étape
+    const steps = [
+      '1. Appuyez sur le bouton Partager (⬆️)',
+      '2. Faites défiler et appuyez sur',
+      '   "Sur l\'écran d\'accueil"',
+      '3. Appuyez sur "Ajouter"',
+      '4. Lancez le jeu depuis l\'icône créée',
+    ];
+
+    const stepsText = this.add.text(0, startY + 90, steps.join('\n'), {
+      fontSize: '14px',
+      color: '#ffffff',
+      align: 'center',
+      lineSpacing: 5,
+    });
+    stepsText.setOrigin(0.5);
+    this.contentContainer.add(stepsText);
+
+    // Note finale
+    const note = this.add.text(
+      0,
+      startY + 190,
+      'Le jeu sera alors en plein écran sans barres de navigation.',
+      {
+        fontSize: '12px',
+        color: '#27ae60',
+      }
+    );
+    note.setOrigin(0.5);
+    this.contentContainer.add(note);
   }
 
   /**

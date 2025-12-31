@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" fill="#1a1a2e"/>
+  <circle cx="96" cy="80" r="40" fill="#e74c3c"/>
+  <text x="96" y="90" text-anchor="middle" font-size="40" fill="#ffffff" font-family="Arial, sans-serif">Z</text>
+  <text x="96" y="150" text-anchor="middle" font-size="18" fill="#ffffff" font-family="Arial, sans-serif">ZOMBIE</text>
+  <text x="96" y="170" text-anchor="middle" font-size="14" fill="#e74c3c" font-family="Arial, sans-serif">HUNTER</text>
+</svg>
