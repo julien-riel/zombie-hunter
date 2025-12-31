@@ -1,0 +1,366 @@
+# Plan de Développement - Système d'Armes
+
+Ce document décrit la vision et le plan d'implémentation pour le système d'armes de Zombie Hunter.
+
+---
+
+## Table des matières
+
+1. [Vision globale](#vision-globale)
+2. [Système de contrôle mêlée/distance](#système-de-contrôle-mêléedistance)
+3. [Inventaire des armes existantes](#inventaire-des-armes-existantes)
+4. [Armes manquantes à développer](#armes-manquantes-à-développer)
+5. [Plan d'implémentation](#plan-dimplémentation)
+6. [Spécifications techniques](#spécifications-techniques)
+
+---
+
+## Vision globale
+
+### Philosophie de gameplay
+
+Le système d'armes doit offrir :
+- **Fluidité** : Pas de friction pour changer d'arme en combat
+- **Tactique** : Chaque arme a son utilité selon la situation
+- **Satisfaction** : Chaque arme doit être fun à utiliser
+- **Progression** : Sentiment d'amélioration au fil du jeu
+
+### Répartition des armes
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    ARSENAL DU JOUEUR                     │
+├─────────────────────────────────────────────────────────┤
+│  ARMES À DISTANCE (Slots 1-4)    │  MÊLÉE (Toujours     │
+│  ─────────────────────────────   │   disponible)        │
+│  • Armes de base                 │  ─────────────────   │
+│  • Armes spéciales               │  • Attaque rapide    │
+│  • Armes lourdes                 │  • Knockback         │
+│  • Armes expérimentales          │  • Pas de munitions  │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Système de contrôle mêlée/distance
+
+### Recommandation : Approche hybride
+
+La mêlée doit être un **réflexe de survie satisfaisant**, pas une arme principale qu'on doit équiper.
+
+### Contrôles proposés
+
+| Plateforme | Action | Commande |
+|------------|--------|----------|
+| **Desktop** | Attaque mêlée volontaire | Touche `V` |
+| **Desktop** | Auto-mêlée (ennemi au contact) | Automatique |
+| **Mobile** | Attaque mêlée volontaire | Bouton 🗡️ |
+| **Mobile** | Auto-mêlée (ennemi au contact) | Automatique |
+
+### Comportement détaillé
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                  LOGIQUE DE COMBAT                       │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  Joueur appuie sur TIR                                  │
+│         │                                                │
+│         ▼                                                │
+│  ┌──────────────────┐                                   │
+│  │ Ennemi au contact│──OUI──▶ Auto-mêlée (knockback)   │
+│  │   (< 40 pixels)  │                                   │
+│  └────────┬─────────┘                                   │
+│           │ NON                                          │
+│           ▼                                              │
+│  ┌──────────────────┐                                   │
+│  │ Munitions dispo? │──NON──▶ Clic vide + son "empty"  │
+│  └────────┬─────────┘                                   │
+│           │ OUI                                          │
+│           ▼                                              │
+│      Tir normal                                          │
+│                                                          │
+│  ─────────────────────────────────────────────────────  │
+│                                                          │
+│  Joueur appuie sur MÊLÉE (V / 🗡️)                       │
+│         │                                                │
+│         ▼                                                │
+│  Attaque mêlée avec arme équipée                        │
+│  (Batte par défaut, upgradable)                         │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Sensations recherchées
+
+| Situation | Émotion | Résultat |
+|-----------|---------|----------|
+| Zombie trop proche | 😱 Panique | Réflexe mêlée → Knockback satisfaisant |
+| Horde qui arrive | 😤 Badass | Quelques coups de mêlée + tir = efficace |
+| Plus de munitions | 😰 Tension | Mêlée = dernier recours viable |
+| Mêlée volontaire | 😎 Style | Économise munitions, montre sa maîtrise |
+
+---
+
+## Inventaire des armes existantes
+
+### Armes à distance - Implémentées ✅
+
+| Arme | Catégorie | Status | Intégrée au jeu |
+|------|-----------|--------|-----------------|
+| Pistol | Base | ✅ Complète | ✅ Slot départ |
+| Shotgun | Base | ✅ Complète | ✅ Slot départ |
+| SMG | Base | ✅ Complète | ✅ Slot départ |
+| Sniper Rifle | Base | ✅ Complète | ✅ Slot départ |
+| Composite Bow | Spéciale | ✅ Complète | ⚠️ Via drops |
+| Flamethrower | Spéciale | ✅ Complète | ⚠️ Via drops |
+| Tesla Cannon | Spéciale | ✅ Complète | ⚠️ Via drops |
+| Nail Gun | Spéciale | ✅ Complète | ⚠️ Via drops |
+| Microwave Cannon | Expérimentale | ✅ Complète | ⚠️ Via drops |
+
+### Armes de mêlée - Implémentées mais NON intégrées ⚠️
+
+| Arme | Status code | Intégrée au jeu | Problème |
+|------|-------------|-----------------|----------|
+| Baseball Bat | ✅ Complète | ❌ Non | Incompatible avec système Weapon |
+| Machete | ✅ Complète | ❌ Non | Incompatible avec système Weapon |
+| Chainsaw | ✅ Complète | ❌ Non | Incompatible avec système Weapon |
+
+**Problème technique** : `MeleeWeapon` n'hérite pas de `Weapon`, donc incompatible avec l'inventaire du Player.
+
+---
+
+## Armes manquantes à développer
+
+### Priorité 1 - Armes de base (variété essentielle)
+
+| Arme | Type | Description | Niche gameplay |
+|------|------|-------------|----------------|
+| **Revolver** | Distance | 6 balles, gros dégâts, rechargement lent | Précision, one-shot |
+| **Assault Rifle** | Distance | Burst 3 balles, précis | Équilibre cadence/précision |
+| **Double Barrel** | Distance | 2 coups très puissants | Burst damage, risqué |
+| **Crossbow** | Distance | Silencieux, récupère les carreaux | Furtif, économique |
+
+### Priorité 2 - Armes spéciales (fun factor)
+
+| Arme | Type | Description | Niche gameplay |
+|------|------|-------------|----------------|
+| **Grenade Launcher** | Explosive | Tir en arc, explosion zone | Crowd control |
+| **Rocket Launcher** | Explosive | Gros dégâts, lent | Boss killer |
+| **Freeze Ray** | Spéciale | Gèle les ennemis | CC, combo avec mêlée |
+| **Acid Sprayer** | Spéciale | DoT acide en cône | Zone denial |
+| **Ricochet Gun** | Spéciale | Balles rebondissantes | Couloirs, chaos |
+
+### Priorité 3 - Armes de mêlée (progression)
+
+| Arme | Tier | Description | Stats vs Batte |
+|------|------|-------------|----------------|
+| Baseball Bat | 1 (défaut) | Arme de départ | Base |
+| Machete | 2 | Plus rapide, moins knockback | +20% vitesse, -30% KB |
+| Fire Axe | 2 | Plus lent, plus de dégâts | +50% dégâts, -20% vitesse |
+| Katana | 3 | Rapide, critique élevé | +30% vitesse, +25% crit |
+| Chainsaw | 3 | Dégâts continus | DPS continu, bruit attire |
+| Sledgehammer | 3 | Très lent, knockback massif | +100% KB, -40% vitesse |
+
+### Priorité 4 - Armes expérimentales (endgame)
+
+| Arme | Type | Description | Déblocage |
+|------|------|-------------|-----------|
+| **Gravity Gun** | Expérimentale | Attire/repousse zombies | Vague 20+ |
+| **Black Hole Generator** | Expérimentale | Aspirateur temporaire | Boss drop |
+| **Laser Minigun** | Expérimentale | Faisceau continu rotatif | Achat 10000pts |
+| **Zombie Converter** | Expérimentale | Convertit zombie en allié | Secret |
+
+---
+
+## Plan d'implémentation
+
+### Phase 1 : Intégration de la mêlée (Priorité HAUTE)
+
+**Objectif** : Rendre la mêlée utilisable avec le système hybride recommandé.
+
+#### Tâches techniques
+
+- [ ] **1.1** Créer `IMeleeCapable` interface ou adapter `MeleeWeapon`
+- [ ] **1.2** Ajouter slot mêlée permanent au Player (séparé des slots 1-4)
+- [ ] **1.3** Ajouter action `melee` dans InputManager
+- [ ] **1.4** Binding touche `V` (desktop)
+- [ ] **1.5** Ajouter bouton 🗡️ dans MobileControls
+- [ ] **1.6** Implémenter auto-mêlée quand ennemi au contact
+- [ ] **1.7** Connecter Baseball Bat comme arme de mêlée par défaut
+- [ ] **1.8** Mettre à jour le HUD pour afficher l'arme de mêlée
+
+#### Critères de succès
+
+- [ ] Touche V déclenche un coup de batte
+- [ ] Zombies au contact sont automatiquement repoussés
+- [ ] Feedback visuel satisfaisant (arc d'attaque, impact)
+- [ ] Fonctionne sur desktop ET mobile
+
+### Phase 2 : Progression mêlée
+
+**Objectif** : Permettre d'upgrader l'arme de mêlée.
+
+#### Tâches
+
+- [ ] **2.1** Système de drop d'armes de mêlée
+- [ ] **2.2** UI de comparaison mêlée actuelle vs trouvée
+- [ ] **2.3** Intégrer Machete et Chainsaw
+- [ ] **2.4** Créer Fire Axe, Katana, Sledgehammer
+- [ ] **2.5** Balancer les stats (vitesse, dégâts, knockback)
+
+### Phase 3 : Nouvelles armes à distance
+
+**Objectif** : Enrichir l'arsenal à distance.
+
+#### Tâches
+
+- [ ] **3.1** Implémenter Revolver
+- [ ] **3.2** Implémenter Assault Rifle
+- [ ] **3.3** Implémenter Double Barrel
+- [ ] **3.4** Implémenter Grenade Launcher
+- [ ] **3.5** Système de rareté des armes (commun/rare/épique/légendaire)
+- [ ] **3.6** Effets visuels selon la rareté
+
+### Phase 4 : Armes expérimentales
+
+**Objectif** : Ajouter des armes "wow factor" pour l'endgame.
+
+#### Tâches
+
+- [ ] **4.1** Implémenter Freeze Ray
+- [ ] **4.2** Implémenter Gravity Gun
+- [ ] **4.3** Conditions de déblocage spéciales
+- [ ] **4.4** Achievements liés aux armes
+
+---
+
+## Spécifications techniques
+
+### Architecture cible
+
+```
+src/weapons/
+├── Weapon.ts                 # Classe de base armes à distance
+├── MeleeWeapon.ts           # Classe de base mêlée (à adapter)
+├── IWeapon.ts               # Interface commune (NOUVEAU)
+│
+├── firearms/                 # Armes à feu classiques
+│   ├── Pistol.ts
+│   ├── Revolver.ts          # NOUVEAU
+│   ├── SMG.ts
+│   ├── AssaultRifle.ts      # NOUVEAU
+│   ├── Shotgun.ts
+│   ├── DoubleBarrel.ts      # NOUVEAU
+│   └── SniperRifle.ts
+│
+├── melee/                    # Armes de mêlée
+│   ├── BaseballBat.ts
+│   ├── Machete.ts
+│   ├── FireAxe.ts           # NOUVEAU
+│   ├── Katana.ts            # NOUVEAU
+│   ├── Chainsaw.ts
+│   └── Sledgehammer.ts      # NOUVEAU
+│
+├── special/                  # Armes spéciales
+│   ├── CompositeBow.ts
+│   ├── Crossbow.ts          # NOUVEAU
+│   ├── Flamethrower.ts
+│   ├── FreezeRay.ts         # NOUVEAU
+│   ├── AcidSprayer.ts       # NOUVEAU
+│   └── TeslaCannon.ts
+│
+├── explosive/                # Armes explosives (NOUVEAU)
+│   ├── GrenadeLauncher.ts
+│   └── RocketLauncher.ts
+│
+└── experimental/             # Armes endgame (NOUVEAU)
+    ├── GravityGun.ts
+    ├── MicrowaveCannon.ts
+    └── LaserMinigun.ts
+```
+
+### Interface commune proposée
+
+```typescript
+interface IWeapon {
+  name: string;
+  damage: number;
+
+  // Méthodes communes
+  fire(direction: Vector2): boolean;
+  update(): void;
+  destroy(): void;
+
+  // Pour le HUD
+  getName(): string;
+  getIcon(): string;
+
+  // Différenciation
+  isMelee(): boolean;
+  isRanged(): boolean;
+
+  // Munitions (Infinity pour mêlée)
+  currentAmmo: number;
+  maxAmmo: number;
+  isReloading: boolean;
+  reload(): void;
+}
+```
+
+### Modifications au Player
+
+```typescript
+class Player {
+  // Existant
+  private weapons: Weapon[] = [];        // Slots 1-4 (distance)
+  private currentWeaponIndex: number;
+
+  // NOUVEAU
+  private meleeWeapon: MeleeWeapon;      // Toujours disponible
+  private autoMeleeEnabled: boolean = true;
+
+  // NOUVELLES MÉTHODES
+  public meleeAttack(): void;            // Touche V
+  public checkAutoMelee(): void;         // Dans update()
+  public equipMeleeWeapon(weapon: MeleeWeapon): void;
+}
+```
+
+---
+
+## Métriques de succès
+
+### Gameplay
+
+- [ ] 80% des joueurs utilisent la mêlée au moins 1x par partie
+- [ ] Ratio mêlée/tir entre 10-30% (mêlée = outil, pas arme principale)
+- [ ] Temps moyen de switch d'arme < 0.5s ressenti
+
+### Technique
+
+- [ ] Pas de lag lors du switch mêlée/distance
+- [ ] Hitbox mêlée précise et satisfaisante
+- [ ] Feedback audio/visuel immédiat (< 50ms)
+
+### Fun
+
+- [ ] "J'ai repoussé 3 zombies d'un coup !" = moment mémorable
+- [ ] Chaque arme se sent différente
+- [ ] Progression visible (batte → katana = satisfaisant)
+
+---
+
+## Références de design
+
+| Jeu | Ce qu'on prend | Ce qu'on évite |
+|-----|----------------|----------------|
+| **Doom 2016** | Glory kills satisfaisants, mêlée contextuelle | Trop de boutons |
+| **Hades** | Attaque/Spécial séparés, feedback | Complexité des builds |
+| **Dead Cells** | Fluidité du switch | Trop d'options à gérer |
+| **Left 4 Dead** | Mêlée = survie, knockback | Mêlée trop faible |
+| **Enter the Gungeon** | Variété d'armes, personnalité | RNG frustrant |
+
+---
+
+*Document créé le 31/12/2024 - À mettre à jour selon les itérations de gameplay*
