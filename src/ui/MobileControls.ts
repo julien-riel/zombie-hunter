@@ -92,12 +92,42 @@ export class MobileControls extends Phaser.GameObjects.Container {
   }
 
   /**
+   * Calcule les zones de capture pour les joysticks
+   * Chaque joystick a une zone de capture couvrant sa moitié de l'écran
+   */
+  private getCaptureZones(): { left: { x: number; y: number; width: number; height: number }; right: { x: number; y: number; width: number; height: number } } {
+    const width = this.scene.scale.width;
+    const height = this.scene.scale.height;
+
+    // Zone de gauche pour le joystick de mouvement (moitié gauche, partie basse)
+    const leftZone = {
+      x: 0,
+      y: height * 0.35, // Commence à 35% de la hauteur
+      width: width * 0.45, // 45% de la largeur
+      height: height * 0.65, // 65% de la hauteur
+    };
+
+    // Zone de droite pour le joystick de visée (moitié droite, partie basse)
+    const rightZone = {
+      x: width * 0.55, // Commence à 55% de la largeur
+      y: height * 0.35,
+      width: width * 0.45,
+      height: height * 0.65,
+    };
+
+    return { left: leftZone, right: rightZone };
+  }
+
+  /**
    * Crée tous les contrôles tactiles
    */
   private createControls(): void {
     const { joystickSize, buttonSize, margin } = this.config;
     const width = this.scene.scale.width;
     const height = this.scene.scale.height;
+
+    // Calculer les zones de capture
+    const zones = this.getCaptureZones();
 
     // ========== JOYSTICK DE MOUVEMENT (gauche) ==========
     this.moveJoystick = new VirtualJoystick(this.scene, {
@@ -106,6 +136,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
       baseRadius: joystickSize,
       stickRadius: joystickSize * 0.4,
       fixed: false,
+      captureZone: zones.left, // Zone de capture étendue
     });
 
     // ========== JOYSTICK DE VISÉE (droite) ==========
@@ -117,6 +148,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
       baseColor: 0x442222,
       stickColor: 0xaa4444,
       fixed: false,
+      captureZone: zones.right, // Zone de capture étendue
     });
 
     // ========== BOUTON DASH (à droite du joystick gauche) ==========
@@ -257,11 +289,16 @@ export class MobileControls extends Phaser.GameObjects.Container {
     const width = gameSize.width;
     const height = gameSize.height;
 
-    // Repositionner le joystick de mouvement
-    this.moveJoystick.setOrigin(margin + joystickSize, height - margin - joystickSize);
+    // Recalculer les zones de capture
+    const zones = this.getCaptureZones();
 
-    // Repositionner le joystick de visée
+    // Repositionner le joystick de mouvement et mettre à jour sa zone
+    this.moveJoystick.setOrigin(margin + joystickSize, height - margin - joystickSize);
+    this.moveJoystick.setCaptureZone(zones.left);
+
+    // Repositionner le joystick de visée et mettre à jour sa zone
     this.aimJoystick.setOrigin(width - margin - joystickSize, height - margin - joystickSize);
+    this.aimJoystick.setCaptureZone(zones.right);
 
     // Repositionner les boutons
     this.dashButton.setPosition(
