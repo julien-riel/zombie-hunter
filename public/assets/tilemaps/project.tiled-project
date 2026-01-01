@@ -1,14 +1,75 @@
 {
     "automappingRulesFile": "",
-    "commands": [
-    ],
+    "commands": [],
     "compatibilityVersion": 1100,
     "extensionsPath": "extensions",
-    "folders": [
-        "."
-    ],
-    "properties": [
-    ],
+    "folders": ["."],
+    "objectTypesFile": "objecttypes.json",
+    "properties": [],
     "propertyTypes": [
+        {
+            "id": 1,
+            "name": "DoorSide",
+            "storageType": "string",
+            "type": "enum",
+            "values": ["top", "bottom", "left", "right"],
+            "valuesAsFlags": false
+        },
+        {
+            "id": 2,
+            "name": "CoverType",
+            "storageType": "string",
+            "type": "enum",
+            "values": ["pillar", "halfWall", "table", "crate", "shelf", "barricade"],
+            "valuesAsFlags": false
+        },
+        {
+            "id": 3,
+            "name": "TerrainType",
+            "storageType": "string",
+            "type": "enum",
+            "values": ["puddle", "debris", "electric", "fire", "acid"],
+            "valuesAsFlags": false
+        },
+        {
+            "id": 4,
+            "name": "InteractiveType",
+            "storageType": "string",
+            "type": "enum",
+            "values": ["barrel_explosive", "barrel_fire", "switch", "generator", "flame_trap", "blade_trap"],
+            "valuesAsFlags": false
+        },
+        {
+            "id": 5,
+            "name": "TrapDirection",
+            "storageType": "string",
+            "type": "enum",
+            "values": ["up", "down", "left", "right"],
+            "valuesAsFlags": false
+        },
+        {
+            "id": 6,
+            "name": "PowerUpType",
+            "storageType": "string",
+            "type": "enum",
+            "values": ["rage", "freeze", "ghost", "magnet", "nuke"],
+            "valuesAsFlags": false
+        },
+        {
+            "id": 7,
+            "name": "ZombieType",
+            "storageType": "string",
+            "type": "enum",
+            "values": ["shambler", "runner", "crawler", "spitter", "screamer", "bomber", "tank", "mini_zombie", "splitter", "invisible", "necromancer"],
+            "valuesAsFlags": false
+        },
+        {
+            "id": 8,
+            "name": "BossType",
+            "storageType": "string",
+            "type": "enum",
+            "values": ["abomination", "patient_zero", "colossus"],
+            "valuesAsFlags": false
+        }
     ]
 }

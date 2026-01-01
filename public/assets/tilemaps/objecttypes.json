@@ -1,0 +1,278 @@
+[
+    {
+        "name": "player_spawn",
+        "color": "#00bcd4",
+        "members": []
+    },
+    {
+        "name": "zombie_door",
+        "color": "#e74c3c",
+        "members": [
+            { "name": "side", "type": "string", "value": "top" }
+        ]
+    },
+    {
+        "name": "pillar",
+        "color": "#8b4513",
+        "members": []
+    },
+    {
+        "name": "halfWall",
+        "color": "#a0522d",
+        "members": [
+            { "name": "health", "type": "int", "value": 100 }
+        ]
+    },
+    {
+        "name": "table",
+        "color": "#d2691e",
+        "members": [
+            { "name": "health", "type": "int", "value": 50 }
+        ]
+    },
+    {
+        "name": "crate",
+        "color": "#cd853f",
+        "members": [
+            { "name": "health", "type": "int", "value": 30 }
+        ]
+    },
+    {
+        "name": "shelf",
+        "color": "#b8860b",
+        "members": [
+            { "name": "health", "type": "int", "value": 40 }
+        ]
+    },
+    {
+        "name": "barricade",
+        "color": "#8b7355",
+        "members": [
+            { "name": "health", "type": "int", "value": 60 }
+        ]
+    },
+    {
+        "name": "puddle",
+        "color": "#3498db",
+        "members": [
+            { "name": "isBlood", "type": "bool", "value": false }
+        ]
+    },
+    {
+        "name": "debris",
+        "color": "#6c5b4a",
+        "members": [
+            { "name": "slowFactor", "type": "float", "value": 0.5 }
+        ]
+    },
+    {
+        "name": "electric",
+        "color": "#f1c40f",
+        "members": [
+            { "name": "active", "type": "bool", "value": true },
+            { "name": "damagePerSecond", "type": "int", "value": 10 }
+        ]
+    },
+    {
+        "name": "fire",
+        "color": "#e74c3c",
+        "members": [
+            { "name": "duration", "type": "int", "value": 5000 },
+            { "name": "damagePerSecond", "type": "int", "value": 15 }
+        ]
+    },
+    {
+        "name": "acid",
+        "color": "#27ae60",
+        "members": [
+            { "name": "duration", "type": "int", "value": 8000 },
+            { "name": "damagePerSecond", "type": "int", "value": 8 },
+            { "name": "slowFactor", "type": "float", "value": 0.7 }
+        ]
+    },
+    {
+        "name": "barrel_explosive",
+        "color": "#c0392b",
+        "members": [
+            { "name": "damage", "type": "int", "value": 100 },
+            { "name": "radius", "type": "int", "value": 96 }
+        ]
+    },
+    {
+        "name": "barrel_fire",
+        "color": "#f39c12",
+        "members": [
+            { "name": "fireDuration", "type": "int", "value": 5000 },
+            { "name": "fireRadius", "type": "int", "value": 64 }
+        ]
+    },
+    {
+        "name": "switch",
+        "color": "#2ecc71",
+        "members": [
+            { "name": "linkedTargetIds", "type": "string", "value": "" },
+            { "name": "defaultState", "type": "bool", "value": false }
+        ]
+    },
+    {
+        "name": "generator",
+        "color": "#3498db",
+        "members": [
+            { "name": "linkedZoneIds", "type": "string", "value": "" },
+            { "name": "defaultActive", "type": "bool", "value": false }
+        ]
+    },
+    {
+        "name": "flame_trap",
+        "color": "#e67e22",
+        "members": [
+            { "name": "direction", "type": "string", "value": "up" },
+            { "name": "linkedSwitchId", "type": "string", "value": "" }
+        ]
+    },
+    {
+        "name": "blade_trap",
+        "color": "#bdc3c7",
+        "members": [
+            { "name": "alwaysActive", "type": "bool", "value": true },
+            { "name": "damage", "type": "int", "value": 25 }
+        ]
+    },
+    {
+        "name": "health_drop",
+        "color": "#e74c3c",
+        "members": [
+            { "name": "size", "type": "string", "value": "small" },
+            { "name": "amount", "type": "int", "value": 25 }
+        ]
+    },
+    {
+        "name": "ammo_drop",
+        "color": "#f39c12",
+        "members": [
+            { "name": "amount", "type": "int", "value": 30 }
+        ]
+    },
+    {
+        "name": "powerup_drop",
+        "color": "#9b59b6",
+        "members": [
+            { "name": "type", "type": "string", "value": "rage" }
+        ]
+    },
+    {
+        "name": "weapon_drop",
+        "color": "#1abc9c",
+        "members": [
+            { "name": "weaponType", "type": "string", "value": "pistol" }
+        ]
+    },
+    {
+        "name": "zombie_spawn",
+        "color": "#27ae60",
+        "members": [
+            { "name": "zombieType", "type": "string", "value": "shambler" },
+            { "name": "waveSpawn", "type": "int", "value": 1 }
+        ]
+    },
+    {
+        "name": "boss_spawn",
+        "color": "#9c27b0",
+        "members": [
+            { "name": "bossType", "type": "string", "value": "abomination" },
+            { "name": "triggerWave", "type": "int", "value": 10 }
+        ]
+    },
+    {
+        "name": "checkpoint",
+        "color": "#4caf50",
+        "members": [
+            { "name": "respawnPoint", "type": "bool", "value": true }
+        ]
+    },
+    {
+        "name": "saferoom",
+        "color": "#8bc34a",
+        "members": [
+            { "name": "healOnEnter", "type": "bool", "value": true },
+            { "name": "clearZombies", "type": "bool", "value": true },
+            { "name": "healAmount", "type": "int", "value": 50 }
+        ]
+    },
+    {
+        "name": "teleporter",
+        "color": "#9c27b0",
+        "members": [
+            { "name": "linkedTeleporterId", "type": "string", "value": "" },
+            { "name": "bidirectional", "type": "bool", "value": true },
+            { "name": "cooldown", "type": "int", "value": 2000 }
+        ]
+    },
+    {
+        "name": "objective_marker",
+        "color": "#ffeb3b",
+        "members": [
+            { "name": "objectiveId", "type": "string", "value": "" },
+            { "name": "type", "type": "string", "value": "reach" }
+        ]
+    },
+    {
+        "name": "defend_zone",
+        "color": "#ff9800",
+        "members": [
+            { "name": "duration", "type": "int", "value": 30 },
+            { "name": "radius", "type": "int", "value": 128 }
+        ]
+    },
+    {
+        "name": "auto_door",
+        "color": "#2196f3",
+        "members": [
+            { "name": "openDirection", "type": "string", "value": "up" },
+            { "name": "openDelay", "type": "int", "value": 500 },
+            { "name": "stayOpenDuration", "type": "int", "value": 3000 }
+        ]
+    },
+    {
+        "name": "elevator",
+        "color": "#607d8b",
+        "members": [
+            { "name": "destinationMapKey", "type": "string", "value": "" },
+            { "name": "destinationSpawnId", "type": "string", "value": "" },
+            { "name": "linkedSwitchId", "type": "string", "value": "" }
+        ]
+    },
+    {
+        "name": "light",
+        "color": "#ffd700",
+        "members": [
+            { "name": "flickering", "type": "bool", "value": false },
+            { "name": "linkedSwitchId", "type": "string", "value": "" },
+            { "name": "color", "type": "string", "value": "#ffffff" }
+        ]
+    },
+    {
+        "name": "alarm",
+        "color": "#ff5722",
+        "members": [
+            { "name": "triggerRadius", "type": "int", "value": 64 },
+            { "name": "alertsZombies", "type": "bool", "value": true },
+            { "name": "alertRadius", "type": "int", "value": 256 }
+        ]
+    },
+    {
+        "name": "breakable_window",
+        "color": "#87ceeb",
+        "members": [
+            { "name": "health", "type": "int", "value": 20 }
+        ]
+    },
+    {
+        "name": "vent",
+        "color": "#455a64",
+        "members": [
+            { "name": "spawnPoint", "type": "bool", "value": false },
+            { "name": "spawnTypes", "type": "string", "value": "crawler" }
+        ]
+    }
+]

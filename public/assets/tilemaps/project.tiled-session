@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "jeu_tuile.tsx",
+    "activeFile": "zombie_tileset.tsx",
     "expandedProjectPaths": [
         "."
     ],
@@ -16,7 +16,27 @@
                 "y": 510.15744489428687
             }
         },
+        "hospital.json": {
+            "scale": 0.4950390625,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 640.3535074567978,
+                "y": 120.19253531129175
+            }
+        },
         "jeu_tuile.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "warehouse.json": {
+            "scale": 0.4950390625,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 640.3535074567978,
+                "y": 368.6577763749704
+            }
+        },
+        "zombie_tileset.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
         }
@@ -26,11 +46,11 @@
     "map.lastUsedFormat": "tmx",
     "map.width": 40,
     "openFiles": [
-        "carte.tmx",
-        "jeu_tuile.tsx"
+        "zombie_tileset.tsx"
     ],
     "project": "project.tiled-project",
     "recentFiles": [
+        "zombie_tileset.tsx",
         "carte.tmx",
         "jeu_tuile.tsx"
     ],
