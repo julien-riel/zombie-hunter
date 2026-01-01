@@ -56,6 +56,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
   private itemNextButton!: TouchButton;
   private weaponNextButton!: TouchButton;
   private weaponPrevButton!: TouchButton;
+  private meleeNextButton!: TouchButton;
   private pauseButton!: TouchButton;
 
   // Affichage de l'arme actuelle
@@ -241,23 +242,33 @@ export class MobileControls extends Phaser.GameObjects.Container {
       color: 0x666688,
     });
 
-    // ========== BOUTONS ARME (haut droite) ==========
+    // ========== BOUTONS ARME DISTANCE (haut droite) ==========
     this.weaponNextButton = new TouchButton(this.scene, {
       x: width - margin - buttonSize,
       y: margin + buttonSize,
       radius: buttonSize * 0.7,
-      icon: '▲',
-      iconSize: 18,
-      color: 0x666666,
+      icon: '🔫',
+      iconSize: 16,
+      color: 0x446688,
     });
 
     this.weaponPrevButton = new TouchButton(this.scene, {
       x: width - margin - buttonSize,
       y: margin + buttonSize * 2.5,
       radius: buttonSize * 0.7,
-      icon: '▼',
+      icon: '↕',
       iconSize: 18,
-      color: 0x666666,
+      color: 0x446688,
+    });
+
+    // ========== BOUTON ARME MELEE (sous les boutons distance) ==========
+    this.meleeNextButton = new TouchButton(this.scene, {
+      x: width - margin - buttonSize,
+      y: margin + buttonSize * 4,
+      radius: buttonSize * 0.7,
+      icon: '⚔',
+      iconSize: 18,
+      color: 0x886644,
     });
 
     // ========== AFFICHAGE NOM DE L'ARME (entre les boutons +/-) ==========
@@ -356,6 +367,10 @@ export class MobileControls extends Phaser.GameObjects.Container {
       this.inputManager.triggerAction('weaponPrev');
     });
 
+    this.meleeNextButton.onPress(() => {
+      this.inputManager.triggerAction('meleeNext');
+    });
+
     this.pauseButton.onPress(() => {
       this.inputManager.triggerAction('pause');
     });
@@ -387,6 +402,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
       this.itemNextButton,
       this.weaponNextButton,
       this.weaponPrevButton,
+      this.meleeNextButton,
       this.pauseButton,
     ];
 
@@ -562,6 +578,8 @@ export class MobileControls extends Phaser.GameObjects.Container {
 
     this.weaponPrevButton.setPosition(width - margin - buttonSize, margin + buttonSize * 2.5);
 
+    this.meleeNextButton.setPosition(width - margin - buttonSize, margin + buttonSize * 4);
+
     this.weaponNameText.setPosition(
       width - margin - buttonSize * 2.5,
       margin + buttonSize * 1.75
@@ -616,6 +634,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
       this.itemNextButton,
       this.weaponNextButton,
       this.weaponPrevButton,
+      this.meleeNextButton,
       this.pauseButton,
     ];
 
@@ -693,6 +712,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
     this.itemNextButton.resize(baseButtonSize * 0.7);
     this.weaponNextButton.resize(baseButtonSize * 0.7);
     this.weaponPrevButton.resize(baseButtonSize * 0.7);
+    this.meleeNextButton.resize(baseButtonSize * 0.7);
     this.pauseButton.resize(baseButtonSize * 0.8);
 
     // Repositionner
@@ -733,6 +753,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
     this.itemNextButton.destroy();
     this.weaponNextButton.destroy();
     this.weaponPrevButton.destroy();
+    this.meleeNextButton.destroy();
     this.pauseButton.destroy();
     this.weaponNameText.destroy();
 

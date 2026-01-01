@@ -10,5 +10,6 @@ export { PauseScene } from './PauseScene';
 export { GameOverScene } from './GameOverScene';
 export { UpgradeScene } from './UpgradeScene';
 export { TacticalMenuScene } from './TacticalMenuScene';
+export { LoadoutSelectionScene } from './LoadoutSelectionScene';
 export { ProgressionScene, PROGRESSION_SCENE_KEY } from './ProgressionScene';
 export { DebugScene } from './DebugScene';

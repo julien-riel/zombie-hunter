@@ -19,6 +19,7 @@ export type InputAction =
   | 'weapon4'
   | 'weaponNext'
   | 'weaponPrev'
+  | 'meleeNext'
   | 'pause';
 
 /**
@@ -84,7 +85,7 @@ export class InputManager {
       'shoot', 'dash', 'reload', 'ability', 'interact',
       'useItem', 'itemNext', 'melee',
       'weapon1', 'weapon2', 'weapon3', 'weapon4',
-      'weaponNext', 'weaponPrev', 'pause'
+      'weaponNext', 'weaponPrev', 'meleeNext', 'pause'
     ];
     actions.forEach(action => this.touchActions.set(action, false));
   }

@@ -394,7 +394,7 @@ export class WaveSystem {
 
     if (!upgradeSystem) {
       console.warn('[WaveSystem] UpgradeSystem not available, skipping upgrade selection');
-      this.showTacticalMenu();
+      this.showLoadoutSelection();
       return;
     }
 
@@ -403,15 +403,15 @@ export class WaveSystem {
 
     if (choices.length === 0) {
       console.log('[WaveSystem] No upgrades available, skipping selection');
-      this.showTacticalMenu();
+      this.showLoadoutSelection();
       return;
     }
 
     // Écouter la fermeture de la scène d'upgrade
     this.scene.events.once('upgradeSceneClosed', () => {
-      // Afficher le menu tactique après un court délai
+      // Afficher la sélection de loadout après un court délai
       this.scene.time.delayedCall(TACTICAL_MENU_DELAY, () => {
-        this.showTacticalMenu();
+        this.showLoadoutSelection();
       });
     });
 
@@ -420,6 +420,33 @@ export class WaveSystem {
       gameScene: this.scene,
       waveNumber: this.currentWave,
       choices: choices,
+    });
+  }
+
+  /**
+   * Affiche la scène de sélection du loadout (Phase 5)
+   * Skip pour la wave 1 (loadout par défaut)
+   */
+  private showLoadoutSelection(): void {
+    // Skip la sélection de loadout pour la wave 1
+    if (this.currentWave === 1) {
+      console.log('[WaveSystem] Wave 1 complete, skipping loadout selection');
+      this.showTacticalMenu();
+      return;
+    }
+
+    // Écouter la fermeture de la scène de loadout
+    this.scene.events.once('loadoutSelectionClosed', () => {
+      // Afficher le menu tactique après un court délai
+      this.scene.time.delayedCall(TACTICAL_MENU_DELAY, () => {
+        this.showTacticalMenu();
+      });
+    });
+
+    // Lancer la scène de sélection du loadout
+    this.scene.scene.launch(SCENE_KEYS.LOADOUT_SELECT, {
+      gameScene: this.scene,
+      waveNumber: this.currentWave,
     });
   }
 

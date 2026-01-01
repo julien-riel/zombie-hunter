@@ -12,6 +12,7 @@ import {
   GameOverScene,
   UpgradeScene,
   TacticalMenuScene,
+  LoadoutSelectionScene,
   ProgressionScene,
   DebugScene,
 } from '@scenes/index';
@@ -63,6 +64,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     GameOverScene,
     UpgradeScene,
     TacticalMenuScene,
+    LoadoutSelectionScene,
     ProgressionScene,
     DebugScene,
   ],

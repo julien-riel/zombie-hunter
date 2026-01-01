@@ -136,4 +136,13 @@ export abstract class Weapon {
   public isFullAmmo(): boolean {
     return this.currentAmmo >= this.maxAmmo;
   }
+
+  /**
+   * Détruit l'arme et libère les ressources
+   * Override dans les sous-classes si nécessaire
+   */
+  public destroy(): void {
+    // Implémentation par défaut vide
+    // Les sous-classes peuvent override pour libérer des ressources
+  }
 }

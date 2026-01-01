@@ -134,6 +134,8 @@ export interface DebugPanelCallbacks {
   getGameSpeed?: () => number;
   // Reload weapons
   onReloadWeapons?: () => void;
+  // Inventory
+  onUnlockAllWeapons?: () => void;
 }
 
 /**
@@ -670,6 +672,13 @@ export class DebugPanel {
       this.callbacks.onReloadWeapons?.();
     }, false, '#66ccff');
     this.container.add(reloadBtn);
+
+    // Unlock All button
+    const unlockBtn = this.createButton(startX + 105, y, 100, 'Unlock All', () => {
+      this.callbacks.onUnlockAllWeapons?.();
+    }, false, '#ff66ff');
+    this.container.add(unlockBtn);
+
     y += this.BUTTON_HEIGHT + this.BUTTON_SPACING;
 
     return y;

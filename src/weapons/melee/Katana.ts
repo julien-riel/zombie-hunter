@@ -38,7 +38,7 @@ export class Katana extends MeleeWeapon {
   /**
    * Override pour ajouter les coups critiques fréquents
    */
-  protected override onHit(zombies: Zombie[], direction: Phaser.Math.Vector2): void {
+  protected override onHit(zombies: Zombie[], _direction: Phaser.Math.Vector2): void {
     for (const zombie of zombies) {
       // Le katana a une chance de crit élevée
       const isCrit = Math.random() < this.critChance;

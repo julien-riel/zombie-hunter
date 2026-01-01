@@ -289,12 +289,10 @@ export class MeleeComparisonUI {
 
       // Vitesse (inversé car plus petit = plus rapide)
       const speedMs = weapon.swingSpeed;
-      const speedDiff = compareWith ? compareWith.swingSpeed - speedMs : 0; // Inversé
       const speedLabel = speedMs <= 250 ? 'Rapide' : speedMs <= 400 ? 'Normal' : speedMs <= 600 ? 'Lent' : 'Tres lent';
       lines.push(`Vitesse: ${speedLabel}`);
 
       // Portée
-      const rangeDiff = compareWith ? weapon.range - compareWith.range : 0;
       lines.push(`Portee: ${weapon.range}px`);
 
       // Knockback

@@ -33,18 +33,24 @@ export class HUDScene extends Phaser.Scene {
   private waveAnnouncementText!: Phaser.GameObjects.Text;
   private waveAnnouncementSubtext!: Phaser.GameObjects.Text;
 
-  // Éléments d'inventaire d'armes
-  private weaponSlots: Phaser.GameObjects.Container[] = [];
-  private weaponSlotBgs: Phaser.GameObjects.Rectangle[] = [];
-  private weaponNames: Phaser.GameObjects.Text[] = [];
-  private weaponAmmoTexts: Phaser.GameObjects.Text[] = [];
-  private weaponKeyHints: Phaser.GameObjects.Text[] = [];
+  // ==================== SYSTÈME 2+2 (Phase 4 Inventaire) ====================
 
-  // Élément d'arme de mêlée
-  private meleeSlot!: Phaser.GameObjects.Container;
-  private meleeSlotBg!: Phaser.GameObjects.Rectangle;
-  private meleeNameText!: Phaser.GameObjects.Text;
-  private meleeKeyHint!: Phaser.GameObjects.Text;
+  // Slots d'armes de mêlée (touches 1-2)
+  private meleeSlots: Phaser.GameObjects.Container[] = [];
+  private meleeSlotBgs: Phaser.GameObjects.Rectangle[] = [];
+  private meleeNames: Phaser.GameObjects.Text[] = [];
+  private meleeKeyHints: Phaser.GameObjects.Text[] = [];
+
+  // Slots d'armes à distance (touches 3-4)
+  private rangedSlots: Phaser.GameObjects.Container[] = [];
+  private rangedSlotBgs: Phaser.GameObjects.Rectangle[] = [];
+  private rangedNames: Phaser.GameObjects.Text[] = [];
+  private rangedAmmoTexts: Phaser.GameObjects.Text[] = [];
+  private rangedKeyHints: Phaser.GameObjects.Text[] = [];
+
+  // Index actifs
+  private currentMeleeIndex: 0 | 1 = 0;
+  private currentRangedIndex: 0 | 1 = 0;
 
   // Compteur de combo (Phase 6.1)
   private comboMeter!: ComboMeter;
@@ -86,8 +92,7 @@ export class HUDScene extends Phaser.Scene {
     this.createWaveDisplay();
     this.createWaveAnnouncement();
     this.createControls();
-    this.createWeaponInventory();
-    this.createMeleeSlot();
+    this.createWeaponSlots();
     this.createComboMeter();
     this.createPowerUpDisplay();
     this.createActiveItemDisplay();
@@ -102,10 +107,12 @@ export class HUDScene extends Phaser.Scene {
     this.gameScene.events.on('waveProgress', this.onWaveProgress, this);
     this.gameScene.events.on('waveComplete', this.onWaveComplete, this);
 
-    // Écouter les événements d'armes
-    this.gameScene.events.on('weaponInventoryChanged', this.onWeaponInventoryChanged, this);
-    this.gameScene.events.on('weaponChanged', this.onWeaponChanged, this);
-    this.gameScene.events.on('meleeWeaponChanged', this.onMeleeWeaponChanged, this);
+    // Écouter les événements d'armes (système 2+2)
+    this.gameScene.events.on('loadoutChanged', this.onLoadoutChanged, this);
+    this.gameScene.events.on('meleeSlotChanged', this.onMeleeSlotChanged, this);
+    this.gameScene.events.on('rangedSlotChanged', this.onRangedSlotChanged, this);
+    this.gameScene.events.on('meleeSlotEquipped', this.onMeleeSlotEquipped, this);
+    this.gameScene.events.on('rangedSlotEquipped', this.onRangedSlotEquipped, this);
 
     // Écouter les événements de combo (Phase 6.1)
     this.gameScene.events.on('combo:increase', this.onComboIncrease, this);
@@ -294,9 +301,10 @@ export class HUDScene extends Phaser.Scene {
       'WASD/Flèches - Déplacement',
       'Souris - Viser',
       'Clic gauche - Tirer',
-      'V - Mêlée',
+      'V - Attaque mêlée',
       'Espace - Dash',
-      '1-4/Molette - Arme',
+      '1-2 - Armes mêlée',
+      '3-4/Molette - Armes distance',
       'R - Recharger',
     ].join('\n');
 
@@ -309,64 +317,120 @@ export class HUDScene extends Phaser.Scene {
       .setOrigin(1, 0);
   }
 
+  // ==================== SYSTÈME 2+2 (Phase 4 Inventaire) ====================
+
   /**
-   * Crée l'affichage de l'inventaire d'armes
-   * Sur mobile, les slots sont masqués car le changement d'arme se fait via MobileControls
+   * Crée les slots d'armes (2 mêlée + 2 distance)
+   * Layout: [Mêlée 1][Mêlée 2] --- [Distance 3][Distance 4]
    */
-  private createWeaponInventory(): void {
-    // Sur mobile, on masque l'inventaire d'armes car il y a des boutons dédiés
+  private createWeaponSlots(): void {
+    // Sur mobile, on masque les slots car il y a des boutons dédiés
     if (this.isMobile) {
       return;
     }
 
-    const slotWidth = 100;
+    const slotWidth = 90;
     const slotHeight = 50;
-    const slotSpacing = 10;
-    const maxSlots = 4;
-    const totalWidth = maxSlots * slotWidth + (maxSlots - 1) * slotSpacing;
-    const startX = (GAME_WIDTH - totalWidth) / 2;
+    const slotSpacing = 8;
+    const groupSpacing = 20; // Espace entre mêlée et distance
     const y = GAME_HEIGHT - slotHeight - 20;
 
-    for (let i = 0; i < maxSlots; i++) {
+    // Calcul du positionnement centré
+    // 2 slots mêlée + 2 slots distance + espaces
+    const meleeGroupWidth = 2 * slotWidth + slotSpacing;
+    const rangedGroupWidth = 2 * slotWidth + slotSpacing;
+    const totalWidth = meleeGroupWidth + groupSpacing + rangedGroupWidth;
+    const startX = (GAME_WIDTH - totalWidth) / 2;
+
+    // Créer les slots de mêlée (touches 1-2)
+    for (let i = 0; i < 2; i++) {
       const x = startX + i * (slotWidth + slotSpacing);
-      this.createWeaponSlot(i, x, y, slotWidth, slotHeight);
+      this.createMeleeSlot(i, x, y, slotWidth, slotHeight);
+    }
+
+    // Créer les slots d'armes à distance (touches 3-4)
+    const rangedStartX = startX + meleeGroupWidth + groupSpacing;
+    for (let i = 0; i < 2; i++) {
+      const x = rangedStartX + i * (slotWidth + slotSpacing);
+      this.createRangedSlot(i, x, y, slotWidth, slotHeight);
     }
 
     // Initialiser avec les armes du joueur si disponibles
-    if (this.gameScene?.player) {
-      const weapons = this.gameScene.player.getWeapons();
-      const currentIndex = this.gameScene.player.getCurrentWeaponIndex();
-      this.updateWeaponSlots(weapons, currentIndex);
-    }
+    this.initializeWeaponSlots();
   }
 
   /**
-   * Crée un slot d'arme individuel
+   * Crée un slot d'arme de mêlée
    */
-  private createWeaponSlot(index: number, x: number, y: number, width: number, height: number): void {
+  private createMeleeSlot(index: number, x: number, y: number, width: number, height: number): void {
     const container = this.add.container(x, y);
 
-    // Fond du slot
-    const bg = this.add.rectangle(0, 0, width, height, 0x222222, 0.8);
+    // Fond du slot (couleur distincte pour mêlée)
+    const bg = this.add.rectangle(0, 0, width, height, 0x442222, 0.8);
     bg.setOrigin(0, 0);
-    bg.setStrokeStyle(2, 0x444444);
-    this.weaponSlotBgs.push(bg);
+    bg.setStrokeStyle(2, 0x664444);
+    this.meleeSlotBgs.push(bg);
 
-    // Indicateur de touche (1, 2, 3, 4)
+    // Indicateur de touche (1, 2)
     const keyHint = this.add.text(5, 3, `${index + 1}`, {
       fontSize: '10px',
-      color: '#666666',
+      color: '#aa6644',
     });
-    this.weaponKeyHints.push(keyHint);
+    this.meleeKeyHints.push(keyHint);
+
+    // Icône mêlée
+    const meleeIcon = this.add.text(width - 15, 5, '⚔', {
+      fontSize: '10px',
+      color: '#aa6644',
+    });
+    meleeIcon.setOrigin(0.5, 0);
 
     // Nom de l'arme
-    const name = this.add.text(width / 2, height / 2 - 8, '', {
-      fontSize: '12px',
+    const name = this.add.text(width / 2, height / 2, '', {
+      fontSize: '11px',
       color: '#ffffff',
       fontStyle: 'bold',
     });
     name.setOrigin(0.5);
-    this.weaponNames.push(name);
+    this.meleeNames.push(name);
+
+    container.add([bg, keyHint, meleeIcon, name]);
+    this.meleeSlots.push(container);
+  }
+
+  /**
+   * Crée un slot d'arme à distance
+   */
+  private createRangedSlot(index: number, x: number, y: number, width: number, height: number): void {
+    const container = this.add.container(x, y);
+
+    // Fond du slot
+    const bg = this.add.rectangle(0, 0, width, height, 0x222244, 0.8);
+    bg.setOrigin(0, 0);
+    bg.setStrokeStyle(2, 0x444466);
+    this.rangedSlotBgs.push(bg);
+
+    // Indicateur de touche (3, 4)
+    const keyHint = this.add.text(5, 3, `${index + 3}`, {
+      fontSize: '10px',
+      color: '#6666aa',
+    });
+    this.rangedKeyHints.push(keyHint);
+
+    // Icône distance
+    const rangedIcon = this.add.text(width - 15, 5, '🔫', {
+      fontSize: '10px',
+    });
+    rangedIcon.setOrigin(0.5, 0);
+
+    // Nom de l'arme
+    const name = this.add.text(width / 2, height / 2 - 8, '', {
+      fontSize: '11px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    });
+    name.setOrigin(0.5);
+    this.rangedNames.push(name);
 
     // Munitions
     const ammo = this.add.text(width / 2, height / 2 + 10, '', {
@@ -374,95 +438,75 @@ export class HUDScene extends Phaser.Scene {
       color: '#aaaaaa',
     });
     ammo.setOrigin(0.5);
-    this.weaponAmmoTexts.push(ammo);
+    this.rangedAmmoTexts.push(ammo);
 
-    container.add([bg, keyHint, name, ammo]);
-    this.weaponSlots.push(container);
+    container.add([bg, keyHint, rangedIcon, name, ammo]);
+    this.rangedSlots.push(container);
   }
 
   /**
-   * Crée le slot d'arme de mêlée
-   * Affiché à gauche de l'inventaire d'armes
+   * Initialise les slots avec les armes du joueur
    */
-  private createMeleeSlot(): void {
-    // Sur mobile, on masque le slot mêlée car il y a un bouton dédié
-    if (this.isMobile) {
-      return;
-    }
+  private initializeWeaponSlots(): void {
+    if (!this.gameScene?.player) return;
 
-    const slotWidth = 80;
-    const slotHeight = 50;
-    const maxSlots = 4;
-    const slotSpacing = 10;
-    const totalWidth = maxSlots * 100 + (maxSlots - 1) * slotSpacing;
-    const startX = (GAME_WIDTH - totalWidth) / 2;
-    const y = GAME_HEIGHT - slotHeight - 20;
+    const meleeWeapons = this.gameScene.player.getMeleeWeapons();
+    const rangedWeapons = this.gameScene.player.getRangedWeapons();
+    this.currentMeleeIndex = this.gameScene.player.getCurrentMeleeIndex();
+    this.currentRangedIndex = this.gameScene.player.getCurrentRangedIndex();
 
-    // Positionner à gauche des armes à distance
-    const x = startX - slotWidth - slotSpacing * 2;
+    this.updateMeleeSlots(meleeWeapons, this.currentMeleeIndex);
+    this.updateRangedSlots(rangedWeapons, this.currentRangedIndex);
+  }
 
-    this.meleeSlot = this.add.container(x, y);
+  /**
+   * Met à jour les slots de mêlée
+   */
+  private updateMeleeSlots(weapons: [MeleeWeapon | null, MeleeWeapon | null], activeIndex: 0 | 1): void {
+    for (let i = 0; i < 2; i++) {
+      const weapon = weapons[i];
+      const bg = this.meleeSlotBgs[i];
+      const name = this.meleeNames[i];
+      const keyHint = this.meleeKeyHints[i];
 
-    // Fond du slot (couleur distincte pour mêlée)
-    this.meleeSlotBg = this.add.rectangle(0, 0, slotWidth, slotHeight, 0x442222, 0.8);
-    this.meleeSlotBg.setOrigin(0, 0);
-    this.meleeSlotBg.setStrokeStyle(2, 0x664444);
+      if (!bg || !name || !keyHint) continue;
 
-    // Indicateur de touche (V)
-    this.meleeKeyHint = this.add.text(5, 3, 'V', {
-      fontSize: '10px',
-      color: '#aa6644',
-    });
+      if (weapon) {
+        name.setText(weapon.getName());
+        name.setVisible(true);
 
-    // Icône mêlée
-    const meleeIcon = this.add.text(slotWidth / 2, slotHeight / 2 - 8, '🗡️', {
-      fontSize: '16px',
-    });
-    meleeIcon.setOrigin(0.5);
-
-    // Nom de l'arme
-    this.meleeNameText = this.add.text(slotWidth / 2, slotHeight / 2 + 10, '', {
-      fontSize: '10px',
-      color: '#ffffff',
-    });
-    this.meleeNameText.setOrigin(0.5);
-
-    this.meleeSlot.add([this.meleeSlotBg, this.meleeKeyHint, meleeIcon, this.meleeNameText]);
-
-    // Initialiser avec l'arme de mêlée du joueur si disponible
-    if (this.gameScene?.player) {
-      const meleeWeapon = this.gameScene.player.getMeleeWeapon();
-      if (meleeWeapon) {
-        this.updateMeleeSlot(meleeWeapon);
+        // Highlight pour l'arme sélectionnée
+        if (i === activeIndex) {
+          bg.setStrokeStyle(3, 0xff6644);
+          bg.setFillStyle(0x442222, 0.95);
+          keyHint.setColor('#ff6644');
+        } else {
+          bg.setStrokeStyle(2, 0x664444);
+          bg.setFillStyle(0x442222, 0.8);
+          keyHint.setColor('#aa6644');
+        }
+      } else {
+        name.setText('Vide');
+        name.setVisible(true);
+        bg.setStrokeStyle(1, 0x443333);
+        bg.setFillStyle(0x221111, 0.5);
+        keyHint.setColor('#553333');
       }
     }
   }
 
   /**
-   * Met à jour le slot de mêlée
+   * Met à jour les slots d'armes à distance
    */
-  private updateMeleeSlot(weapon: MeleeWeapon): void {
-    if (!this.meleeNameText) return;
-    this.meleeNameText.setText(weapon.getName());
-  }
-
-  /**
-   * Gère le changement d'arme de mêlée
-   */
-  private onMeleeWeaponChanged(weapon: MeleeWeapon): void {
-    this.updateMeleeSlot(weapon);
-  }
-
-  /**
-   * Met à jour les slots d'armes
-   */
-  private updateWeaponSlots(weapons: Weapon[], currentIndex: number): void {
-    for (let i = 0; i < this.weaponSlots.length; i++) {
+  private updateRangedSlots(weapons: [Weapon | null, Weapon | null], activeIndex: 0 | 1): void {
+    for (let i = 0; i < 2; i++) {
       const weapon = weapons[i];
-      const bg = this.weaponSlotBgs[i];
-      const name = this.weaponNames[i];
-      const ammo = this.weaponAmmoTexts[i];
-      const keyHint = this.weaponKeyHints[i];
+      const bg = this.rangedSlotBgs[i];
+      const name = this.rangedNames[i];
+      const ammo = this.rangedAmmoTexts[i];
+      const keyHint = this.rangedKeyHints[i];
+
+      if (!bg || !name || !ammo || !keyHint) continue;
 
       if (weapon) {
         name.setText(weapon.getName());
@@ -471,38 +515,79 @@ export class HUDScene extends Phaser.Scene {
         ammo.setVisible(true);
 
         // Highlight pour l'arme sélectionnée
-        if (i === currentIndex) {
-          bg.setStrokeStyle(3, 0x00ff00);
-          bg.setFillStyle(0x003300, 0.9);
-          keyHint.setColor('#00ff00');
+        if (i === activeIndex) {
+          bg.setStrokeStyle(3, 0x6666ff);
+          bg.setFillStyle(0x222244, 0.95);
+          keyHint.setColor('#6666ff');
         } else {
-          bg.setStrokeStyle(2, 0x444444);
-          bg.setFillStyle(0x222222, 0.8);
-          keyHint.setColor('#666666');
+          bg.setStrokeStyle(2, 0x444466);
+          bg.setFillStyle(0x222244, 0.8);
+          keyHint.setColor('#6666aa');
         }
       } else {
-        name.setVisible(false);
+        name.setText('Vide');
+        name.setVisible(true);
         ammo.setVisible(false);
-        bg.setStrokeStyle(1, 0x333333);
-        bg.setFillStyle(0x111111, 0.5);
-        keyHint.setColor('#333333');
+        bg.setStrokeStyle(1, 0x333344);
+        bg.setFillStyle(0x111122, 0.5);
+        keyHint.setColor('#333355');
       }
     }
   }
 
+  // ==================== ÉVÉNEMENTS SYSTÈME 2+2 ====================
+
   /**
-   * Gère le changement d'inventaire d'armes
+   * Gère le changement complet de loadout
    */
-  private onWeaponInventoryChanged(weapons: Weapon[], currentIndex: number): void {
-    this.updateWeaponSlots(weapons, currentIndex);
+  private onLoadoutChanged(data: {
+    meleeWeapons: [MeleeWeapon | null, MeleeWeapon | null];
+    rangedWeapons: [Weapon | null, Weapon | null];
+    currentMeleeIndex: 0 | 1;
+    currentRangedIndex: 0 | 1;
+  }): void {
+    this.currentMeleeIndex = data.currentMeleeIndex;
+    this.currentRangedIndex = data.currentRangedIndex;
+    this.updateMeleeSlots(data.meleeWeapons, data.currentMeleeIndex);
+    this.updateRangedSlots(data.rangedWeapons, data.currentRangedIndex);
   }
 
   /**
-   * Gère le changement d'arme
+   * Gère le changement de slot mêlée actif
    */
-  private onWeaponChanged(index: number, _weapon: Weapon): void {
-    const weapons = this.gameScene.player.getWeapons();
-    this.updateWeaponSlots(weapons, index);
+  private onMeleeSlotChanged(index: 0 | 1, _weapon: MeleeWeapon): void {
+    if (!this.gameScene?.player) return;
+    this.currentMeleeIndex = index;
+    const meleeWeapons = this.gameScene.player.getMeleeWeapons();
+    this.updateMeleeSlots(meleeWeapons, index);
+  }
+
+  /**
+   * Gère le changement de slot distance actif
+   */
+  private onRangedSlotChanged(index: 0 | 1, _weapon: Weapon): void {
+    if (!this.gameScene?.player) return;
+    this.currentRangedIndex = index;
+    const rangedWeapons = this.gameScene.player.getRangedWeapons();
+    this.updateRangedSlots(rangedWeapons, index);
+  }
+
+  /**
+   * Gère l'équipement d'une nouvelle arme de mêlée dans un slot
+   */
+  private onMeleeSlotEquipped(_slotIndex: 0 | 1, _weapon: MeleeWeapon): void {
+    if (!this.gameScene?.player) return;
+    const meleeWeapons = this.gameScene.player.getMeleeWeapons();
+    this.updateMeleeSlots(meleeWeapons, this.currentMeleeIndex);
+  }
+
+  /**
+   * Gère l'équipement d'une nouvelle arme à distance dans un slot
+   */
+  private onRangedSlotEquipped(_slotIndex: 0 | 1, _weapon: Weapon): void {
+    if (!this.gameScene?.player) return;
+    const rangedWeapons = this.gameScene.player.getRangedWeapons();
+    this.updateRangedSlots(rangedWeapons, this.currentRangedIndex);
   }
 
   /**
@@ -627,29 +712,32 @@ export class HUDScene extends Phaser.Scene {
       this.ammoText.setText(`${weapon.getName()}: ${weapon.currentAmmo}/${weapon.maxAmmo}${reloadingText}`);
     }
 
-    // Mettre à jour aussi les slots d'armes
-    this.updateWeaponSlotsAmmo();
+    // Mettre à jour aussi les slots d'armes à distance
+    this.updateRangedSlotsAmmo();
   }
 
   /**
-   * Met à jour les munitions dans les slots d'armes
+   * Met à jour les munitions dans les slots d'armes à distance
    */
-  private updateWeaponSlotsAmmo(): void {
-    const weapons = this.gameScene.player.getWeapons();
-    for (let i = 0; i < weapons.length && i < this.weaponAmmoTexts.length; i++) {
-      const weapon = weapons[i];
+  private updateRangedSlotsAmmo(): void {
+    const rangedWeapons = this.gameScene.player.getRangedWeapons();
+    for (let i = 0; i < 2; i++) {
+      const weapon = rangedWeapons[i];
+      const ammoText = this.rangedAmmoTexts[i];
+      if (!ammoText) continue;
+
       if (weapon) {
         const reloadingIndicator = weapon.isReloading ? '*' : '';
-        this.weaponAmmoTexts[i].setText(`${weapon.currentAmmo}/${weapon.maxAmmo}${reloadingIndicator}`);
+        ammoText.setText(`${weapon.currentAmmo}/${weapon.maxAmmo}${reloadingIndicator}`);
 
         // Changer la couleur si les munitions sont basses
         const ammoPercent = weapon.currentAmmo / weapon.maxAmmo;
         if (ammoPercent <= 0) {
-          this.weaponAmmoTexts[i].setColor('#ff0000');
+          ammoText.setColor('#ff0000');
         } else if (ammoPercent <= 0.3) {
-          this.weaponAmmoTexts[i].setColor('#ff6600');
+          ammoText.setColor('#ff6600');
         } else {
-          this.weaponAmmoTexts[i].setColor('#aaaaaa');
+          ammoText.setColor('#aaaaaa');
         }
       }
     }
@@ -885,9 +973,13 @@ export class HUDScene extends Phaser.Scene {
     this.gameScene.events.off('waveStart', this.onWaveStart, this);
     this.gameScene.events.off('waveProgress', this.onWaveProgress, this);
     this.gameScene.events.off('waveComplete', this.onWaveComplete, this);
-    this.gameScene.events.off('weaponInventoryChanged', this.onWeaponInventoryChanged, this);
-    this.gameScene.events.off('weaponChanged', this.onWeaponChanged, this);
-    this.gameScene.events.off('meleeWeaponChanged', this.onMeleeWeaponChanged, this);
+
+    // Retirer les listeners d'armes (système 2+2)
+    this.gameScene.events.off('loadoutChanged', this.onLoadoutChanged, this);
+    this.gameScene.events.off('meleeSlotChanged', this.onMeleeSlotChanged, this);
+    this.gameScene.events.off('rangedSlotChanged', this.onRangedSlotChanged, this);
+    this.gameScene.events.off('meleeSlotEquipped', this.onMeleeSlotEquipped, this);
+    this.gameScene.events.off('rangedSlotEquipped', this.onRangedSlotEquipped, this);
 
     // Retirer les listeners de combo (Phase 6.1)
     this.gameScene.events.off('combo:increase', this.onComboIncrease, this);

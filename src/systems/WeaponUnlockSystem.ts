@@ -4,6 +4,7 @@ import {
   ExperimentalWeaponType,
   EXPERIMENTAL_UNLOCK_CONDITIONS,
 } from '@weapons/experimental';
+import { WeaponRegistry } from '@/systems/WeaponRegistry';
 
 /**
  * État de déblocage des armes
@@ -125,6 +126,7 @@ export class WeaponUnlockSystem {
    * Vérifie les déblocages basés sur la vague
    */
   private checkWaveUnlocks(waveNumber: number): void {
+    // Vérifier les armes expérimentales
     const waveUnlocks: ExperimentalWeaponType[] = ['freezeRay', 'gravityGun'];
 
     for (const weaponType of waveUnlocks) {
@@ -135,6 +137,100 @@ export class WeaponUnlockSystem {
         this.unlockWeapon(weaponType, 'wave', false);
       }
     }
+
+    // Vérifier les armes standard (non-expérimentales) basées sur la vague
+    this.checkStandardWaveUnlocks(waveNumber);
+  }
+
+  /**
+   * Vérifie les déblocages d'armes standard basés sur la vague
+   */
+  private checkStandardWaveUnlocks(waveNumber: number): void {
+    const inventoryManager = this.scene.getInventoryManager?.();
+    if (!inventoryManager) return;
+
+    const allWeapons = WeaponRegistry.getAll();
+
+    for (const weapon of allWeapons) {
+      // Ignorer si déjà débloquée
+      if (inventoryManager.isUnlocked(weapon.id)) continue;
+
+      // Vérifier si c'est un déblocage par wave
+      const condition = weapon.unlockCondition;
+      if (condition?.type === 'wave' && condition.value) {
+        if (waveNumber >= condition.value) {
+          inventoryManager.unlockWeapon(weapon.id);
+
+          // Notification pour les armes standards
+          this.showStandardUnlockNotification(weapon.name);
+        }
+      }
+    }
+  }
+
+  /**
+   * Affiche une notification de déblocage pour une arme standard
+   */
+  private showStandardUnlockNotification(weaponName: string): void {
+    const centerX = this.scene.cameras.main.centerX;
+    const centerY = this.scene.cameras.main.centerY - 50;
+
+    // Fond de notification
+    const bg = this.scene.add.rectangle(centerX, centerY, 300, 60, 0x000000, 0.8);
+    bg.setStrokeStyle(2, 0x00ff00, 1);
+    bg.setDepth(100);
+
+    // Titre
+    const title = this.scene.add.text(centerX, centerY - 12, '🔓 ARME DÉBLOQUÉE!', {
+      fontSize: '14px',
+      color: '#00ff00',
+      fontStyle: 'bold',
+    });
+    title.setOrigin(0.5);
+    title.setDepth(101);
+
+    // Nom de l'arme
+    const name = this.scene.add.text(centerX, centerY + 10, weaponName, {
+      fontSize: '18px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    });
+    name.setOrigin(0.5);
+    name.setDepth(101);
+
+    // Animation
+    bg.setScale(0);
+    title.setAlpha(0);
+    name.setAlpha(0);
+
+    this.scene.tweens.add({
+      targets: bg,
+      scale: 1,
+      duration: 300,
+      ease: 'Back.easeOut',
+    });
+
+    this.scene.tweens.add({
+      targets: [title, name],
+      alpha: 1,
+      duration: 300,
+      delay: 200,
+    });
+
+    // Disparition après 2 secondes
+    this.scene.time.delayedCall(2000, () => {
+      this.scene.tweens.add({
+        targets: [bg, title, name],
+        alpha: 0,
+        y: centerY - 30,
+        duration: 400,
+        onComplete: () => {
+          bg.destroy();
+          title.destroy();
+          name.destroy();
+        },
+      });
+    });
   }
 
   /**
@@ -149,6 +245,33 @@ export class WeaponUnlockSystem {
 
       // Drop l'arme
       this.dropExperimentalWeapon('blackHoleGenerator');
+    }
+
+    // Vérifier les armes standard avec condition 'boss'
+    this.checkBossUnlocks();
+  }
+
+  /**
+   * Vérifie les déblocages d'armes basés sur la défaite de boss
+   */
+  private checkBossUnlocks(): void {
+    const inventoryManager = this.scene.getInventoryManager?.();
+    if (!inventoryManager) return;
+
+    const allWeapons = WeaponRegistry.getAll();
+
+    for (const weapon of allWeapons) {
+      // Ignorer si déjà débloquée
+      if (inventoryManager.isUnlocked(weapon.id)) continue;
+
+      // Vérifier si c'est un déblocage par boss
+      const condition = weapon.unlockCondition;
+      if (condition?.type === 'boss') {
+        inventoryManager.unlockWeapon(weapon.id);
+
+        // Notification pour les armes standards
+        this.showStandardUnlockNotification(weapon.name);
+      }
     }
   }
 
@@ -207,6 +330,12 @@ export class WeaponUnlockSystem {
       this.saveState();
     }
     this.state.sessionUnlocked.add(weaponType);
+
+    // Débloquer dans l'inventaire du joueur
+    const inventoryManager = this.scene.getInventoryManager?.();
+    if (inventoryManager) {
+      inventoryManager.unlockWeapon(weaponType);
+    }
 
     // Émettre l'événement
     const event: WeaponUnlockEvent = {

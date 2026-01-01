@@ -2,6 +2,7 @@ import type { GameScene } from '@scenes/GameScene';
 import type { ComboSystem } from './ComboSystem';
 import type { ZombieType } from '@/types/entities';
 import { BALANCE } from '@config/balance';
+import { WeaponRegistry } from '@/systems/WeaponRegistry';
 
 /**
  * Configuration de l'économie (depuis balance.ts)
@@ -268,6 +269,93 @@ export class EconomySystem {
         break;
       }
     }
+  }
+
+  /**
+   * Tente d'acheter une arme
+   * @returns true si l'achat a réussi
+   */
+  public purchaseWeapon(weaponId: string): boolean {
+    const definition = WeaponRegistry.get(weaponId);
+    if (!definition) {
+      console.warn(`[EconomySystem] Unknown weapon: ${weaponId}`);
+      return false;
+    }
+
+    // Vérifier que c'est une arme achetable
+    const unlockCondition = definition.unlockCondition;
+    if (!unlockCondition || unlockCondition.type !== 'purchase') {
+      console.warn(`[EconomySystem] Weapon ${weaponId} is not purchasable`);
+      return false;
+    }
+
+    const cost = unlockCondition.value || 0;
+
+    // Vérifier si l'arme est déjà débloquée
+    const inventoryManager = this.scene.getInventoryManager?.();
+    if (inventoryManager && inventoryManager.isUnlocked(weaponId)) {
+      this.scene.events.emit('economy:weapon_purchase_failed', {
+        weaponId,
+        reason: 'already_unlocked',
+      });
+      return false;
+    }
+
+    // Vérifier les points
+    if (!this.canAfford(cost)) {
+      this.scene.events.emit('economy:weapon_purchase_failed', {
+        weaponId,
+        cost,
+        points: this.points,
+        reason: 'insufficient_funds',
+      });
+      return false;
+    }
+
+    // Effectuer l'achat
+    this.spendPoints(cost);
+
+    // Débloquer l'arme dans l'inventaire
+    if (inventoryManager) {
+      inventoryManager.unlockWeapon(weaponId);
+    }
+
+    this.scene.events.emit('economy:weapon_purchased', {
+      weaponId,
+      cost,
+      remainingPoints: this.points,
+      definition,
+    });
+
+    return true;
+  }
+
+  /**
+   * Récupère les armes achetables avec leur état
+   */
+  public getPurchasableWeapons(): Array<{
+    weaponId: string;
+    name: string;
+    cost: number;
+    canAfford: boolean;
+    isUnlocked: boolean;
+    category: 'melee' | 'ranged';
+    description?: string;
+  }> {
+    const allWeapons = WeaponRegistry.getAll();
+    const inventoryManager = this.scene.getInventoryManager?.();
+
+    return allWeapons
+      .filter(w => w.unlockCondition?.type === 'purchase')
+      .map(w => ({
+        weaponId: w.id,
+        name: w.name,
+        cost: w.unlockCondition?.value || 0,
+        canAfford: this.canAfford(w.unlockCondition?.value || 0),
+        isUnlocked: inventoryManager?.isUnlocked(w.id) || false,
+        category: w.category,
+        description: w.description,
+      }));
   }
 
   /**

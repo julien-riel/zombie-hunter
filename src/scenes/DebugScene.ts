@@ -117,6 +117,8 @@ export class DebugScene extends Phaser.Scene {
       getGameSpeed: () => this.gameSpeed,
       // Reload all weapons
       onReloadWeapons: () => this.reloadAllWeapons(),
+      // Inventory
+      onUnlockAllWeapons: () => this.unlockAllWeapons(),
     });
 
     // Créer le panneau de stats (F4)
@@ -335,6 +337,15 @@ export class DebugScene extends Phaser.Scene {
   }
 
   /**
+   * Débloque toutes les armes dans l'inventaire
+   */
+  public unlockAllWeapons(): void {
+    const inventoryManager = this.gameScene.getInventoryManager();
+    inventoryManager.unlockAllWeapons();
+    console.log(`[Debug] Unlocked all weapons in inventory (${inventoryManager.getUnlockedCount()} weapons)`);
+  }
+
+  /**
    * Soigne le joueur à 100%
    */
   public healPlayerFull(): void {
@@ -485,40 +496,59 @@ export class DebugScene extends Phaser.Scene {
 
   /**
    * Handler pour attribution d'arme
+   * Débloque l'arme dans l'inventaire et l'équipe dans le slot distance actif du joueur
    */
   private onWeaponGive(weaponId: string): void {
     const player = this.gameScene.getPlayer();
+    const inventoryManager = this.gameScene.getInventoryManager();
 
-    // Map des armes
+    // Mapping entre les IDs du debug panel et les IDs du WeaponRegistry
+    const weaponIdMap: Record<string, string> = {
+      sniper: 'sniperRifle',
+      tesla: 'teslaCannon',
+      bow: 'compositeBow',
+      microwave: 'microwaveCannon',
+      blackHole: 'blackHoleGenerator',
+    };
+
+    const registryWeaponId = weaponIdMap[weaponId] || weaponId;
+
+    // Débloquer l'arme dans l'inventaire si pas déjà débloquée
+    if (!inventoryManager.isUnlocked(registryWeaponId)) {
+      inventoryManager.unlockWeapon(registryWeaponId);
+      console.log(`[Debug] Unlocked ${registryWeaponId} in inventory`);
+    }
+
+    // Map des armes (toutes sont des armes à distance)
     const weaponMap: Record<string, () => void> = {
       // Armes de base
-      pistol: () => player.addWeapon(new Pistol(this.gameScene, player)),
-      shotgun: () => player.addWeapon(new Shotgun(this.gameScene, player)),
-      smg: () => player.addWeapon(new SMG(this.gameScene, player)),
-      sniper: () => player.addWeapon(new SniperRifle(this.gameScene, player)),
+      pistol: () => player.equipRangedInSlot(new Pistol(this.gameScene, player)),
+      shotgun: () => player.equipRangedInSlot(new Shotgun(this.gameScene, player)),
+      smg: () => player.equipRangedInSlot(new SMG(this.gameScene, player)),
+      sniper: () => player.equipRangedInSlot(new SniperRifle(this.gameScene, player)),
       // Armes Phase 3
-      revolver: () => player.addWeapon(new Revolver(this.gameScene, player)),
-      assaultRifle: () => player.addWeapon(new AssaultRifle(this.gameScene, player)),
-      doubleBarrel: () => player.addWeapon(new DoubleBarrel(this.gameScene, player)),
-      grenadeLauncher: () => player.addWeapon(new GrenadeLauncher(this.gameScene, player)),
+      revolver: () => player.equipRangedInSlot(new Revolver(this.gameScene, player)),
+      assaultRifle: () => player.equipRangedInSlot(new AssaultRifle(this.gameScene, player)),
+      doubleBarrel: () => player.equipRangedInSlot(new DoubleBarrel(this.gameScene, player)),
+      grenadeLauncher: () => player.equipRangedInSlot(new GrenadeLauncher(this.gameScene, player)),
       // Armes spéciales
-      flamethrower: () => player.addWeapon(new Flamethrower(this.gameScene, player)),
-      tesla: () => player.addWeapon(new TeslaCannon(this.gameScene, player)),
-      nailgun: () => player.addWeapon(new NailGun(this.gameScene, player)),
-      bow: () => player.addWeapon(new CompositeBow(this.gameScene, player)),
-      microwave: () => player.addWeapon(new MicrowaveCannon(this.gameScene, player)),
+      flamethrower: () => player.equipRangedInSlot(new Flamethrower(this.gameScene, player)),
+      tesla: () => player.equipRangedInSlot(new TeslaCannon(this.gameScene, player)),
+      nailgun: () => player.equipRangedInSlot(new NailGun(this.gameScene, player)),
+      bow: () => player.equipRangedInSlot(new CompositeBow(this.gameScene, player)),
+      microwave: () => player.equipRangedInSlot(new MicrowaveCannon(this.gameScene, player)),
       // Armes expérimentales (Phase 4)
-      freezeRay: () => player.addWeapon(new FreezeRay(this.gameScene, player)),
-      gravityGun: () => player.addWeapon(new GravityGun(this.gameScene, player)),
-      blackHole: () => player.addWeapon(new BlackHoleGenerator(this.gameScene, player)),
-      laserMinigun: () => player.addWeapon(new LaserMinigun(this.gameScene, player)),
-      zombieConverter: () => player.addWeapon(new ZombieConverter(this.gameScene, player)),
+      freezeRay: () => player.equipRangedInSlot(new FreezeRay(this.gameScene, player)),
+      gravityGun: () => player.equipRangedInSlot(new GravityGun(this.gameScene, player)),
+      blackHole: () => player.equipRangedInSlot(new BlackHoleGenerator(this.gameScene, player)),
+      laserMinigun: () => player.equipRangedInSlot(new LaserMinigun(this.gameScene, player)),
+      zombieConverter: () => player.equipRangedInSlot(new ZombieConverter(this.gameScene, player)),
     };
 
     const createWeapon = weaponMap[weaponId];
     if (createWeapon) {
       createWeapon();
-      console.log(`[Debug] Gave ${weaponId} to player`);
+      console.log(`[Debug] Gave ${weaponId} to player (replaced slot ${player.getCurrentRangedIndex() + 3})`);
     } else {
       console.warn(`[Debug] Unknown weapon: ${weaponId}`);
     }

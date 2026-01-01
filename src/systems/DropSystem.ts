@@ -261,7 +261,7 @@ export class DropSystem {
    */
   private spawnMeleeWeaponDrop(x: number, y: number): MeleeWeaponDrop | null {
     // Obtenir la vague actuelle pour déterminer le tier
-    const currentWave = this.scene.getWaveNumber?.() ?? 1;
+    const currentWave = this.scene.getWaveSystem()?.getCurrentWave() ?? 1;
 
     // Vérifier si la vague est assez avancée pour les drops de mêlée
     const minWave = this.config.meleeWeapon?.waveModifier?.minWaveForTier2 ?? 3;

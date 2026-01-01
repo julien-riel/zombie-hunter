@@ -2,19 +2,18 @@ import Phaser from 'phaser';
 import { BALANCE } from '@config/balance';
 import { ASSET_KEYS } from '@config/assets.manifest';
 import { Weapon } from '@weapons/Weapon';
-import { Pistol } from '@weapons/firearms/Pistol';
-import { Shotgun } from '@weapons/firearms/Shotgun';
-import { SMG } from '@weapons/firearms/SMG';
-import { SniperRifle } from '@weapons/firearms/SniperRifle';
 import { MeleeWeapon } from '@weapons/melee/MeleeWeapon';
 import { BaseballBat } from '@weapons/melee/BaseballBat';
+import { Pistol } from '@weapons/firearms/Pistol';
 import type { GameScene } from '@scenes/GameScene';
 import { Character, CharacterFactory, AbilityManager } from '@characters/index';
 import type { CharacterType } from '@/types/entities';
 import type { InputManager } from '@/managers/InputManager';
+import type { LoadoutConfig } from '@/types/inventory';
+import { WeaponRegistry } from '@/systems/WeaponRegistry';
 
-/** Nombre maximum d'armes que le joueur peut porter */
-const MAX_WEAPONS = 4;
+/** Nombre de slots de mêlée */
+const MELEE_SLOTS = 2;
 
 /**
  * Classe du joueur
@@ -23,15 +22,24 @@ const MAX_WEAPONS = 4;
 export class Player extends Phaser.Physics.Arcade.Sprite {
   public health: number;
   public maxHealth: number;
+
+  // ==================== SYSTÈME D'ARMES (Phase 2 Inventaire) ====================
+
+  /** Slots d'armes de mêlée [slot1, slot2] - touches 1-2 */
+  private meleeWeapons: [MeleeWeapon | null, MeleeWeapon | null] = [null, null];
+  /** Index de l'arme de mêlée active (0 ou 1) */
+  private currentMeleeIndex: 0 | 1 = 0;
+
+  /** Slots d'armes à distance [slot3, slot4] - touches 3-4 */
+  private rangedWeapons: [Weapon | null, Weapon | null] = [null, null];
+  /** Index de l'arme à distance active (0 ou 1) */
+  private currentRangedIndex: 0 | 1 = 0;
+
+  /** Arme à distance actuellement équipée (raccourci vers rangedWeapons[currentRangedIndex]) */
   public currentWeapon: Weapon | null = null;
+  /** Arme de mêlée actuellement équipée (raccourci vers meleeWeapons[currentMeleeIndex]) */
+  private currentMeleeWeapon: MeleeWeapon | null = null;
 
-  /** Inventaire des armes à distance */
-  private weapons: Weapon[] = [];
-  /** Index de l'arme actuellement équipée */
-  private currentWeaponIndex: number = 0;
-
-  /** Arme de mêlée (toujours disponible) */
-  private meleeWeapon: MeleeWeapon | null = null;
   /** Auto-mêlée activée (attaque automatique quand ennemi au contact) */
   private autoMeleeEnabled: boolean = true;
   /** Distance pour déclencher l'auto-mêlée */
@@ -106,14 +114,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Configuration de l'input
     this.setupInput();
 
-    // Ajouter les armes de départ
-    this.addWeapon(new Pistol(scene, this));
-    this.addWeapon(new Shotgun(scene, this));
-    this.addWeapon(new SMG(scene, this));
-    this.addWeapon(new SniperRifle(scene, this));
+    // Équiper le loadout par défaut (Batte + Pistol)
+    this.equipDefaultLoadout();
+  }
 
-    // Ajouter l'arme de mêlée par défaut
-    this.equipMeleeWeapon(new BaseballBat(scene, this));
+  /**
+   * Équipe le loadout par défaut (wave 1)
+   * Batte de Baseball en slot mêlée 1, Pistol en slot distance 1
+   */
+  private equipDefaultLoadout(): void {
+    const scene = this.scene as GameScene;
+
+    // Slot mêlée 1: Batte de Baseball
+    this.meleeWeapons[0] = new BaseballBat(scene, this);
+    this.currentMeleeIndex = 0;
+    this.currentMeleeWeapon = this.meleeWeapons[0];
+
+    // Slot distance 1: Pistol
+    this.rangedWeapons[0] = new Pistol(scene, this);
+    this.currentRangedIndex = 0;
+    this.currentWeapon = this.rangedWeapons[0];
+
+    // Notifier le HUD
+    this.emitLoadoutChanged();
   }
 
   /**
@@ -148,12 +171,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
     ];
 
-    // Molette de souris pour cycler les armes (géré par InputManager sinon)
+    // Molette de souris pour cycler les armes à distance (géré par InputManager sinon)
     this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gx: number[], _gy: number[], deltaY: number) => {
       if (deltaY > 0) {
-        this.cycleWeapon(1);
+        this.cycleRangedWeapon(1);
       } else if (deltaY < 0) {
-        this.cycleWeapon(-1);
+        this.cycleRangedWeapon(-1);
       }
     });
   }
@@ -165,12 +188,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (!this.inputManager) return;
 
     // Callbacks pour les changements d'armes
-    this.inputManager.onActionTriggered('weapon1', () => this.switchWeapon(0));
-    this.inputManager.onActionTriggered('weapon2', () => this.switchWeapon(1));
-    this.inputManager.onActionTriggered('weapon3', () => this.switchWeapon(2));
-    this.inputManager.onActionTriggered('weapon4', () => this.switchWeapon(3));
-    this.inputManager.onActionTriggered('weaponNext', () => this.cycleWeapon(1));
-    this.inputManager.onActionTriggered('weaponPrev', () => this.cycleWeapon(-1));
+    // Touches 1-2: mêlée, Touches 3-4: distance
+    this.inputManager.onActionTriggered('weapon1', () => this.switchMeleeSlot(0));
+    this.inputManager.onActionTriggered('weapon2', () => this.switchMeleeSlot(1));
+    this.inputManager.onActionTriggered('weapon3', () => this.switchRangedSlot(0));
+    this.inputManager.onActionTriggered('weapon4', () => this.switchRangedSlot(1));
+    this.inputManager.onActionTriggered('weaponNext', () => this.cycleRangedWeapon(1));
+    this.inputManager.onActionTriggered('weaponPrev', () => this.cycleRangedWeapon(-1));
+    this.inputManager.onActionTriggered('meleeNext', () => this.cycleMeleeWeapon());
 
     // Callback pour la mêlée
     this.inputManager.onActionTriggered('melee', () => this.meleeAttack());
@@ -203,7 +228,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Mise à jour des armes
     this.currentWeapon?.update();
-    this.meleeWeapon?.update();
+    this.currentMeleeWeapon?.update();
   }
 
   /**
@@ -418,7 +443,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Ne s'active que si le joueur tire et un ennemi est très proche
    */
   private checkAutoMelee(): void {
-    if (!this.autoMeleeEnabled || !this.meleeWeapon) return;
+    if (!this.autoMeleeEnabled || !this.currentMeleeWeapon) return;
 
     // Vérifier si le joueur est en train de tirer
     const isShooting = this.inputManager
@@ -445,7 +470,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Effectue une attaque de mêlée
    */
   public meleeAttack(): void {
-    if (!this.meleeWeapon) return;
+    if (!this.currentMeleeWeapon) return;
 
     let direction: Phaser.Math.Vector2;
 
@@ -462,27 +487,34 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       ).normalize();
     }
 
-    this.meleeWeapon.swing(direction);
+    this.currentMeleeWeapon.swing(direction);
   }
 
   /**
    * Gère le changement d'arme via les touches 1-4
+   * Touches 1-2: armes de mêlée
+   * Touches 3-4: armes à distance
    */
   private handleWeaponSwitch(): void {
-    // Si InputManager, le changement est géré via les callbacks
+    // Si InputManager, vérifier les touches
     if (this.inputManager) {
-      // Vérifier quand même les JustPressed pour le clavier
-      if (this.inputManager.isActionJustPressed('weapon1')) this.switchWeapon(0);
-      else if (this.inputManager.isActionJustPressed('weapon2')) this.switchWeapon(1);
-      else if (this.inputManager.isActionJustPressed('weapon3')) this.switchWeapon(2);
-      else if (this.inputManager.isActionJustPressed('weapon4')) this.switchWeapon(3);
+      // Touches 1-2 pour la mêlée
+      if (this.inputManager.isActionJustPressed('weapon1')) this.switchMeleeSlot(0);
+      else if (this.inputManager.isActionJustPressed('weapon2')) this.switchMeleeSlot(1);
+      // Touches 3-4 pour les armes à distance
+      else if (this.inputManager.isActionJustPressed('weapon3')) this.switchRangedSlot(0);
+      else if (this.inputManager.isActionJustPressed('weapon4')) this.switchRangedSlot(1);
       return;
     }
 
     // Mode legacy : touches 1-4
     for (let i = 0; i < this.weaponKeys.length; i++) {
       if (this.weaponKeys[i] && Phaser.Input.Keyboard.JustDown(this.weaponKeys[i])) {
-        this.switchWeapon(i);
+        if (i < MELEE_SLOTS) {
+          this.switchMeleeSlot(i as 0 | 1);
+        } else {
+          this.switchRangedSlot((i - MELEE_SLOTS) as 0 | 1);
+        }
         break;
       }
     }
@@ -532,107 +564,210 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.abilityManager.useAbility();
   }
 
+  // ==================== SYSTÈME D'ARMES 2+2 (Phase 2 Inventaire) ====================
+
   /**
-   * Ajoute une arme à l'inventaire
-   * @returns true si l'arme a été ajoutée, false si l'inventaire est plein
+   * Équipe un loadout complet (appelé avant chaque wave)
+   * Détruit les anciennes armes et crée les nouvelles depuis le WeaponRegistry
    */
-  public addWeapon(weapon: Weapon): boolean {
-    if (this.weapons.length >= MAX_WEAPONS) {
-      return false;
+  public equipLoadout(loadout: LoadoutConfig): void {
+    const scene = this.scene as GameScene;
+
+    // Détruire les anciennes armes de mêlée
+    for (const weapon of this.meleeWeapons) {
+      if (weapon) weapon.destroy();
     }
 
-    this.weapons.push(weapon);
-
-    // Si c'est la première arme, l'équiper automatiquement
-    if (this.weapons.length === 1) {
-      this.currentWeapon = weapon;
-      this.currentWeaponIndex = 0;
+    // Détruire les anciennes armes à distance
+    for (const weapon of this.rangedWeapons) {
+      if (weapon) weapon.destroy();
     }
+
+    // Créer les nouvelles armes de mêlée
+    this.meleeWeapons = [
+      loadout.meleeSlots[0] ? WeaponRegistry.createWeapon(loadout.meleeSlots[0], scene, this) : null,
+      loadout.meleeSlots[1] ? WeaponRegistry.createWeapon(loadout.meleeSlots[1], scene, this) : null,
+    ];
+
+    // Créer les nouvelles armes à distance
+    this.rangedWeapons = [
+      loadout.rangedSlots[0] ? WeaponRegistry.createWeapon(loadout.rangedSlots[0], scene, this) : null,
+      loadout.rangedSlots[1] ? WeaponRegistry.createWeapon(loadout.rangedSlots[1], scene, this) : null,
+    ];
+
+    // Sélectionner la première arme disponible dans chaque catégorie
+    this.currentMeleeIndex = this.meleeWeapons[0] ? 0 : 1;
+    this.currentMeleeWeapon = this.meleeWeapons[this.currentMeleeIndex];
+
+    this.currentRangedIndex = this.rangedWeapons[0] ? 0 : 1;
+    this.currentWeapon = this.rangedWeapons[this.currentRangedIndex];
+
+    // Notifier le HUD
+    this.emitLoadoutChanged();
+  }
+
+  /**
+   * Émet les événements de changement de loadout pour le HUD
+   */
+  private emitLoadoutChanged(): void {
+    const scene = this.scene as GameScene;
+    scene.events.emit('loadoutChanged', {
+      meleeWeapons: this.meleeWeapons,
+      rangedWeapons: this.rangedWeapons,
+      currentMeleeIndex: this.currentMeleeIndex,
+      currentRangedIndex: this.currentRangedIndex,
+    });
+  }
+
+  /**
+   * Change de slot d'arme de mêlée (touches 1-2)
+   */
+  public switchMeleeSlot(index: 0 | 1): void {
+    const weapon = this.meleeWeapons[index];
+    if (!weapon) return; // Slot vide
+    if (index === this.currentMeleeIndex) return; // Déjà sélectionné
+
+    this.currentMeleeIndex = index;
+    this.currentMeleeWeapon = weapon;
 
     // Émettre un événement pour le HUD
-    (this.scene as GameScene).events.emit('weaponInventoryChanged', this.weapons, this.currentWeaponIndex);
-
-    return true;
+    (this.scene as GameScene).events.emit('meleeSlotChanged', index, this.currentMeleeWeapon);
   }
 
   /**
-   * Change d'arme par index
+   * Change de slot d'arme à distance (touches 3-4)
    */
-  public switchWeapon(index: number): void {
-    if (index < 0 || index >= this.weapons.length) return;
-    if (index === this.currentWeaponIndex) return;
+  public switchRangedSlot(index: 0 | 1): void {
+    const weapon = this.rangedWeapons[index];
+    if (!weapon) return; // Slot vide
+    if (index === this.currentRangedIndex) return; // Déjà sélectionné
 
-    this.currentWeaponIndex = index;
-    this.currentWeapon = this.weapons[index];
-
-    // Émettre un événement pour le HUD
-    (this.scene as GameScene).events.emit('weaponChanged', this.currentWeaponIndex, this.currentWeapon);
-  }
-
-  /**
-   * Cycle entre les armes (molette de souris)
-   * @param direction 1 pour suivant, -1 pour précédent
-   */
-  public cycleWeapon(direction: 1 | -1): void {
-    if (this.weapons.length <= 1) return;
-
-    let newIndex = this.currentWeaponIndex + direction;
-
-    // Wrap around
-    if (newIndex < 0) {
-      newIndex = this.weapons.length - 1;
-    } else if (newIndex >= this.weapons.length) {
-      newIndex = 0;
-    }
-
-    this.switchWeapon(newIndex);
-  }
-
-  /**
-   * Récupère l'inventaire des armes
-   */
-  public getWeapons(): Weapon[] {
-    return this.weapons;
-  }
-
-  /**
-   * Récupère l'index de l'arme actuelle
-   */
-  public getCurrentWeaponIndex(): number {
-    return this.currentWeaponIndex;
-  }
-
-  /**
-   * Équipe une arme (ancienne méthode pour compatibilité)
-   * @deprecated Utiliser addWeapon() et switchWeapon() à la place
-   */
-  public equipWeapon(weapon: Weapon): void {
+    this.currentRangedIndex = index;
     this.currentWeapon = weapon;
-  }
-
-  // ==================== MÉTHODES ARME DE MÊLÉE (Phase 1 Armes) ====================
-
-  /**
-   * Équipe une arme de mêlée
-   * L'ancienne arme de mêlée est détruite
-   */
-  public equipMeleeWeapon(weapon: MeleeWeapon): void {
-    // Détruire l'ancienne arme si elle existe
-    if (this.meleeWeapon) {
-      this.meleeWeapon.destroy();
-    }
-
-    this.meleeWeapon = weapon;
 
     // Émettre un événement pour le HUD
-    (this.scene as GameScene).events.emit('meleeWeaponChanged', this.meleeWeapon);
+    (this.scene as GameScene).events.emit('rangedSlotChanged', index, this.currentWeapon);
+  }
+
+  /**
+   * Cycle entre les armes à distance (molette de souris)
+   * @param _direction 1 pour suivant, -1 pour précédent (non utilisé car seulement 2 slots)
+   */
+  public cycleRangedWeapon(_direction: 1 | -1): void {
+    const otherIndex = this.currentRangedIndex === 0 ? 1 : 0;
+    if (this.rangedWeapons[otherIndex]) {
+      this.switchRangedSlot(otherIndex as 0 | 1);
+    }
+  }
+
+  /**
+   * Cycle entre les armes de mêlée (pour contrôles tactiles)
+   */
+  public cycleMeleeWeapon(): void {
+    const otherIndex = this.currentMeleeIndex === 0 ? 1 : 0;
+    if (this.meleeWeapons[otherIndex]) {
+      this.switchMeleeSlot(otherIndex as 0 | 1);
+    }
+  }
+
+  /**
+   * Récupère les armes de mêlée
+   */
+  public getMeleeWeapons(): [MeleeWeapon | null, MeleeWeapon | null] {
+    return [...this.meleeWeapons] as [MeleeWeapon | null, MeleeWeapon | null];
+  }
+
+  /**
+   * Récupère les armes à distance
+   */
+  public getRangedWeapons(): [Weapon | null, Weapon | null] {
+    return [...this.rangedWeapons] as [Weapon | null, Weapon | null];
   }
 
   /**
    * Récupère l'arme de mêlée actuelle
    */
   public getMeleeWeapon(): MeleeWeapon | null {
-    return this.meleeWeapon;
+    return this.currentMeleeWeapon;
+  }
+
+  /**
+   * Récupère l'index du slot mêlée actif
+   */
+  public getCurrentMeleeIndex(): 0 | 1 {
+    return this.currentMeleeIndex;
+  }
+
+  /**
+   * Récupère l'index du slot distance actif
+   */
+  public getCurrentRangedIndex(): 0 | 1 {
+    return this.currentRangedIndex;
+  }
+
+  /**
+   * Équipe directement une arme de mêlée dans un slot
+   * Utilisé pour le debug et les drops
+   */
+  public equipMeleeInSlot(weapon: MeleeWeapon, slotIndex: 0 | 1 = this.currentMeleeIndex): void {
+    // Détruire l'ancienne arme si elle existe
+    if (this.meleeWeapons[slotIndex]) {
+      this.meleeWeapons[slotIndex]!.destroy();
+    }
+
+    this.meleeWeapons[slotIndex] = weapon;
+
+    // Mettre à jour l'arme courante si c'est le slot actif
+    if (slotIndex === this.currentMeleeIndex) {
+      this.currentMeleeWeapon = weapon;
+    }
+
+    // Émettre un événement pour le HUD
+    (this.scene as GameScene).events.emit('meleeSlotEquipped', slotIndex, weapon);
+  }
+
+  /**
+   * Équipe directement une arme à distance dans un slot
+   * Utilisé pour le debug et les drops
+   */
+  public equipRangedInSlot(weapon: Weapon, slotIndex: 0 | 1 = this.currentRangedIndex): void {
+    // Détruire l'ancienne arme si elle existe
+    if (this.rangedWeapons[slotIndex]) {
+      this.rangedWeapons[slotIndex]!.destroy();
+    }
+
+    this.rangedWeapons[slotIndex] = weapon;
+
+    // Mettre à jour l'arme courante si c'est le slot actif
+    if (slotIndex === this.currentRangedIndex) {
+      this.currentWeapon = weapon;
+    }
+
+    // Émettre un événement pour le HUD
+    (this.scene as GameScene).events.emit('rangedSlotEquipped', slotIndex, weapon);
+  }
+
+  // ==================== COMPATIBILITÉ LEGACY ====================
+
+  /**
+   * @deprecated Utiliser getRangedWeapons() à la place
+   */
+  public getWeapons(): Weapon[] {
+    return this.rangedWeapons.filter((w): w is Weapon => w !== null);
+  }
+
+  /**
+   * @deprecated Utiliser getCurrentRangedIndex() à la place
+   */
+  public getCurrentWeaponIndex(): number {
+    return this.currentRangedIndex;
+  }
+
+  /**
+   * @deprecated Utiliser equipMeleeInSlot() à la place
+   */
+  public equipMeleeWeapon(weapon: MeleeWeapon): void {
+    this.equipMeleeInSlot(weapon, this.currentMeleeIndex);
   }
 
   /**
@@ -786,12 +921,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Retire toutes les armes de l'inventaire (debug)
    */
   public clearWeapons(): void {
-    this.weapons = [];
+    // Détruire les armes de mêlée
+    for (const weapon of this.meleeWeapons) {
+      if (weapon) weapon.destroy();
+    }
+    this.meleeWeapons = [null, null];
+    this.currentMeleeWeapon = null;
+    this.currentMeleeIndex = 0;
+
+    // Détruire les armes à distance
+    for (const weapon of this.rangedWeapons) {
+      if (weapon) weapon.destroy();
+    }
+    this.rangedWeapons = [null, null];
     this.currentWeapon = null;
-    this.currentWeaponIndex = 0;
+    this.currentRangedIndex = 0;
 
     // Émettre un événement pour le HUD
-    (this.scene as GameScene).events.emit('weaponInventoryChanged', this.weapons, this.currentWeaponIndex);
+    this.emitLoadoutChanged();
   }
 
   // ==================== MÉTHODES PERSONNAGE (Phase 7.1) ====================

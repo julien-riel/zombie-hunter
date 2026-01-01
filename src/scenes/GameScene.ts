@@ -15,6 +15,7 @@ import { TelemetryManager } from '@managers/TelemetryManager';
 import { CorpseManager } from '@managers/CorpseManager';
 import { SaveManager } from '@managers/SaveManager';
 import { InputManager } from '@managers/InputManager';
+import { InventoryManager } from '@managers/InventoryManager';
 import { ZombieFactory } from '@entities/zombies/ZombieFactory';
 import { CombatSystem } from '@systems/CombatSystem';
 import { ComboSystem } from '@systems/ComboSystem';
@@ -81,6 +82,7 @@ export class GameScene extends Phaser.Scene {
   private flowFieldManager!: FlowFieldManager;
   private bossFactory!: BossFactory;
   private eventSystem!: EventSystem;
+  private inventoryManager!: InventoryManager;
 
   // Mode de jeu (Phase 8.2)
   private modeConfig: ModeConfig | null = null;
@@ -261,6 +263,10 @@ export class GameScene extends Phaser.Scene {
 
     // Système d'événements spéciaux (Phase 7.4)
     this.eventSystem = new EventSystem(this);
+
+    // Gestionnaire d'inventaire (Phase 5)
+    this.inventoryManager = new InventoryManager();
+    this.inventoryManager.load();
 
     // Système de vagues (avec intégration ThreatSystem, DDA, et EventSystem)
     this.waveSystem = new WaveSystem(this);
@@ -765,6 +771,13 @@ export class GameScene extends Phaser.Scene {
    */
   public getEventSystem(): EventSystem {
     return this.eventSystem;
+  }
+
+  /**
+   * Récupère le gestionnaire d'inventaire (Phase 5)
+   */
+  public getInventoryManager(): InventoryManager {
+    return this.inventoryManager;
   }
 
   /**
