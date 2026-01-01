@@ -61,6 +61,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
 
   // Affichage de l'arme actuelle
   private weaponNameText!: Phaser.GameObjects.Text;
+  private meleeNameText!: Phaser.GameObjects.Text;
 
   // État
   private isVisible: boolean = true;
@@ -266,10 +267,25 @@ export class MobileControls extends Phaser.GameObjects.Container {
       x: width - margin - buttonSize,
       y: margin + buttonSize * 4,
       radius: buttonSize * 0.7,
-      icon: '⚔',
+      icon: '⚔️',
       iconSize: 18,
-      color: 0x886644,
+      color: 0xaa4444,
     });
+
+    // ========== AFFICHAGE NOM DE L'ARME MELEE ==========
+    this.meleeNameText = this.scene.add.text(
+      width - margin - buttonSize * 2.5,
+      margin + buttonSize * 4,
+      '',
+      {
+        fontSize: '12px',
+        color: '#ff8888',
+        fontStyle: 'bold',
+        align: 'right',
+      }
+    );
+    this.meleeNameText.setOrigin(1, 0.5);
+    this.meleeNameText.setDepth(1000);
 
     // ========== AFFICHAGE NOM DE L'ARME (entre les boutons +/-) ==========
     this.weaponNameText = this.scene.add.text(
@@ -585,6 +601,11 @@ export class MobileControls extends Phaser.GameObjects.Container {
       margin + buttonSize * 1.75
     );
 
+    this.meleeNameText.setPosition(
+      width - margin - buttonSize * 2.5,
+      margin + buttonSize * 4
+    );
+
     this.pauseButton.setPosition(margin + buttonSize, margin + buttonSize);
   }
 
@@ -608,11 +629,20 @@ export class MobileControls extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Met à jour l'affichage de l'arme actuelle
+   * Met à jour l'affichage de l'arme à distance actuelle
    */
   public setCurrentWeapon(weaponName: string): void {
     if (this.weaponNameText) {
       this.weaponNameText.setText(weaponName);
+    }
+  }
+
+  /**
+   * Met à jour l'affichage de l'arme de mêlée actuelle
+   */
+  public setCurrentMeleeWeapon(weaponName: string): void {
+    if (this.meleeNameText) {
+      this.meleeNameText.setText(weaponName);
     }
   }
 
@@ -640,6 +670,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
 
     // Gérer la visibilité du texte d'arme séparément
     this.weaponNameText.setVisible(show);
+    this.meleeNameText.setVisible(show);
 
     elements.forEach((element) => {
       if (element.setVisibility) {
@@ -756,6 +787,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
     this.meleeNextButton.destroy();
     this.pauseButton.destroy();
     this.weaponNameText.destroy();
+    this.meleeNameText.destroy();
 
     super.destroy(fromScene);
   }

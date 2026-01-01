@@ -1150,16 +1150,35 @@ export class GameScene extends Phaser.Scene {
       inputManager: this.inputManager,
     });
 
-    // Mettre à jour l'affichage de l'arme quand elle change
+    // Mettre à jour l'affichage de l'arme à distance quand elle change
     this.events.on('weaponChanged', (_index: number, weapon: { getName: () => string }) => {
       if (this.mobileControls && weapon) {
         this.mobileControls.setCurrentWeapon(weapon.getName());
       }
     });
 
-    // Initialiser avec l'arme actuelle
+    // Mettre à jour l'affichage de l'arme de mêlée quand elle change
+    this.events.on('rangedSlotChanged', (_index: number, weapon: { getName: () => string }) => {
+      if (this.mobileControls && weapon) {
+        this.mobileControls.setCurrentWeapon(weapon.getName());
+      }
+    });
+
+    this.events.on('meleeSlotChanged', (_index: number, weapon: { getName: () => string }) => {
+      if (this.mobileControls && weapon) {
+        this.mobileControls.setCurrentMeleeWeapon(weapon.getName());
+      }
+    });
+
+    // Initialiser avec l'arme à distance actuelle
     if (this.player?.currentWeapon) {
       this.mobileControls.setCurrentWeapon(this.player.currentWeapon.getName());
+    }
+
+    // Initialiser avec l'arme de mêlée actuelle
+    const currentMelee = this.player?.getMeleeWeapon?.();
+    if (currentMelee) {
+      this.mobileControls.setCurrentMeleeWeapon(currentMelee.getName());
     }
 
     // Enregistrer le callback pour la pause via InputManager
