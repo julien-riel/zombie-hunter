@@ -50,7 +50,6 @@ export class LoadoutSelectionScene extends Phaser.Scene {
 
   // Slots d'armes
   private weaponSlots: WeaponSlotDisplay[] = [];
-  private selectedSlot: WeaponSlotDisplay | null = null;
 
   // Panneau de sélection d'arme
   private selectionPanel: Phaser.GameObjects.Container | null = null;
@@ -70,7 +69,6 @@ export class LoadoutSelectionScene extends Phaser.Scene {
     this.gameScene = data.gameScene;
     this.waveNumber = data.waveNumber;
     this.isClosing = false;
-    this.selectedSlot = null;
     this.weaponSlots = [];
     this.isMobile = !DeviceDetector.isDesktop();
 
@@ -349,7 +347,6 @@ export class LoadoutSelectionScene extends Phaser.Scene {
       this.selectionPanel = null;
     }
 
-    this.selectedSlot = slot;
     this.createSelectionPanel(slot);
   }
 
@@ -398,7 +395,6 @@ export class LoadoutSelectionScene extends Phaser.Scene {
     closeBtn.on('pointerdown', () => {
       container.destroy();
       this.selectionPanel = null;
-      this.selectedSlot = null;
     });
     container.add(closeBtn);
 
@@ -549,7 +545,6 @@ export class LoadoutSelectionScene extends Phaser.Scene {
       this.selectionPanel.destroy();
       this.selectionPanel = null;
     }
-    this.selectedSlot = null;
 
     // Effet de feedback
     this.flashEffect(0x00ff00);
@@ -706,7 +701,6 @@ export class LoadoutSelectionScene extends Phaser.Scene {
    */
   shutdown(): void {
     this.weaponSlots = [];
-    this.selectedSlot = null;
     if (this.selectionPanel) {
       this.selectionPanel.destroy();
       this.selectionPanel = null;
