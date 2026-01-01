@@ -187,6 +187,7 @@ export const BALANCE = {
       reloadTime: 1000,
       bulletSpeed: 600,
       spread: 0.05,
+      rarity: 'common' as const,
       // DPS théorique : 40 (sans reload)
     },
     shotgun: {
@@ -197,6 +198,7 @@ export const BALANCE = {
       reloadTime: 1500,
       bulletSpeed: 500,
       spread: 0.3,
+      rarity: 'common' as const,
       // DPS théorique : 60 (6 pellets * 8 dmg / 0.8s)
     },
     smg: {
@@ -206,6 +208,7 @@ export const BALANCE = {
       reloadTime: 1200,
       bulletSpeed: 550,
       spread: 0.08,
+      rarity: 'common' as const,
       // DPS théorique : 60
     },
     sniper: {
@@ -215,7 +218,53 @@ export const BALANCE = {
       reloadTime: 2000,
       bulletSpeed: 900,
       spread: 0,
+      rarity: 'common' as const,
       // DPS théorique : 66.7
+    },
+    revolver: {
+      damage: 35,
+      fireRate: 500,
+      magazineSize: 6,
+      reloadTime: 2000,
+      bulletSpeed: 700,
+      spread: 0.02,
+      rarity: 'rare' as const,
+      // DPS théorique : 70 (35 dmg * 2 tirs/s) - One shot potential sur zombies faibles
+    },
+    assaultRifle: {
+      damage: 12,
+      fireRate: 100, // Entre les tirs du burst
+      burstCount: 3, // 3 balles par burst
+      burstDelay: 400, // Délai entre les bursts
+      magazineSize: 24,
+      reloadTime: 1800,
+      bulletSpeed: 650,
+      spread: 0.04,
+      rarity: 'rare' as const,
+      // DPS théorique : ~54 (12 dmg * 3 balles / 0.4s burst + 0.3s = ~0.67s)
+    },
+    doubleBarrel: {
+      damage: 15, // Par pellet
+      pelletCount: 8,
+      fireRate: 200, // Délai entre les 2 tirs
+      magazineSize: 2,
+      reloadTime: 2200,
+      bulletSpeed: 450,
+      spread: 0.35,
+      rarity: 'epic' as const,
+      // DPS théorique : Burst massif (15 * 8 * 2 = 240 en ~0.4s), puis reload
+    },
+    grenadeLauncher: {
+      damage: 80, // Dégâts directs
+      explosionDamage: 60, // Dégâts de zone
+      explosionRadius: 100,
+      fireRate: 1500,
+      magazineSize: 4,
+      reloadTime: 2500,
+      projectileSpeed: 400,
+      arcGravity: 300, // Gravité pour le tir en arc
+      rarity: 'epic' as const,
+      // DPS théorique : Variable selon le nombre de cibles
     },
 
     // === ARMES DE MELEE ===
@@ -227,6 +276,7 @@ export const BALANCE = {
       arcAngle: 90,
       stunChance: 0.2,
       stunDuration: 500,
+      tier: 1,
       // DPS théorique : 62.5 (25 dmg / 0.4s)
     },
     machete: {
@@ -235,6 +285,7 @@ export const BALANCE = {
       swingSpeed: 250,
       knockback: 0,
       arcAngle: 60,
+      tier: 2,
       // DPS théorique : 120 (30 dmg / 0.25s)
     },
     chainsaw: {
@@ -244,7 +295,41 @@ export const BALANCE = {
       fuelConsumption: 2,
       maxFuel: 100,
       slowdown: 0.5,
+      tier: 3,
       // DPS théorique : 80 (8 dmg * 10 ticks/s)
+    },
+    fireAxe: {
+      damage: 40,
+      range: 55,
+      swingSpeed: 500,
+      knockback: 180,
+      arcAngle: 100,
+      critChance: 0.15,
+      critMultiplier: 2.0,
+      tier: 2,
+      // DPS théorique : 80 (40 dmg / 0.5s), +crit = ~92 effective
+    },
+    katana: {
+      damage: 22,
+      range: 65,
+      swingSpeed: 200,
+      knockback: 0,
+      arcAngle: 70,
+      critChance: 0.3,
+      critMultiplier: 1.75,
+      tier: 3,
+      // DPS théorique : 110 (22 dmg / 0.2s), +crit = ~132 effective
+    },
+    sledgehammer: {
+      damage: 60,
+      range: 70,
+      swingSpeed: 800,
+      knockback: 400,
+      arcAngle: 120,
+      stunDuration: 1000,
+      groundShakeIntensity: 0.01,
+      tier: 3,
+      // DPS théorique : 75 (60 dmg / 0.8s), mais stun + knockback massif
     },
 
     // === ARMES SPECIALES ===
@@ -301,6 +386,76 @@ export const BALANCE = {
       chargeTime: 500,
       coneAngle: 45,
       // DPS théorique : 30 (faible mais dégâts de zone)
+    },
+
+    // === ARMES EXPERIMENTALES (Phase 4) ===
+    freezeRay: {
+      damage: 20,
+      range: 300,
+      fireRate: 800,
+      magazineSize: 15,
+      reloadTime: 2000,
+      projectileSpeed: 400,
+      freezeDuration: 3000, // 3 secondes de gel
+      freezeSlowFactor: 0.2, // 80% de ralentissement
+      chainRadius: 80, // Rayon de propagation du gel
+      chainChance: 0.5, // 50% de chance de propager
+      meleeBonusDamage: 1.5, // +50% dégâts mêlée sur ennemis gelés
+      rarity: 'legendary' as const,
+      unlockWave: 20,
+    },
+    gravityGun: {
+      damage: 15,
+      range: 250,
+      fireRate: 1200,
+      magazineSize: 8,
+      reloadTime: 2500,
+      coneAngle: 60,
+      pushForce: 400, // Force de répulsion
+      pullForce: 300, // Force d'attraction
+      collisionDamage: 30, // Dégâts quand zombies se percutent
+      rarity: 'legendary' as const,
+      unlockWave: 20,
+    },
+    blackHoleGenerator: {
+      damage: 10, // Dégâts du projectile initial
+      fireRate: 3000,
+      magazineSize: 3,
+      reloadTime: 4000,
+      projectileSpeed: 300,
+      duration: 5000, // 5 secondes
+      attractRadius: 150, // Rayon d'attraction
+      damagePerSecond: 25, // Dégâts continus
+      pullForce: 200, // Force d'attraction
+      maxBlackHoles: 2, // Maximum simultanés
+      implosionDamage: 80, // Dégâts à l'implosion
+      rarity: 'legendary' as const,
+      unlockType: 'bossDrop',
+    },
+    laserMinigun: {
+      damagePerSecond: 120, // DPS du faisceau
+      range: 400,
+      beamWidth: 8,
+      maxEnergy: 100, // Énergie max
+      energyPerSecond: 15, // Consommation
+      rechargeTime: 3000,
+      warmupTime: 500, // Temps de chauffe
+      overheatTime: 4000, // Temps avant surchauffe
+      cooldownRate: 0.5, // Vitesse de refroidissement (par seconde)
+      rarity: 'legendary' as const,
+      unlockCost: 10000, // Prix d'achat
+    },
+    zombieConverter: {
+      fireRate: 2000,
+      magazineSize: 5,
+      reloadTime: 3000,
+      projectileSpeed: 350,
+      convertDuration: 15000, // 15 secondes de conversion
+      maxConverted: 3, // Maximum de zombies convertis
+      convertedDamageBonus: 0.5, // +50% dégâts des zombies convertis
+      rarity: 'legendary' as const,
+      unlockType: 'secret',
+      unlockRequirement: 100, // Nombre de zombies à convertir au total
     },
   },
 
@@ -373,18 +528,37 @@ export const BALANCE = {
     },
 
     // Table de loot par type de zombie
-    // Format: { ammo, healthSmall, healthMedium, powerUp }
+    // Format: { ammo, healthSmall, healthMedium, powerUp, meleeWeapon }
     lootTables: {
-      shambler: { ammo: 0.15, healthSmall: 0.08, healthMedium: 0, powerUp: 0.01 },
-      runner: { ammo: 0.12, healthSmall: 0.05, healthMedium: 0, powerUp: 0.02 },
-      crawler: { ammo: 0.12, healthSmall: 0.06, healthMedium: 0.02, powerUp: 0.02 },
-      tank: { ammo: 0.25, healthSmall: 0.15, healthMedium: 0.15, powerUp: 0.05 },
-      spitter: { ammo: 0.20, healthSmall: 0.10, healthMedium: 0, powerUp: 0.03 },
-      bomber: { ammo: 0.10, healthSmall: 0.05, healthMedium: 0, powerUp: 0.03 },
-      screamer: { ammo: 0.20, healthSmall: 0.12, healthMedium: 0, powerUp: 0.08 },
-      splitter: { ammo: 0.15, healthSmall: 0.08, healthMedium: 0, powerUp: 0.02 },
-      invisible: { ammo: 0.18, healthSmall: 0.10, healthMedium: 0.05, powerUp: 0.05 },
-      necromancer: { ammo: 0.30, healthSmall: 0.20, healthMedium: 0.10, powerUp: 0.10 },
+      shambler: { ammo: 0.15, healthSmall: 0.08, healthMedium: 0, powerUp: 0.01, meleeWeapon: 0 },
+      runner: { ammo: 0.12, healthSmall: 0.05, healthMedium: 0, powerUp: 0.02, meleeWeapon: 0 },
+      crawler: { ammo: 0.12, healthSmall: 0.06, healthMedium: 0.02, powerUp: 0.02, meleeWeapon: 0 },
+      tank: { ammo: 0.25, healthSmall: 0.15, healthMedium: 0.15, powerUp: 0.05, meleeWeapon: 0.05 },
+      spitter: { ammo: 0.20, healthSmall: 0.10, healthMedium: 0, powerUp: 0.03, meleeWeapon: 0 },
+      bomber: { ammo: 0.10, healthSmall: 0.05, healthMedium: 0, powerUp: 0.03, meleeWeapon: 0 },
+      screamer: { ammo: 0.20, healthSmall: 0.12, healthMedium: 0, powerUp: 0.08, meleeWeapon: 0.03 },
+      splitter: { ammo: 0.15, healthSmall: 0.08, healthMedium: 0, powerUp: 0.02, meleeWeapon: 0 },
+      invisible: { ammo: 0.18, healthSmall: 0.10, healthMedium: 0.05, powerUp: 0.05, meleeWeapon: 0.04 },
+      necromancer: { ammo: 0.30, healthSmall: 0.20, healthMedium: 0.10, powerUp: 0.10, meleeWeapon: 0.08 },
+    },
+
+    // Configuration des drops d'armes de mêlée
+    meleeWeapon: {
+      // Armes disponibles par tier (le tier détermine la puissance)
+      // Tier 1: Arme de départ
+      // Tier 2: Armes intermédiaires
+      // Tier 3: Armes puissantes
+      availableWeapons: ['machete', 'fireAxe', 'katana', 'sledgehammer', 'chainsaw'] as const,
+      // Poids de drop par tier (tier 2 plus commun, tier 3 rare)
+      tierWeights: {
+        2: 0.7, // 70% chance tier 2
+        3: 0.3, // 30% chance tier 3
+      },
+      // Modificateur de drop basé sur la vague
+      waveModifier: {
+        minWaveForTier2: 3, // Tier 2 à partir de la vague 3
+        minWaveForTier3: 8, // Tier 3 à partir de la vague 8
+      },
     },
   },
 

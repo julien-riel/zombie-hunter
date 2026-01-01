@@ -3,10 +3,13 @@ import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
 import type { GameScene } from './GameScene';
 import type { WaveConfig } from '@systems/WaveSystem';
 import type { Weapon } from '@weapons/Weapon';
+import type { MeleeWeapon } from '@weapons/melee/MeleeWeapon';
 import { ComboMeter } from '@ui/ComboMeter';
 import { PowerUpDisplay } from '@ui/PowerUpDisplay';
 import { ActiveItemDisplay } from '@ui/ActiveItemDisplay';
+import { MeleeComparisonUI } from '@ui/MeleeComparisonUI';
 import type { GameEventPayloads } from '@/types/events';
+import type { MeleeWeaponInfo, MeleeWeaponDrop } from '@items/drops/MeleeWeaponDrop';
 import { DeviceDetector } from '@utils/DeviceDetector';
 
 /**
@@ -37,6 +40,12 @@ export class HUDScene extends Phaser.Scene {
   private weaponAmmoTexts: Phaser.GameObjects.Text[] = [];
   private weaponKeyHints: Phaser.GameObjects.Text[] = [];
 
+  // Élément d'arme de mêlée
+  private meleeSlot!: Phaser.GameObjects.Container;
+  private meleeSlotBg!: Phaser.GameObjects.Rectangle;
+  private meleeNameText!: Phaser.GameObjects.Text;
+  private meleeKeyHint!: Phaser.GameObjects.Text;
+
   // Compteur de combo (Phase 6.1)
   private comboMeter!: ComboMeter;
 
@@ -45,6 +54,9 @@ export class HUDScene extends Phaser.Scene {
 
   // Affichage des objets actifs (Phase 6.4)
   private activeItemDisplay!: ActiveItemDisplay;
+
+  // UI de comparaison d'armes de mêlée (Phase 2 Armes)
+  private meleeComparisonUI!: MeleeComparisonUI;
 
   // Détection mobile
   private isMobile: boolean = false;
@@ -75,9 +87,11 @@ export class HUDScene extends Phaser.Scene {
     this.createWaveAnnouncement();
     this.createControls();
     this.createWeaponInventory();
+    this.createMeleeSlot();
     this.createComboMeter();
     this.createPowerUpDisplay();
     this.createActiveItemDisplay();
+    this.createMeleeComparisonUI();
 
     // Écouter les événements de score
     this.gameScene.events.on('scoreUpdate', this.onScoreUpdate, this);
@@ -91,6 +105,7 @@ export class HUDScene extends Phaser.Scene {
     // Écouter les événements d'armes
     this.gameScene.events.on('weaponInventoryChanged', this.onWeaponInventoryChanged, this);
     this.gameScene.events.on('weaponChanged', this.onWeaponChanged, this);
+    this.gameScene.events.on('meleeWeaponChanged', this.onMeleeWeaponChanged, this);
 
     // Écouter les événements de combo (Phase 6.1)
     this.gameScene.events.on('combo:increase', this.onComboIncrease, this);
@@ -108,6 +123,11 @@ export class HUDScene extends Phaser.Scene {
     // Écouter les événements d'économie (Phase 6.6)
     this.gameScene.events.on('economy:update', this.onEconomyUpdate, this);
     this.gameScene.events.on('economy:points_earned', this.onPointsEarned, this);
+
+    // Écouter les événements de drop d'armes de mêlée (Phase 2 Armes)
+    this.gameScene.events.on('meleeWeaponDrop:showComparison', this.onMeleeWeaponDropShowComparison, this);
+    this.gameScene.events.on('meleeWeaponDrop:hideComparison', this.onMeleeWeaponDropHideComparison, this);
+    this.gameScene.events.on('meleeWeaponDrop:accept', this.onMeleeWeaponDropAccept, this);
   }
 
   /**
@@ -274,6 +294,7 @@ export class HUDScene extends Phaser.Scene {
       'WASD/Flèches - Déplacement',
       'Souris - Viser',
       'Clic gauche - Tirer',
+      'V - Mêlée',
       'Espace - Dash',
       '1-4/Molette - Arme',
       'R - Recharger',
@@ -357,6 +378,79 @@ export class HUDScene extends Phaser.Scene {
 
     container.add([bg, keyHint, name, ammo]);
     this.weaponSlots.push(container);
+  }
+
+  /**
+   * Crée le slot d'arme de mêlée
+   * Affiché à gauche de l'inventaire d'armes
+   */
+  private createMeleeSlot(): void {
+    // Sur mobile, on masque le slot mêlée car il y a un bouton dédié
+    if (this.isMobile) {
+      return;
+    }
+
+    const slotWidth = 80;
+    const slotHeight = 50;
+    const maxSlots = 4;
+    const slotSpacing = 10;
+    const totalWidth = maxSlots * 100 + (maxSlots - 1) * slotSpacing;
+    const startX = (GAME_WIDTH - totalWidth) / 2;
+    const y = GAME_HEIGHT - slotHeight - 20;
+
+    // Positionner à gauche des armes à distance
+    const x = startX - slotWidth - slotSpacing * 2;
+
+    this.meleeSlot = this.add.container(x, y);
+
+    // Fond du slot (couleur distincte pour mêlée)
+    this.meleeSlotBg = this.add.rectangle(0, 0, slotWidth, slotHeight, 0x442222, 0.8);
+    this.meleeSlotBg.setOrigin(0, 0);
+    this.meleeSlotBg.setStrokeStyle(2, 0x664444);
+
+    // Indicateur de touche (V)
+    this.meleeKeyHint = this.add.text(5, 3, 'V', {
+      fontSize: '10px',
+      color: '#aa6644',
+    });
+
+    // Icône mêlée
+    const meleeIcon = this.add.text(slotWidth / 2, slotHeight / 2 - 8, '🗡️', {
+      fontSize: '16px',
+    });
+    meleeIcon.setOrigin(0.5);
+
+    // Nom de l'arme
+    this.meleeNameText = this.add.text(slotWidth / 2, slotHeight / 2 + 10, '', {
+      fontSize: '10px',
+      color: '#ffffff',
+    });
+    this.meleeNameText.setOrigin(0.5);
+
+    this.meleeSlot.add([this.meleeSlotBg, this.meleeKeyHint, meleeIcon, this.meleeNameText]);
+
+    // Initialiser avec l'arme de mêlée du joueur si disponible
+    if (this.gameScene?.player) {
+      const meleeWeapon = this.gameScene.player.getMeleeWeapon();
+      if (meleeWeapon) {
+        this.updateMeleeSlot(meleeWeapon);
+      }
+    }
+  }
+
+  /**
+   * Met à jour le slot de mêlée
+   */
+  private updateMeleeSlot(weapon: MeleeWeapon): void {
+    if (!this.meleeNameText) return;
+    this.meleeNameText.setText(weapon.getName());
+  }
+
+  /**
+   * Gère le changement d'arme de mêlée
+   */
+  private onMeleeWeaponChanged(weapon: MeleeWeapon): void {
+    this.updateMeleeSlot(weapon);
   }
 
   /**
@@ -744,6 +838,43 @@ export class HUDScene extends Phaser.Scene {
     }
   }
 
+  // ==================== UI COMPARAISON MELEE (Phase 2 Armes) ====================
+
+  /**
+   * Crée l'UI de comparaison d'armes de mêlée
+   */
+  private createMeleeComparisonUI(): void {
+    this.meleeComparisonUI = new MeleeComparisonUI(this);
+  }
+
+  /**
+   * Affiche l'UI de comparaison d'armes de mêlée
+   */
+  private onMeleeWeaponDropShowComparison(data: {
+    currentWeapon: MeleeWeaponInfo | null;
+    newWeapon: MeleeWeaponInfo;
+    dropId: MeleeWeaponDrop;
+  }): void {
+    this.meleeComparisonUI.show(data);
+  }
+
+  /**
+   * Cache l'UI de comparaison d'armes de mêlée
+   */
+  private onMeleeWeaponDropHideComparison(): void {
+    this.meleeComparisonUI.hide();
+  }
+
+  /**
+   * Gère l'acceptation d'une nouvelle arme de mêlée
+   */
+  private onMeleeWeaponDropAccept(drop: MeleeWeaponDrop): void {
+    // Le joueur accepte la nouvelle arme
+    if (this.gameScene?.player) {
+      drop.accept(this.gameScene.player);
+    }
+  }
+
   /**
    * Nettoyage lors de la destruction de la scène
    */
@@ -756,6 +887,7 @@ export class HUDScene extends Phaser.Scene {
     this.gameScene.events.off('waveComplete', this.onWaveComplete, this);
     this.gameScene.events.off('weaponInventoryChanged', this.onWeaponInventoryChanged, this);
     this.gameScene.events.off('weaponChanged', this.onWeaponChanged, this);
+    this.gameScene.events.off('meleeWeaponChanged', this.onMeleeWeaponChanged, this);
 
     // Retirer les listeners de combo (Phase 6.1)
     this.gameScene.events.off('combo:increase', this.onComboIncrease, this);
@@ -773,5 +905,15 @@ export class HUDScene extends Phaser.Scene {
     // Retirer les listeners d'économie (Phase 6.6)
     this.gameScene.events.off('economy:update', this.onEconomyUpdate, this);
     this.gameScene.events.off('economy:points_earned', this.onPointsEarned, this);
+
+    // Retirer les listeners de drop d'armes de mêlée (Phase 2 Armes)
+    this.gameScene.events.off('meleeWeaponDrop:showComparison', this.onMeleeWeaponDropShowComparison, this);
+    this.gameScene.events.off('meleeWeaponDrop:hideComparison', this.onMeleeWeaponDropHideComparison, this);
+    this.gameScene.events.off('meleeWeaponDrop:accept', this.onMeleeWeaponDropAccept, this);
+
+    // Détruire l'UI de comparaison
+    if (this.meleeComparisonUI) {
+      this.meleeComparisonUI.destroy();
+    }
   }
 }

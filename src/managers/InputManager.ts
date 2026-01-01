@@ -12,6 +12,7 @@ export type InputAction =
   | 'interact'
   | 'useItem'
   | 'itemNext'
+  | 'melee'
   | 'weapon1'
   | 'weapon2'
   | 'weapon3'
@@ -55,6 +56,7 @@ export class InputManager {
   private interactKey: Phaser.Input.Keyboard.Key | null = null;
   private useItemKey: Phaser.Input.Keyboard.Key | null = null;
   private itemNextKey: Phaser.Input.Keyboard.Key | null = null;
+  private meleeKey: Phaser.Input.Keyboard.Key | null = null;
   private pauseKeys: Phaser.Input.Keyboard.Key[] = [];
   private weaponKeys: Phaser.Input.Keyboard.Key[] = [];
 
@@ -80,7 +82,7 @@ export class InputManager {
     // Initialiser les actions tactiles à false
     const actions: InputAction[] = [
       'shoot', 'dash', 'reload', 'ability', 'interact',
-      'useItem', 'itemNext',
+      'useItem', 'itemNext', 'melee',
       'weapon1', 'weapon2', 'weapon3', 'weapon4',
       'weaponNext', 'weaponPrev', 'pause'
     ];
@@ -109,6 +111,7 @@ export class InputManager {
     this.interactKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.useItemKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.itemNextKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+    this.meleeKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.V);
 
     // Empêcher Tab de changer le focus du navigateur
     if (this.itemNextKey) {
@@ -273,6 +276,8 @@ export class InputManager {
         return this.useItemKey?.isDown || false;
       case 'itemNext':
         return this.itemNextKey?.isDown || false;
+      case 'melee':
+        return this.meleeKey?.isDown || false;
       case 'pause':
         return this.pauseKeys.some(key => key.isDown);
       case 'weapon1':
@@ -311,6 +316,8 @@ export class InputManager {
         return this.useItemKey ? Phaser.Input.Keyboard.JustDown(this.useItemKey) : false;
       case 'itemNext':
         return this.itemNextKey ? Phaser.Input.Keyboard.JustDown(this.itemNextKey) : false;
+      case 'melee':
+        return this.meleeKey ? Phaser.Input.Keyboard.JustDown(this.meleeKey) : false;
       case 'pause':
         return this.pauseKeys.some(key => Phaser.Input.Keyboard.JustDown(key));
       case 'weapon1':

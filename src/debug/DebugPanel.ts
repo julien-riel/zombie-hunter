@@ -11,14 +11,28 @@ import { SpecialEventType } from '@systems/events';
  * Configuration des armes disponibles
  */
 const WEAPON_TYPES = [
+  // Armes de base
   { id: 'pistol', label: 'Pistol' },
   { id: 'shotgun', label: 'Shotgun' },
   { id: 'smg', label: 'SMG' },
   { id: 'sniper', label: 'Sniper' },
+  // Armes Phase 3
+  { id: 'revolver', label: 'Revolver' },
+  { id: 'assaultRifle', label: 'Assault' },
+  { id: 'doubleBarrel', label: 'DblBarr' },
+  { id: 'grenadeLauncher', label: 'Grenade' },
+  // Armes spéciales
   { id: 'flamethrower', label: 'Flame' },
   { id: 'tesla', label: 'Tesla' },
   { id: 'nailgun', label: 'Nail' },
   { id: 'bow', label: 'Bow' },
+  { id: 'microwave', label: 'Microwave' },
+  // Armes expérimentales (Phase 4)
+  { id: 'freezeRay', label: 'Freeze' },
+  { id: 'gravityGun', label: 'Gravity' },
+  { id: 'blackHole', label: 'BlkHole' },
+  { id: 'laserMinigun', label: 'Laser' },
+  { id: 'zombieConverter', label: 'Convert' },
 ] as const;
 
 /**

@@ -6,6 +6,8 @@ import { Pistol } from '@weapons/firearms/Pistol';
 import { Shotgun } from '@weapons/firearms/Shotgun';
 import { SMG } from '@weapons/firearms/SMG';
 import { SniperRifle } from '@weapons/firearms/SniperRifle';
+import { MeleeWeapon } from '@weapons/melee/MeleeWeapon';
+import { BaseballBat } from '@weapons/melee/BaseballBat';
 import type { GameScene } from '@scenes/GameScene';
 import { Character, CharacterFactory, AbilityManager } from '@characters/index';
 import type { CharacterType } from '@/types/entities';
@@ -23,10 +25,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public maxHealth: number;
   public currentWeapon: Weapon | null = null;
 
-  /** Inventaire des armes */
+  /** Inventaire des armes à distance */
   private weapons: Weapon[] = [];
   /** Index de l'arme actuellement équipée */
   private currentWeaponIndex: number = 0;
+
+  /** Arme de mêlée (toujours disponible) */
+  private meleeWeapon: MeleeWeapon | null = null;
+  /** Auto-mêlée activée (attaque automatique quand ennemi au contact) */
+  private autoMeleeEnabled: boolean = true;
+  /** Distance pour déclencher l'auto-mêlée */
+  private autoMeleeDistance: number = 40;
 
   /** Gestionnaire d'entrées abstrait (support mobile) */
   private inputManager: InputManager | null = null;
@@ -102,6 +111,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.addWeapon(new Shotgun(scene, this));
     this.addWeapon(new SMG(scene, this));
     this.addWeapon(new SniperRifle(scene, this));
+
+    // Ajouter l'arme de mêlée par défaut
+    this.equipMeleeWeapon(new BaseballBat(scene, this));
   }
 
   /**
@@ -159,6 +171,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.inputManager.onActionTriggered('weapon4', () => this.switchWeapon(3));
     this.inputManager.onActionTriggered('weaponNext', () => this.cycleWeapon(1));
     this.inputManager.onActionTriggered('weaponPrev', () => this.cycleWeapon(-1));
+
+    // Callback pour la mêlée
+    this.inputManager.onActionTriggered('melee', () => this.meleeAttack());
   }
 
   /**
@@ -180,12 +195,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.handleRotation();
     this.handleDash();
     this.handleShooting();
+    this.handleMelee();
+    this.checkAutoMelee();
     this.handleWeaponSwitch();
     this.handleReload();
     this.handleAbility();
 
-    // Mise à jour de l'arme
+    // Mise à jour des armes
     this.currentWeapon?.update();
+    this.meleeWeapon?.update();
   }
 
   /**
@@ -381,6 +399,73 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
+   * Gère l'attaque de mêlée via touche V
+   */
+  private handleMelee(): void {
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      if (this.inputManager.isActionJustPressed('melee') || this.inputManager.isActionPressed('melee')) {
+        this.meleeAttack();
+      }
+      return;
+    }
+
+    // Mode legacy : géré dans setupInput via callback
+  }
+
+  /**
+   * Vérifie et exécute l'auto-mêlée quand un zombie est au contact
+   * Ne s'active que si le joueur tire et un ennemi est très proche
+   */
+  private checkAutoMelee(): void {
+    if (!this.autoMeleeEnabled || !this.meleeWeapon) return;
+
+    // Vérifier si le joueur est en train de tirer
+    const isShooting = this.inputManager
+      ? this.inputManager.isShooting()
+      : this.scene.input.activePointer.isDown;
+
+    if (!isShooting) return;
+
+    // Vérifier si un zombie est au contact
+    const zombies = (this.scene as GameScene).getActiveZombies();
+    for (const zombie of zombies) {
+      if (!zombie.active) continue;
+
+      const distance = Phaser.Math.Distance.Between(this.x, this.y, zombie.x, zombie.y);
+      if (distance <= this.autoMeleeDistance) {
+        // Zombie au contact, déclencher l'auto-mêlée
+        this.meleeAttack();
+        break;
+      }
+    }
+  }
+
+  /**
+   * Effectue une attaque de mêlée
+   */
+  public meleeAttack(): void {
+    if (!this.meleeWeapon) return;
+
+    let direction: Phaser.Math.Vector2;
+
+    // Utiliser l'InputManager si disponible
+    if (this.inputManager) {
+      const aimDir = this.inputManager.getAimDirection(this.x, this.y);
+      direction = new Phaser.Math.Vector2(aimDir.x, aimDir.y);
+    } else {
+      // Mode legacy : direction vers la souris
+      const pointer = this.scene.input.activePointer;
+      direction = new Phaser.Math.Vector2(
+        pointer.worldX - this.x,
+        pointer.worldY - this.y
+      ).normalize();
+    }
+
+    this.meleeWeapon.swing(direction);
+  }
+
+  /**
    * Gère le changement d'arme via les touches 1-4
    */
   private handleWeaponSwitch(): void {
@@ -523,6 +608,45 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    */
   public equipWeapon(weapon: Weapon): void {
     this.currentWeapon = weapon;
+  }
+
+  // ==================== MÉTHODES ARME DE MÊLÉE (Phase 1 Armes) ====================
+
+  /**
+   * Équipe une arme de mêlée
+   * L'ancienne arme de mêlée est détruite
+   */
+  public equipMeleeWeapon(weapon: MeleeWeapon): void {
+    // Détruire l'ancienne arme si elle existe
+    if (this.meleeWeapon) {
+      this.meleeWeapon.destroy();
+    }
+
+    this.meleeWeapon = weapon;
+
+    // Émettre un événement pour le HUD
+    (this.scene as GameScene).events.emit('meleeWeaponChanged', this.meleeWeapon);
+  }
+
+  /**
+   * Récupère l'arme de mêlée actuelle
+   */
+  public getMeleeWeapon(): MeleeWeapon | null {
+    return this.meleeWeapon;
+  }
+
+  /**
+   * Active/désactive l'auto-mêlée
+   */
+  public setAutoMelee(enabled: boolean): void {
+    this.autoMeleeEnabled = enabled;
+  }
+
+  /**
+   * Vérifie si l'auto-mêlée est activée
+   */
+  public isAutoMeleeEnabled(): boolean {
+    return this.autoMeleeEnabled;
   }
 
   /**

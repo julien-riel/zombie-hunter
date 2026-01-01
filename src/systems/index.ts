@@ -24,3 +24,12 @@ export {
   type SpecialEvent,
   type SpecialEventConfig,
 } from './events';
+
+// Phase 4 - Armes Expérimentales
+export { WeaponUnlockSystem } from './WeaponUnlockSystem';
+export type { WeaponUnlockState, WeaponUnlockEvent } from './WeaponUnlockSystem';
+export { WeaponAchievementSystem } from './WeaponAchievementSystem';
+export type { Achievement, AchievementProgress } from './WeaponAchievementSystem';
+
+// Système d'Inventaire
+export { WeaponRegistry } from './WeaponRegistry';

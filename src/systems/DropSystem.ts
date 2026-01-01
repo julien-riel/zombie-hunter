@@ -8,6 +8,7 @@ import { Drop, DropType } from '@items/drops';
 import { AmmoDrop } from '@items/drops/AmmoDrop';
 import { HealthDrop } from '@items/drops/HealthDrop';
 import { PowerUpDrop } from '@items/drops/PowerUpDrop';
+import { MeleeWeaponDrop, selectRandomMeleeWeapon } from '@items/drops/MeleeWeaponDrop';
 import type { ZombieBalanceType } from '@config/balance';
 
 /**
@@ -18,6 +19,7 @@ interface LootTableEntry {
   healthSmall: number;
   healthMedium: number;
   powerUp: number;
+  meleeWeapon: number;
 }
 
 /**
@@ -42,9 +44,12 @@ export class DropSystem {
   private healthSmallDropPool: Phaser.GameObjects.Group;
   private healthMediumDropPool: Phaser.GameObjects.Group;
   private powerUpDropPool: Phaser.GameObjects.Group;
+  private meleeWeaponDropPool: Phaser.GameObjects.Group;
 
   // Tous les drops actifs (pour l'update)
   private activeDrops: Set<Drop> = new Set();
+  // Drops d'armes de mêlée actifs (géré séparément car classe différente)
+  private activeMeleeDrops: Set<MeleeWeaponDrop> = new Set();
 
   constructor(scene: GameScene, player: Player, comboSystem: ComboSystem) {
     this.scene = scene;
@@ -74,6 +79,12 @@ export class DropSystem {
     this.powerUpDropPool = this.scene.add.group({
       classType: PowerUpDrop,
       maxSize: 10,
+      runChildUpdate: false,
+    });
+
+    this.meleeWeaponDropPool = this.scene.add.group({
+      classType: MeleeWeaponDrop,
+      maxSize: 5,
       runChildUpdate: false,
     });
 
@@ -130,6 +141,10 @@ export class DropSystem {
 
     if (this.rollDrop(lootTable.powerUp, comboBonus)) {
       this.spawnDrop('powerUp', position.x, position.y);
+    }
+
+    if (this.rollDrop(lootTable.meleeWeapon, comboBonus)) {
+      this.spawnMeleeWeaponDrop(position.x, position.y);
     }
   }
 
@@ -242,6 +257,50 @@ export class DropSystem {
   }
 
   /**
+   * Fait apparaître un drop d'arme de mêlée
+   */
+  private spawnMeleeWeaponDrop(x: number, y: number): MeleeWeaponDrop | null {
+    // Obtenir la vague actuelle pour déterminer le tier
+    const currentWave = this.scene.getWaveNumber?.() ?? 1;
+
+    // Vérifier si la vague est assez avancée pour les drops de mêlée
+    const minWave = this.config.meleeWeapon?.waveModifier?.minWaveForTier2 ?? 3;
+    if (currentWave < minWave) {
+      return null;
+    }
+
+    // Sélectionner une arme aléatoire
+    const weaponType = selectRandomMeleeWeapon(currentWave);
+
+    // Chercher un drop inactif dans le pool
+    const inactiveDrop = this.meleeWeaponDropPool.getFirstDead(false) as MeleeWeaponDrop | null;
+
+    let meleeDrop: MeleeWeaponDrop;
+
+    if (inactiveDrop) {
+      inactiveDrop.reset(x, y, weaponType);
+      meleeDrop = inactiveDrop;
+    } else if (this.meleeWeaponDropPool.getLength() < (this.meleeWeaponDropPool.maxSize ?? 5)) {
+      meleeDrop = new MeleeWeaponDrop(this.scene, x, y, weaponType);
+      this.meleeWeaponDropPool.add(meleeDrop);
+    } else {
+      return null;
+    }
+
+    this.activeMeleeDrops.add(meleeDrop);
+
+    // Émettre l'événement de drop
+    this.scene.events.emit('item:drop', {
+      itemType: 'meleeWeapon',
+      weaponType,
+      position: { x, y },
+      source: 'zombie',
+    });
+
+    return meleeDrop;
+  }
+
+  /**
    * Met à jour le système de drops
    */
   public update(): void {
@@ -260,6 +319,15 @@ export class DropSystem {
         this.activeDrops.delete(drop);
       }
     }
+
+    // Mettre à jour les drops d'armes de mêlée
+    for (const meleeDrop of this.activeMeleeDrops) {
+      if (meleeDrop.active) {
+        meleeDrop.update(this.player);
+      } else {
+        this.activeMeleeDrops.delete(meleeDrop);
+      }
+    }
   }
 
   /**
@@ -276,13 +344,16 @@ export class DropSystem {
    * Retourne le nombre de drops actifs
    */
   public getActiveDropCount(): number {
-    return this.activeDrops.size;
+    return this.activeDrops.size + this.activeMeleeDrops.size;
   }
 
   /**
    * Spawn un drop manuellement (pour debug)
    */
-  public spawnDropDebug(type: DropType, x: number, y: number): Drop | null {
+  public spawnDropDebug(type: DropType, x: number, y: number): Drop | MeleeWeaponDrop | null {
+    if (type === 'meleeWeapon') {
+      return this.spawnMeleeWeaponDrop(x, y);
+    }
     return this.spawnDrop(type, x, y);
   }
 
@@ -294,6 +365,11 @@ export class DropSystem {
       drop.deactivate();
     }
     this.activeDrops.clear();
+
+    for (const meleeDrop of this.activeMeleeDrops) {
+      meleeDrop.deactivate();
+    }
+    this.activeMeleeDrops.clear();
   }
 
   /**
@@ -308,5 +384,6 @@ export class DropSystem {
     this.healthSmallDropPool.destroy(true);
     this.healthMediumDropPool.destroy(true);
     this.powerUpDropPool.destroy(true);
+    this.meleeWeaponDropPool.destroy(true);
   }
 }

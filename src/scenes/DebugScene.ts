@@ -18,10 +18,21 @@ import { Pistol } from '@weapons/firearms/Pistol';
 import { Shotgun } from '@weapons/firearms/Shotgun';
 import { SMG } from '@weapons/firearms/SMG';
 import { SniperRifle } from '@weapons/firearms/SniperRifle';
+import { Revolver } from '@weapons/firearms/Revolver';
+import { AssaultRifle } from '@weapons/firearms/AssaultRifle';
+import { DoubleBarrel } from '@weapons/firearms/DoubleBarrel';
 import { Flamethrower } from '@weapons/special/Flamethrower';
 import { TeslaCannon } from '@weapons/special/TeslaCannon';
 import { NailGun } from '@weapons/special/NailGun';
 import { CompositeBow } from '@weapons/special/CompositeBow';
+import { MicrowaveCannon } from '@weapons/special/MicrowaveCannon';
+import { GrenadeLauncher } from '@weapons/explosive/GrenadeLauncher';
+// Armes expérimentales (Phase 4)
+import { FreezeRay } from '@weapons/experimental/FreezeRay';
+import { GravityGun } from '@weapons/experimental/GravityGun';
+import { BlackHoleGenerator } from '@weapons/experimental/BlackHoleGenerator';
+import { LaserMinigun } from '@weapons/experimental/LaserMinigun';
+import { ZombieConverter } from '@weapons/experimental/ZombieConverter';
 
 /**
  * Scène de debug overlay
@@ -480,15 +491,28 @@ export class DebugScene extends Phaser.Scene {
 
     // Map des armes
     const weaponMap: Record<string, () => void> = {
+      // Armes de base
       pistol: () => player.addWeapon(new Pistol(this.gameScene, player)),
       shotgun: () => player.addWeapon(new Shotgun(this.gameScene, player)),
       smg: () => player.addWeapon(new SMG(this.gameScene, player)),
       sniper: () => player.addWeapon(new SniperRifle(this.gameScene, player)),
+      // Armes Phase 3
+      revolver: () => player.addWeapon(new Revolver(this.gameScene, player)),
+      assaultRifle: () => player.addWeapon(new AssaultRifle(this.gameScene, player)),
+      doubleBarrel: () => player.addWeapon(new DoubleBarrel(this.gameScene, player)),
+      grenadeLauncher: () => player.addWeapon(new GrenadeLauncher(this.gameScene, player)),
+      // Armes spéciales
       flamethrower: () => player.addWeapon(new Flamethrower(this.gameScene, player)),
       tesla: () => player.addWeapon(new TeslaCannon(this.gameScene, player)),
       nailgun: () => player.addWeapon(new NailGun(this.gameScene, player)),
       bow: () => player.addWeapon(new CompositeBow(this.gameScene, player)),
-      // Note: Chainsaw n'étend pas Weapon, donc non compatible avec l'inventaire standard
+      microwave: () => player.addWeapon(new MicrowaveCannon(this.gameScene, player)),
+      // Armes expérimentales (Phase 4)
+      freezeRay: () => player.addWeapon(new FreezeRay(this.gameScene, player)),
+      gravityGun: () => player.addWeapon(new GravityGun(this.gameScene, player)),
+      blackHole: () => player.addWeapon(new BlackHoleGenerator(this.gameScene, player)),
+      laserMinigun: () => player.addWeapon(new LaserMinigun(this.gameScene, player)),
+      zombieConverter: () => player.addWeapon(new ZombieConverter(this.gameScene, player)),
     };
 
     const createWeapon = weaponMap[weaponId];

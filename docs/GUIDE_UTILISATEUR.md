@@ -45,12 +45,15 @@ Ce guide explique tous les contrôles et fonctionnalités du jeu selon la platef
 
 | Touche | Action |
 |--------|--------|
+| V | Attaque de mêlée (batte) |
 | ESPACE | Dash (esquive rapide) |
 | Q | Capacité spéciale du personnage |
 | R | Recharger l'arme |
 | E | Interagir avec un objet |
 | F | Utiliser l'objet actif équipé |
 | TAB | Changer d'objet actif |
+
+> **Note:** L'auto-mêlée est activée : si vous tirez et qu'un zombie est au contact (< 40 pixels), une attaque mêlée automatique est déclenchée.
 
 ### Sélection d'arme
 
@@ -80,7 +83,7 @@ Ce guide explique tous les contrôles et fonctionnalités du jeu selon la platef
 │                                [▼ Arme -]      │
 │                                                │
 │                          [↻ Cycler] [📦 Item]  │
-│                                   [👆 Interact]│
+│ [🗡️ Mêlée]                        [👆 Interact]│
 │ [⚡ Dash]               [🔥 Ability] [🔄 Reload]│
 │    ◯ Joystick              ◯ Joystick          │
 │    Mouvement                 Visée/Tir         │
@@ -100,12 +103,15 @@ Ce guide explique tous les contrôles et fonctionnalités du jeu selon la platef
 
 | Bouton | Icône | Position | Fonction |
 |--------|-------|----------|----------|
+| Mêlée | 🗡️ | Au-dessus du bouton Dash | Attaque de mêlée |
 | Dash | ⚡ | À droite du joystick gauche | Esquive rapide |
 | Ability | 🔥 | À gauche du joystick droit | Capacité spéciale |
 | Reload | 🔄 | Au-dessus du joystick droit | Recharger l'arme |
 | Interact | 👆 | Au-dessus du bouton Ability | Interagir avec objets |
 | Use Item | 📦 | Zone centrale droite | Utiliser objet actif |
 | Cycle Item | ↻ | À côté de Use Item | Changer d'objet actif |
+
+> **Note:** L'auto-mêlée fonctionne aussi sur mobile : si vous visez et un zombie est au contact, une attaque mêlée automatique est déclenchée.
 
 ### Boutons de navigation
 
@@ -130,6 +136,7 @@ Ce guide explique tous les contrôles et fonctionnalités du jeu selon la platef
 | **Déplacement** | WASD / Flèches | Joystick gauche |
 | **Visée** | Position souris | Joystick droit |
 | **Tir** | Clic gauche | Joystick droit (maintenu) |
+| **Mêlée** | V | Bouton 🗡️ |
 | **Dash** | ESPACE | Bouton ⚡ |
 | **Capacité spéciale** | Q | Bouton 🔥 |
 | **Recharger** | R | Bouton 🔄 |
@@ -200,15 +207,59 @@ Le joueur commence avec 4 armes :
 
 Ces armes peuvent être obtenues via des drops ou des achats :
 
-| Arme | Description |
-|------|-------------|
-| Composite Bow | Projectiles en arc |
-| Flamethrower | Dégâts de zone (feu) |
-| Tesla Cannon | Dégâts électriques chaînés |
-| Nail Gun | Projectiles multiples |
-| Microwave Cannon | Effets micro-ondes |
+| Arme | Rareté | Description |
+|------|--------|-------------|
+| Revolver | Rare | 6 coups puissants, rechargement lent |
+| Assault Rifle | Rare | Tir en rafale (3 balles), précis |
+| Double Barrel | Épique | 2 coups dévastateurs, 8 projectiles chacun |
+| Grenade Launcher | Épique | Projectiles explosifs avec trajectoire en arc |
+| Composite Bow | Variable | Projectiles en arc |
+| Flamethrower | Variable | Dégâts de zone (feu) |
+| Tesla Cannon | Variable | Dégâts électriques chaînés |
+| Nail Gun | Variable | Projectiles multiples |
+| Microwave Cannon | Variable | Effets micro-ondes |
 
-> **Note :** Les armes de mêlée (Baseball Bat, Machete, Chainsaw) sont en cours de développement et ne sont pas encore disponibles dans le jeu.
+### Armes expérimentales (endgame)
+
+Ces armes légendaires sont les plus puissantes du jeu. Chacune a une condition de déblocage spéciale :
+
+| Arme | Déblocage | Description | Particularité |
+|------|-----------|-------------|---------------|
+| Rayon Glacial | Vague 20+ | Gèle les ennemis | +50% dégâts mêlée sur gelés |
+| Canon Gravitique | Vague 20+ | Attire/repousse zombies | Dégâts de collision |
+| Générateur de Trou Noir | Drop de boss | Crée un trou noir aspirant | Max 2 trous noirs actifs |
+| Laser Minigun | Achat 10 000 pts | Faisceau laser continu | Gestion de la surchauffe |
+| Convertisseur de Zombies | Secret* | Convertit les zombies en alliés | Max 3 zombies convertis |
+
+> **Secret** : Le Convertisseur de Zombies se débloque après avoir converti 100 zombies au total (déblocage permanent).
+
+### Système de rareté
+
+Chaque arme possède une rareté qui affecte ses statistiques :
+
+| Rareté | Couleur | Multiplicateur de dégâts | Chance de drop |
+|--------|---------|--------------------------|----------------|
+| Commun | Gris | x1.0 | 50% |
+| Rare | Bleu | x1.15 | 30% |
+| Épique | Violet | x1.35 | 15% |
+| Légendaire | Or | x1.6 | 5% |
+
+> **Effets visuels :** Les armes de rareté supérieure brillent avec des effets de particules. Les armes légendaires ont un effet doré pulsant distinctif.
+
+> **Note :** L'arme de mêlée de base (Batte de baseball) est disponible dès le départ. Utilisez la touche **V** (Desktop) ou le bouton **🗡️** (Mobile) pour attaquer. Des armes de mêlée plus puissantes peuvent être obtenues en combat !
+
+### Armes de mêlée disponibles
+
+| Arme | Tier | Description | Particularité |
+|------|------|-------------|---------------|
+| Batte de baseball | 1 | Arme de départ équilibrée | Chance de stun |
+| Machette | 2 | Attaques très rapides | Pas de knockback |
+| Hache de pompier | 2 | Dégâts élevés, lente | Coups critiques |
+| Katana | 3 | Très rapide, bonne portée | Critiques fréquents |
+| Marteau | 3 | Très lent mais dévastateur | Stun garanti, knockback massif |
+| Tronçonneuse | 3 | DPS continu | Consomme du carburant |
+
+> **Astuce :** Approchez-vous d'un drop d'arme de mêlée pour comparer ses stats avec votre arme actuelle. Appuyez sur **E** pour l'équiper ou **Q** pour la garder.
 
 ### Mécanique de rechargement
 

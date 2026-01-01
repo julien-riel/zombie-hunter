@@ -6,7 +6,7 @@ import type { Player } from '@entities/Player';
 /**
  * Types de drops disponibles
  */
-export type DropType = 'ammo' | 'healthSmall' | 'healthMedium' | 'powerUp';
+export type DropType = 'ammo' | 'healthSmall' | 'healthMedium' | 'powerUp' | 'meleeWeapon';
 
 /**
  * Configuration d'un drop

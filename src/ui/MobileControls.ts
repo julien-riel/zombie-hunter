@@ -48,6 +48,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
 
   // Boutons
   private dashButton!: TouchButton;
+  private meleeButton!: TouchButton;
   private reloadButton!: TouchButton;
   private abilityButton!: TouchButton;
   private interactButton!: TouchButton;
@@ -176,6 +177,16 @@ export class MobileControls extends Phaser.GameObjects.Container {
       color: 0x4444aa,
       cooldown: 0,
       showCooldown: true,
+    });
+
+    // ========== BOUTON MELEE (au-dessus du dash) ==========
+    this.meleeButton = new TouchButton(this.scene, {
+      x: margin + joystickSize * 2 + buttonSize + margin / 2,
+      y: height - margin - joystickSize - buttonSize * 2 - margin / 2,
+      radius: buttonSize,
+      icon: '🗡️',
+      iconSize: 28,
+      color: 0xaa6644,
     });
 
     // ========== BOUTON RELOAD (au-dessus du joystick droit) ==========
@@ -307,6 +318,10 @@ export class MobileControls extends Phaser.GameObjects.Container {
       this.inputManager.setTouchAction('dash', false);
     });
 
+    this.meleeButton.onPress(() => {
+      this.inputManager.triggerAction('melee');
+    });
+
     this.reloadButton.onPress(() => {
       this.inputManager.setTouchAction('reload', true);
     });
@@ -364,6 +379,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
     // Liste de tous les boutons pour la détection
     const buttons = [
       this.dashButton,
+      this.meleeButton,
       this.reloadButton,
       this.abilityButton,
       this.interactButton,
@@ -512,6 +528,11 @@ export class MobileControls extends Phaser.GameObjects.Container {
       height - margin - joystickSize
     );
 
+    this.meleeButton.setPosition(
+      margin + joystickSize * 2 + buttonSize + margin / 2,
+      height - margin - joystickSize - buttonSize * 2 - margin / 2
+    );
+
     this.reloadButton.setPosition(
       width - margin - joystickSize,
       height - margin - joystickSize * 2 - buttonSize
@@ -587,6 +608,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
       this.moveJoystick,
       this.aimJoystick,
       this.dashButton,
+      this.meleeButton,
       this.reloadButton,
       this.abilityButton,
       this.interactButton,
@@ -663,6 +685,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
     this.aimJoystick.resize(baseJoystickSize, baseJoystickSize * 0.4);
 
     this.dashButton.resize(baseButtonSize);
+    this.meleeButton.resize(baseButtonSize);
     this.reloadButton.resize(baseButtonSize * 0.85);
     this.abilityButton.resize(baseButtonSize);
     this.interactButton.resize(baseButtonSize * 0.85);
@@ -702,6 +725,7 @@ export class MobileControls extends Phaser.GameObjects.Container {
     this.moveJoystick.destroy();
     this.aimJoystick.destroy();
     this.dashButton.destroy();
+    this.meleeButton.destroy();
     this.reloadButton.destroy();
     this.abilityButton.destroy();
     this.interactButton.destroy();

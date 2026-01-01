@@ -175,63 +175,165 @@ La mêlée doit être un **réflexe de survie satisfaisant**, pas une arme princ
 
 ## Plan d'implémentation
 
-### Phase 1 : Intégration de la mêlée (Priorité HAUTE)
+### Phase 1 : Intégration de la mêlée (Priorité HAUTE) ✅ COMPLÉTÉE
 
 **Objectif** : Rendre la mêlée utilisable avec le système hybride recommandé.
 
 #### Tâches techniques
 
-- [ ] **1.1** Créer `IMeleeCapable` interface ou adapter `MeleeWeapon`
-- [ ] **1.2** Ajouter slot mêlée permanent au Player (séparé des slots 1-4)
-- [ ] **1.3** Ajouter action `melee` dans InputManager
-- [ ] **1.4** Binding touche `V` (desktop)
-- [ ] **1.5** Ajouter bouton 🗡️ dans MobileControls
-- [ ] **1.6** Implémenter auto-mêlée quand ennemi au contact
-- [ ] **1.7** Connecter Baseball Bat comme arme de mêlée par défaut
-- [ ] **1.8** Mettre à jour le HUD pour afficher l'arme de mêlée
+- [x] **1.1** Créer `IMeleeCapable` interface ou adapter `MeleeWeapon`
+- [x] **1.2** Ajouter slot mêlée permanent au Player (séparé des slots 1-4)
+- [x] **1.3** Ajouter action `melee` dans InputManager
+- [x] **1.4** Binding touche `V` (desktop)
+- [x] **1.5** Ajouter bouton 🗡️ dans MobileControls
+- [x] **1.6** Implémenter auto-mêlée quand ennemi au contact
+- [x] **1.7** Connecter Baseball Bat comme arme de mêlée par défaut
+- [x] **1.8** Mettre à jour le HUD pour afficher l'arme de mêlée
 
 #### Critères de succès
 
-- [ ] Touche V déclenche un coup de batte
-- [ ] Zombies au contact sont automatiquement repoussés
-- [ ] Feedback visuel satisfaisant (arc d'attaque, impact)
-- [ ] Fonctionne sur desktop ET mobile
+- [x] Touche V déclenche un coup de batte
+- [x] Zombies au contact sont automatiquement repoussés (auto-mêlée activée quand tir + ennemi < 40px)
+- [x] Feedback visuel satisfaisant (arc d'attaque, impact, effet de stun)
+- [x] Fonctionne sur desktop ET mobile
 
-### Phase 2 : Progression mêlée
+### Phase 2 : Progression mêlée ✅ COMPLÉTÉE
 
 **Objectif** : Permettre d'upgrader l'arme de mêlée.
 
 #### Tâches
 
-- [ ] **2.1** Système de drop d'armes de mêlée
-- [ ] **2.2** UI de comparaison mêlée actuelle vs trouvée
-- [ ] **2.3** Intégrer Machete et Chainsaw
-- [ ] **2.4** Créer Fire Axe, Katana, Sledgehammer
-- [ ] **2.5** Balancer les stats (vitesse, dégâts, knockback)
+- [x] **2.1** Système de drop d'armes de mêlée
+  - `MeleeWeaponDrop` créé avec système de tiers
+  - Intégré dans `DropSystem` avec chances de drop par type de zombie
+  - Drop basé sur la vague actuelle (tier 2 à partir vague 3, tier 3 à partir vague 8)
+- [x] **2.2** UI de comparaison mêlée actuelle vs trouvée
+  - `MeleeComparisonUI` avec affichage des stats comparées
+  - Touches E pour accepter, Q pour refuser
+  - Support tactile pour mobile
+- [x] **2.3** Intégrer Machete et Chainsaw
+  - Machete : tier 2, très rapide, dégâts élevés
+  - Chainsaw : tier 3, DPS continu, consomme carburant
+- [x] **2.4** Créer Fire Axe, Katana, Sledgehammer
+  - Fire Axe (Hache) : tier 2, dégâts élevés, coups critiques
+  - Katana : tier 3, très rapide, critiques fréquents
+  - Sledgehammer (Marteau) : tier 3, lent mais dévastateur, stun garanti
+- [x] **2.5** Balancer les stats (vitesse, dégâts, knockback)
+  - Système de tiers (1-3) pour la progression
+  - Stats équilibrées dans `balance.ts`
 
-### Phase 3 : Nouvelles armes à distance
+#### Critères de succès
+
+- [x] Les armes de mêlée peuvent être trouvées en combat
+- [x] Le joueur peut comparer les stats avant d'équiper
+- [x] Chaque arme a un gameplay distinct
+- [x] Progression visible du tier 1 (batte) au tier 3 (katana, marteau, etc.)
+
+### Phase 3 : Nouvelles armes à distance ✅ COMPLÉTÉE
 
 **Objectif** : Enrichir l'arsenal à distance.
 
 #### Tâches
 
-- [ ] **3.1** Implémenter Revolver
-- [ ] **3.2** Implémenter Assault Rifle
-- [ ] **3.3** Implémenter Double Barrel
-- [ ] **3.4** Implémenter Grenade Launcher
-- [ ] **3.5** Système de rareté des armes (commun/rare/épique/légendaire)
-- [ ] **3.6** Effets visuels selon la rareté
+- [x] **3.1** Implémenter Revolver
+  - 6 balles, dégâts élevés (35), rechargement lent
+  - Effet de recul et flash de bouche prononcé
+  - Rareté : Rare
+- [x] **3.2** Implémenter Assault Rifle
+  - Mode burst (3 balles par appui)
+  - 24 balles par chargeur (8 bursts)
+  - Spread qui augmente légèrement pendant le burst
+  - Rareté : Rare
+- [x] **3.3** Implémenter Double Barrel
+  - 2 cartouches, 8 pellets par tir
+  - Dégâts massifs à courte portée
+  - Option de tir double (les 2 canons en même temps)
+  - Rareté : Épique
+- [x] **3.4** Implémenter Grenade Launcher
+  - Tir en arc avec gravité
+  - Explosion de zone (100px rayon)
+  - Ne blesse pas le joueur
+  - 4 grenades par chargeur
+  - Rareté : Épique
+- [x] **3.5** Système de rareté des armes (commun/rare/épique/légendaire)
+  - `WeaponRarity.ts` avec config complète
+  - Couleurs : Gris (commun), Vert (rare), Violet (épique), Orange (légendaire)
+  - Multiplicateurs de dégâts : x1.0, x1.15, x1.3, x1.5
+  - Probabilités de drop : 60%, 25%, 12%, 3%
+- [x] **3.6** Effets visuels selon la rareté
+  - `RarityEffects.ts` avec glow, particules, effets de pickup
+  - Animations de pulsation pour raretés élevées
+  - Bordures colorées pour les slots d'armes
 
-### Phase 4 : Armes expérimentales
+#### Critères de succès
+
+- [x] Chaque arme a un gameplay distinct et satisfaisant
+- [x] Le revolver récompense la précision
+- [x] L'assault rifle offre un bon contrôle
+- [x] Le double barrel est dévastateur mais risqué
+- [x] Le grenade launcher permet le crowd control
+- [x] Les raretés sont visuellement distinctes
+
+### Phase 4 : Armes expérimentales ✅ COMPLÉTÉE
 
 **Objectif** : Ajouter des armes "wow factor" pour l'endgame.
 
 #### Tâches
 
-- [ ] **4.1** Implémenter Freeze Ray
-- [ ] **4.2** Implémenter Gravity Gun
-- [ ] **4.3** Conditions de déblocage spéciales
-- [ ] **4.4** Achievements liés aux armes
+- [x] **4.1** Implémenter Freeze Ray
+  - Tire un projectile de glace qui gèle les ennemis
+  - Les ennemis gelés sont ralentis (80%) pendant 3 secondes
+  - Propagation en chaîne (50% chance, rayon 80px)
+  - Bonus de dégâts mêlée sur ennemis gelés (+50%)
+  - Rareté : Légendaire
+  - Déblocage : Vague 20+
+- [x] **4.2** Implémenter Gravity Gun
+  - Deux modes : Push (repousse) et Pull (attire)
+  - Les zombies projetés infligent des dégâts aux autres
+  - Effet visuel de cône gravitique
+  - Rareté : Légendaire
+  - Déblocage : Vague 20+
+- [x] **4.3** Implémenter Black Hole Generator
+  - Crée un trou noir qui aspire les zombies
+  - Dégâts continus aux zombies dans le rayon
+  - Maximum 2 trous noirs actifs simultanément
+  - Implosion finale avec dégâts de zone
+  - Rareté : Légendaire
+  - Déblocage : Drop de boss
+- [x] **4.4** Implémenter Laser Minigun
+  - Faisceau laser continu qui balaye les ennemis
+  - Système de chauffe et surchauffe
+  - Warmup avant puissance maximale
+  - Rareté : Légendaire
+  - Déblocage : Achat 10 000 points
+- [x] **4.5** Implémenter Zombie Converter
+  - Convertit les zombies en alliés temporaires
+  - Les zombies convertis attaquent leurs congénères
+  - Maximum 3 zombies convertis simultanément
+  - Durée de conversion : 15 secondes
+  - Rareté : Légendaire
+  - Déblocage : Secret (convertir 100 zombies au total)
+- [x] **4.6** Conditions de déblocage spéciales
+  - Système de déblocage par vague (Freeze Ray, Gravity Gun)
+  - Système de déblocage par drop de boss (Black Hole Generator)
+  - Système d'achat (Laser Minigun - 10 000 points)
+  - Système secret (Zombie Converter - 100 conversions)
+  - WeaponUnlockSystem créé avec persistance localStorage
+- [x] **4.7** Achievements liés aux armes
+  - 17 achievements créés (expérimentales, mêlée, distance, spéciales)
+  - Système de progression et récompenses
+  - WeaponAchievementSystem avec notifications visuelles
+
+#### Critères de succès
+
+- [x] Chaque arme a un gameplay unique et satisfaisant
+- [x] Le Freeze Ray permet des combos mêlée stratégiques
+- [x] Le Gravity Gun offre un chaos contrôlé amusant
+- [x] Le Black Hole Generator est visuellement impressionnant
+- [x] Le Laser Minigun récompense la gestion de la chaleur
+- [x] Le Zombie Converter offre une mécanique unique et secrète
+- [x] Les conditions de déblocage créent des objectifs à long terme
+- [x] Les achievements motivent l'utilisation des armes
 
 ---
 

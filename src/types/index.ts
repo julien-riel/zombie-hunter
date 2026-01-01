@@ -7,3 +7,4 @@ export * from './weapons';
 export * from './arena';
 export * from './events';
 export * from './modes';
+export * from './inventory';
