@@ -22,6 +22,17 @@ export const COLLISION_CATEGORIES = {
   TERRAIN_ZONE: 0x0080,
 } as const;
 
+// Clés des tilemaps Tiled
+export const TILEMAP_KEYS = {
+  TILESET: 'zombie_tileset',
+  DEFAULT_ARENA: 'default_arena',
+  HOSPITAL: 'hospital',
+  HALL: 'hall',
+  WAREHOUSE: 'warehouse',
+  SUBWAY: 'subway',
+  LABORATORY: 'laboratory',
+} as const;
+
 // Clés des scènes
 export const SCENE_KEYS = {
   BOOT: 'BootScene',

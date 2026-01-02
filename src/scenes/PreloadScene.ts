@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@config/constants';
+import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, TILEMAP_KEYS } from '@config/constants';
 import { ASSET_KEYS } from '@config/assets.manifest';
 
 /**
@@ -16,6 +16,7 @@ export class PreloadScene extends Phaser.Scene {
    */
   preload(): void {
     this.createLoadingBar();
+    this.loadTilemaps();
     this.generatePlaceholderAssets();
   }
 
@@ -65,6 +66,24 @@ export class PreloadScene extends Phaser.Scene {
     this.load.on('complete', () => {
       loadingText.setText('Prêt!');
     });
+  }
+
+  /**
+   * Charge les tilemaps Tiled (tileset et maps JSON)
+   */
+  private loadTilemaps(): void {
+    const basePath = 'assets/tilemaps';
+
+    // Charger l'image du tileset
+    this.load.image(TILEMAP_KEYS.TILESET, `${basePath}/zombie_tileset.png`);
+
+    // Charger les maps JSON
+    this.load.tilemapTiledJSON(TILEMAP_KEYS.DEFAULT_ARENA, `${basePath}/default_arena.json`);
+    this.load.tilemapTiledJSON(TILEMAP_KEYS.HOSPITAL, `${basePath}/hospital.json`);
+    this.load.tilemapTiledJSON(TILEMAP_KEYS.HALL, `${basePath}/hall.json`);
+    this.load.tilemapTiledJSON(TILEMAP_KEYS.WAREHOUSE, `${basePath}/warehouse.json`);
+    this.load.tilemapTiledJSON(TILEMAP_KEYS.SUBWAY, `${basePath}/subway.json`);
+    this.load.tilemapTiledJSON(TILEMAP_KEYS.LABORATORY, `${basePath}/laboratory.json`);
   }
 
   /**

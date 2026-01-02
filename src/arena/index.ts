@@ -1,5 +1,3 @@
-export { Arena } from './Arena';
-export type { ObstacleData } from './Arena';
 export {
   Door,
   DoorState,
@@ -39,3 +37,33 @@ export { FlameTrap, FlameDirection } from './FlameTrap';
 export type { FlameTrapConfig } from './FlameTrap';
 export { BladeTrap } from './BladeTrap';
 export type { BladeTrapConfig } from './BladeTrap';
+
+// Tiled Level Loader & Arena
+export { TiledLevelLoader } from './TiledLevelLoader';
+export { TiledArena } from './TiledArena';
+export type { ObstacleData } from './TiledArena';
+export type {
+  TiledProperty,
+  TiledObject,
+  TiledLayer,
+  TiledTilesetRef,
+  TiledMapData,
+  PlayerSpawnConfig,
+  ZombieDoorConfig,
+  TiledCoverConfig,
+  TiledPuddleConfig,
+  TiledDebrisConfig,
+  TiledElectricConfig,
+  TiledFireConfig,
+  TiledAcidConfig,
+  TiledBarrelExplosiveConfig,
+  TiledBarrelFireConfig,
+  TiledSwitchConfig,
+  TiledGeneratorConfig,
+  TiledFlameTrapConfig,
+  TiledBladeTrapConfig,
+  TiledZombieConfig,
+  TiledBossConfig,
+  TiledPickupConfig,
+  TiledLevelData,
+} from './TiledLevelLoader';

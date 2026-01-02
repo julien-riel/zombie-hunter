@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { SCENE_KEYS, GAME_WIDTH, GAME_HEIGHT } from '@config/constants';
+import { SCENE_KEYS, TILEMAP_KEYS } from '@config/constants';
 import { Player } from '@entities/Player';
-import { Arena } from '@arena/Arena';
+import { TiledArena } from '@arena/TiledArena';
 import { Cover } from '@arena/Cover';
 import type { TerrainZone } from '@arena/TerrainZone';
 import { Interactive } from '@arena/Interactive';
@@ -55,7 +55,7 @@ import type {
  */
 export class GameScene extends Phaser.Scene {
   public player!: Player;
-  public arena!: Arena;
+  public arena!: TiledArena;
   public bulletPool!: BulletPool;
   public acidSpitPool!: AcidSpitPool;
   public flamePool!: FlamePool;
@@ -116,11 +116,41 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Détermine la clé de la map Tiled à charger selon le mode de jeu
+   */
+  private getMapKeyForMode(): string {
+    if (this.gameMode === 'campaign' && this.modeConfig) {
+      const config = this.modeConfig as CampaignModeConfig;
+      // Mapper le levelId vers la clé de map Tiled
+      switch (config.levelId) {
+        case 'hospital':
+          return TILEMAP_KEYS.HOSPITAL;
+        case 'hall':
+          return TILEMAP_KEYS.HALL;
+        case 'warehouse':
+          return TILEMAP_KEYS.WAREHOUSE;
+        case 'subway':
+          return TILEMAP_KEYS.SUBWAY;
+        case 'laboratory':
+          return TILEMAP_KEYS.LABORATORY;
+        default:
+          console.warn(`Unknown campaign level: ${config.levelId}, using default arena`);
+          return TILEMAP_KEYS.DEFAULT_ARENA;
+      }
+    }
+    // Mode survival ou daily: utiliser l'arène par défaut
+    return TILEMAP_KEYS.DEFAULT_ARENA;
+  }
+
+  /**
    * Initialise la scène de jeu
    */
   create(): void {
-    // Créer l'arène
-    this.arena = new Arena(this);
+    // Déterminer quelle map charger selon le mode de jeu
+    const mapKey = this.getMapKeyForMode();
+
+    // Créer l'arène depuis Tiled
+    this.arena = new TiledArena(this, mapKey, TILEMAP_KEYS.TILESET);
     this.walls = this.arena.getWalls();
 
     // Initialiser le pathfinder avec les obstacles de l'arène
@@ -145,10 +175,9 @@ export class GameScene extends Phaser.Scene {
     // Créer le gestionnaire d'entrées (Phase 3 Mobile)
     this.inputManager = new InputManager(this);
 
-    // Créer le joueur au centre avec l'InputManager
-    const centerX = GAME_WIDTH / 2;
-    const centerY = GAME_HEIGHT / 2;
-    this.player = new Player(this, centerX, centerY, undefined, this.inputManager);
+    // Créer le joueur au point de spawn défini dans Tiled
+    const spawn = this.arena.getPlayerSpawn();
+    this.player = new Player(this, spawn.x, spawn.y, undefined, this.inputManager);
 
     // Créer le pool de projectiles acides (pour les Spitters)
     this.acidSpitPool = new AcidSpitPool(this);
@@ -584,9 +613,15 @@ export class GameScene extends Phaser.Scene {
   private setupCollisions(): void {
     const coverGroup = this.arena.getCoverGroup();
     const interactiveGroup = this.arena.getInteractiveGroup();
+    const wallsLayer = this.arena.getWallsLayer();
 
-    // Collision joueur avec les murs
+    // Collision joueur avec les murs (groupe statique)
     this.physics.add.collider(this.player, this.walls);
+
+    // Collision joueur avec le tilemap walls layer
+    if (wallsLayer) {
+      this.physics.add.collider(this.player, wallsLayer);
+    }
 
     // Collision joueur avec les covers
     this.physics.add.collider(this.player, coverGroup);
@@ -604,6 +639,19 @@ export class GameScene extends Phaser.Scene {
       undefined,
       this
     );
+
+    // Collision projectiles avec le tilemap walls layer
+    if (wallsLayer) {
+      this.physics.add.collider(
+        this.bulletPool.getGroup(),
+        wallsLayer,
+        (bullet) => {
+          this.bulletPool.release(bullet as Phaser.Physics.Arcade.Sprite);
+        },
+        undefined,
+        this
+      );
+    }
 
     // Collision projectiles avec les covers (avec dégâts)
     this.physics.add.collider(
@@ -663,6 +711,11 @@ export class GameScene extends Phaser.Scene {
     // Collision zombies avec les murs
     for (const group of this.poolManager.getAllZombieGroups()) {
       this.physics.add.collider(group, this.walls);
+
+      // Collision zombies avec le tilemap walls layer
+      if (wallsLayer) {
+        this.physics.add.collider(group, wallsLayer);
+      }
 
       // Collision zombies avec les covers
       this.physics.add.collider(group, coverGroup);
@@ -832,7 +885,7 @@ export class GameScene extends Phaser.Scene {
   /**
    * Récupère l'arène
    */
-  public getArena(): Arena {
+  public getArena(): TiledArena {
     return this.arena;
   }
 
