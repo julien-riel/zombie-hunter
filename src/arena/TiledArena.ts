@@ -16,6 +16,12 @@ import { Switch } from './Switch';
 import { Generator } from './Generator';
 import { FlameTrap } from './FlameTrap';
 import { BladeTrap } from './BladeTrap';
+import { Checkpoint } from './Checkpoint';
+import { Saferoom } from './Saferoom';
+import { Teleporter } from './Teleporter';
+import { ObjectiveMarker } from './ObjectiveMarker';
+import { DefendZone } from './DefendZone';
+import { AutoDoor } from './AutoDoor';
 import {
   TiledLevelLoader,
   type TiledLevelData,
@@ -60,6 +66,14 @@ export class TiledArena {
   private terrainZones: TerrainZone[] = [];
   private interactiveElements: Interactive[] = [];
 
+  // Nouveaux éléments de gameplay
+  private checkpoints: Checkpoint[] = [];
+  private saferooms: Saferoom[] = [];
+  private teleporters: Teleporter[] = [];
+  private objectiveMarkers: ObjectiveMarker[] = [];
+  private defendZones: DefendZone[] = [];
+  private autoDoors: AutoDoor[] = [];
+
   // Données Tiled
   private levelData: TiledLevelData;
   private playerSpawn: PlayerSpawnConfig;
@@ -88,6 +102,14 @@ export class TiledArena {
     this.createCovers();
     this.createTerrainZones();
     this.createInteractiveElements();
+
+    // Créer les nouveaux éléments de gameplay
+    this.createCheckpoints();
+    this.createSaferooms();
+    this.createTeleporters();
+    this.createObjectiveMarkers();
+    this.createDefendZones();
+    this.createAutoDoors();
 
     // Écouter les événements
     this.scene.events.on('cover:destroy', this.onCoverDestroyed, this);
@@ -342,6 +364,146 @@ export class TiledArena {
       });
       this.interactiveElements.push(trap);
       this.interactiveGroup.add(trap);
+    }
+  }
+
+  // ===========================================================================
+  // NOUVEAUX ÉLÉMENTS DE GAMEPLAY
+  // ===========================================================================
+
+  /**
+   * Crée les checkpoints depuis les données Tiled
+   */
+  private createCheckpoints(): void {
+    for (const config of this.levelData.checkpoints) {
+      const checkpoint = new Checkpoint(this.scene, {
+        x: config.x,
+        y: config.y,
+        id: config.id,
+        radius: config.radius,
+        isRespawnPoint: config.isRespawnPoint,
+      });
+      this.checkpoints.push(checkpoint);
+    }
+  }
+
+  /**
+   * Crée les saferooms depuis les données Tiled
+   */
+  private createSaferooms(): void {
+    for (const config of this.levelData.saferooms) {
+      const saferoom = new Saferoom(this.scene, {
+        x: config.x,
+        y: config.y,
+        width: config.width,
+        height: config.height,
+        healOnEnter: config.healOnEnter,
+        healAmount: config.healAmount,
+        clearZombies: config.clearZombies,
+        clearRadius: config.clearRadius,
+      });
+      this.saferooms.push(saferoom);
+    }
+  }
+
+  /**
+   * Crée les téléporteurs depuis les données Tiled
+   */
+  private createTeleporters(): void {
+    // Première passe: créer tous les téléporteurs
+    const teleporterMap = new Map<string, Teleporter>();
+
+    for (const config of this.levelData.teleporters) {
+      const teleporter = new Teleporter(this.scene, {
+        x: config.x,
+        y: config.y,
+        id: config.id,
+        linkedTeleporterId: config.linkedTeleporterId,
+        radius: config.radius,
+        cooldown: config.cooldown,
+        bidirectional: config.bidirectional,
+      });
+      this.teleporters.push(teleporter);
+      teleporterMap.set(config.id, teleporter);
+    }
+
+    // Deuxième passe: lier les téléporteurs entre eux
+    for (const config of this.levelData.teleporters) {
+      if (config.linkedTeleporterId) {
+        const source = teleporterMap.get(config.id);
+        const target = teleporterMap.get(config.linkedTeleporterId);
+        if (source && target) {
+          source.linkTo(target);
+        }
+      }
+    }
+  }
+
+  /**
+   * Crée les marqueurs d'objectifs depuis les données Tiled
+   */
+  private createObjectiveMarkers(): void {
+    for (const config of this.levelData.objectiveMarkers) {
+      const marker = new ObjectiveMarker(this.scene, {
+        x: config.x,
+        y: config.y,
+        objectiveId: config.id,
+        type: config.type,
+        label: config.label,
+        radius: config.radius,
+        color: config.color,
+        showOnMinimap: config.showOnMinimap,
+        pulseEffect: config.pulseEffect,
+        arrowIndicator: config.arrowIndicator,
+      });
+      this.objectiveMarkers.push(marker);
+    }
+  }
+
+  /**
+   * Crée les zones à défendre depuis les données Tiled
+   */
+  private createDefendZones(): void {
+    for (const config of this.levelData.defendZones) {
+      const zone = new DefendZone(this.scene, {
+        x: config.x,
+        y: config.y,
+        id: config.id,
+        radius: config.radius,
+        duration: config.duration,
+        zombieWaves: config.zombieWaves,
+        zombiesPerWave: config.zombiesPerWave,
+        waveInterval: config.waveInterval,
+        activateOnEnter: config.activateOnEnter,
+        requiredStayTime: config.requiredStayTime,
+      });
+      this.defendZones.push(zone);
+    }
+  }
+
+  /**
+   * Crée les portes automatiques depuis les données Tiled
+   */
+  private createAutoDoors(): void {
+    for (const config of this.levelData.autoDoors) {
+      const door = new AutoDoor(this.scene, {
+        x: config.x,
+        y: config.y,
+        id: config.id,
+        width: config.width,
+        height: config.height,
+        openDirection: config.openDirection,
+        openDistance: config.openDistance,
+        triggerRadius: config.triggerRadius,
+        openSpeed: config.openSpeed,
+        closeDelay: config.closeDelay,
+        stayOpen: config.stayOpen,
+        requiresKey: config.requiresKey,
+        keyId: config.keyId,
+        blocksZombies: config.blocksZombies,
+        blocksProjectiles: config.blocksProjectiles,
+      });
+      this.autoDoors.push(door);
     }
   }
 
@@ -601,6 +763,116 @@ export class TiledArena {
   }
 
   // ===========================================================================
+  // GETTERS - NOUVEAUX ÉLÉMENTS
+  // ===========================================================================
+
+  /**
+   * Retourne tous les checkpoints
+   */
+  public getCheckpoints(): Checkpoint[] {
+    return this.checkpoints;
+  }
+
+  /**
+   * Retourne les checkpoints activés
+   */
+  public getActivatedCheckpoints(): Checkpoint[] {
+    return this.checkpoints.filter((cp) => cp.isActivated());
+  }
+
+  /**
+   * Retourne le dernier checkpoint activé (pour respawn)
+   */
+  public getLastRespawnPoint(): Checkpoint | null {
+    const respawnPoints = this.checkpoints.filter((cp) => cp.canRespawn());
+    return respawnPoints.length > 0 ? respawnPoints[respawnPoints.length - 1] : null;
+  }
+
+  /**
+   * Retourne toutes les saferooms
+   */
+  public getSaferooms(): Saferoom[] {
+    return this.saferooms;
+  }
+
+  /**
+   * Vérifie si le joueur est dans une saferoom
+   */
+  public isPlayerInSaferoom(): boolean {
+    return this.saferooms.some((sr) => sr.isPlayerInside());
+  }
+
+  /**
+   * Retourne tous les téléporteurs
+   */
+  public getTeleporters(): Teleporter[] {
+    return this.teleporters;
+  }
+
+  /**
+   * Retourne un téléporteur par son ID
+   */
+  public getTeleporterById(id: string): Teleporter | null {
+    return this.teleporters.find((t) => t.id === id) ?? null;
+  }
+
+  /**
+   * Retourne tous les marqueurs d'objectifs
+   */
+  public getObjectiveMarkers(): ObjectiveMarker[] {
+    return this.objectiveMarkers;
+  }
+
+  /**
+   * Retourne les marqueurs d'objectifs actifs
+   */
+  public getActiveObjectiveMarkers(): ObjectiveMarker[] {
+    return this.objectiveMarkers.filter((m) => m.isObjectiveActive() && !m.isObjectiveCompleted());
+  }
+
+  /**
+   * Retourne un marqueur d'objectif par son ID
+   */
+  public getObjectiveMarkerById(id: string): ObjectiveMarker | null {
+    return this.objectiveMarkers.find((m) => m.objectiveId === id) ?? null;
+  }
+
+  /**
+   * Retourne toutes les zones à défendre
+   */
+  public getDefendZones(): DefendZone[] {
+    return this.defendZones;
+  }
+
+  /**
+   * Retourne les zones à défendre actives
+   */
+  public getActiveDefendZones(): DefendZone[] {
+    return this.defendZones.filter((z) => z.isZoneActive());
+  }
+
+  /**
+   * Retourne toutes les portes automatiques
+   */
+  public getAutoDoors(): AutoDoor[] {
+    return this.autoDoors;
+  }
+
+  /**
+   * Retourne une porte automatique par son ID
+   */
+  public getAutoDoorById(id: string): AutoDoor | null {
+    return this.autoDoors.find((d) => d.id === id) ?? null;
+  }
+
+  /**
+   * Retourne les colliders des portes automatiques fermées (pour collisions)
+   */
+  public getClosedAutoDoorColliders(): Phaser.GameObjects.Rectangle[] {
+    return this.autoDoors.filter((d) => !d.isDoorOpen()).map((d) => d.getCollider());
+  }
+
+  // ===========================================================================
   // EVENT HANDLERS
   // ===========================================================================
 
@@ -667,9 +939,9 @@ export class TiledArena {
   // ===========================================================================
 
   /**
-   * Met à jour les zones de terrain et éléments interactifs
+   * Met à jour les zones de terrain, éléments interactifs et nouveaux éléments
    */
-  public update(): void {
+  public update(delta: number = 16): void {
     for (const zone of this.terrainZones) {
       if (zone.isActive()) {
         zone.update();
@@ -680,6 +952,31 @@ export class TiledArena {
       if (!elem.isDestroyed()) {
         elem.update();
       }
+    }
+
+    // Mettre à jour les nouveaux éléments de gameplay
+    for (const checkpoint of this.checkpoints) {
+      checkpoint.update();
+    }
+
+    for (const saferoom of this.saferooms) {
+      saferoom.update(delta);
+    }
+
+    for (const teleporter of this.teleporters) {
+      teleporter.update(delta);
+    }
+
+    for (const marker of this.objectiveMarkers) {
+      marker.update();
+    }
+
+    for (const zone of this.defendZones) {
+      zone.update(delta);
+    }
+
+    for (const door of this.autoDoors) {
+      door.update(delta);
     }
   }
 
@@ -710,6 +1007,37 @@ export class TiledArena {
       door.destroy();
     }
     this.doors = [];
+
+    // Détruire les nouveaux éléments de gameplay
+    for (const checkpoint of this.checkpoints) {
+      checkpoint.destroy();
+    }
+    this.checkpoints = [];
+
+    for (const saferoom of this.saferooms) {
+      saferoom.destroy();
+    }
+    this.saferooms = [];
+
+    for (const teleporter of this.teleporters) {
+      teleporter.destroy();
+    }
+    this.teleporters = [];
+
+    for (const marker of this.objectiveMarkers) {
+      marker.destroy();
+    }
+    this.objectiveMarkers = [];
+
+    for (const zone of this.defendZones) {
+      zone.destroy();
+    }
+    this.defendZones = [];
+
+    for (const door of this.autoDoors) {
+      door.destroy();
+    }
+    this.autoDoors = [];
 
     // Détruire le tilemap
     if (this.tilemap) {

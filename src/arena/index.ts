@@ -66,4 +66,26 @@ export type {
   TiledBossConfig,
   TiledPickupConfig,
   TiledLevelData,
+  TiledCheckpointConfig,
+  TiledSaferoomConfig,
+  TiledTeleporterConfig,
+  TiledObjectiveType,
+  TiledObjectiveMarkerConfig,
+  TiledDefendZoneConfig,
+  TiledDoorDirection,
+  TiledAutoDoorConfig,
 } from './TiledLevelLoader';
+
+// New Gameplay Elements
+export { Checkpoint } from './Checkpoint';
+export type { CheckpointConfig } from './Checkpoint';
+export { Saferoom } from './Saferoom';
+export type { SaferoomConfig } from './Saferoom';
+export { Teleporter } from './Teleporter';
+export type { TeleporterConfig } from './Teleporter';
+export { ObjectiveMarker } from './ObjectiveMarker';
+export type { ObjectiveMarkerConfig, ObjectiveType } from './ObjectiveMarker';
+export { DefendZone } from './DefendZone';
+export type { DefendZoneConfig } from './DefendZone';
+export { AutoDoor } from './AutoDoor';
+export type { AutoDoorConfig, DoorDirection } from './AutoDoor';

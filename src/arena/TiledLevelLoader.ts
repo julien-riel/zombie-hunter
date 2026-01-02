@@ -260,6 +260,111 @@ export interface TiledPickupConfig {
   weaponType?: string;
 }
 
+// ===========================================================================
+// NOUVEAUX ÉLÉMENTS DE GAMEPLAY
+// ===========================================================================
+
+/**
+ * Configuration d'un checkpoint
+ */
+export interface TiledCheckpointConfig {
+  id: string;
+  x: number;
+  y: number;
+  radius?: number;
+  isRespawnPoint?: boolean;
+}
+
+/**
+ * Configuration d'une saferoom
+ */
+export interface TiledSaferoomConfig {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  healOnEnter?: boolean;
+  healAmount?: number;
+  clearZombies?: boolean;
+  clearRadius?: number;
+}
+
+/**
+ * Configuration d'un téléporteur
+ */
+export interface TiledTeleporterConfig {
+  id: string;
+  x: number;
+  y: number;
+  linkedTeleporterId?: string;
+  radius?: number;
+  cooldown?: number;
+  bidirectional?: boolean;
+}
+
+/**
+ * Type d'objectif
+ */
+export type TiledObjectiveType = 'defend' | 'collect' | 'reach' | 'eliminate' | 'escort' | 'activate';
+
+/**
+ * Configuration d'un marqueur d'objectif
+ */
+export interface TiledObjectiveMarkerConfig {
+  id: string;
+  x: number;
+  y: number;
+  type?: TiledObjectiveType;
+  label?: string;
+  radius?: number;
+  color?: number;
+  showOnMinimap?: boolean;
+  pulseEffect?: boolean;
+  arrowIndicator?: boolean;
+}
+
+/**
+ * Configuration d'une zone à défendre
+ */
+export interface TiledDefendZoneConfig {
+  id: string;
+  x: number;
+  y: number;
+  radius?: number;
+  duration?: number;
+  zombieWaves?: number;
+  zombiesPerWave?: number;
+  waveInterval?: number;
+  activateOnEnter?: boolean;
+  requiredStayTime?: number;
+}
+
+/**
+ * Direction d'ouverture d'une porte
+ */
+export type TiledDoorDirection = 'up' | 'down' | 'left' | 'right';
+
+/**
+ * Configuration d'une porte automatique
+ */
+export interface TiledAutoDoorConfig {
+  id: string;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  openDirection?: TiledDoorDirection;
+  openDistance?: number;
+  triggerRadius?: number;
+  openSpeed?: number;
+  closeDelay?: number;
+  stayOpen?: boolean;
+  requiresKey?: boolean;
+  keyId?: string;
+  blocksZombies?: boolean;
+  blocksProjectiles?: boolean;
+}
+
 /**
  * Données complètes d'un niveau Tiled
  */
@@ -298,6 +403,14 @@ export interface TiledLevelData {
   zombies: TiledZombieConfig[];
   bosses: TiledBossConfig[];
   pickups: TiledPickupConfig[];
+
+  /** Nouveaux éléments de gameplay */
+  checkpoints: TiledCheckpointConfig[];
+  saferooms: TiledSaferoomConfig[];
+  teleporters: TiledTeleporterConfig[];
+  objectiveMarkers: TiledObjectiveMarkerConfig[];
+  defendZones: TiledDefendZoneConfig[];
+  autoDoors: TiledAutoDoorConfig[];
 
   /** Tile layers pour le rendu */
   groundLayer: number[] | null;
@@ -363,6 +476,12 @@ export class TiledLevelLoader {
       zombies: [],
       bosses: [],
       pickups: [],
+      checkpoints: [],
+      saferooms: [],
+      teleporters: [],
+      objectiveMarkers: [],
+      defendZones: [],
+      autoDoors: [],
       groundLayer: null,
       wallsLayer: null,
       decorationLayer: null,
@@ -442,6 +561,10 @@ export class TiledLevelLoader {
       this.parseBossesLayer(objects, levelData);
     } else if (name === 'pickups' || name === 'items') {
       this.parsePickupsLayer(objects, levelData);
+    } else if (name === 'objectives' || name === 'campaign') {
+      this.parseObjectivesLayer(objects, levelData);
+    } else if (name === 'doors' || name === 'auto_doors') {
+      this.parseAutoDoorLayer(objects, levelData);
     }
   }
 
@@ -751,6 +874,133 @@ export class TiledLevelLoader {
         powerupType: this.getStringProperty(obj, 'type'),
         weaponType: this.getStringProperty(obj, 'weaponType'),
       });
+    }
+  }
+
+  // ===========================================================================
+  // NOUVEAUX LAYERS DE GAMEPLAY
+  // ===========================================================================
+
+  /**
+   * Parse le layer des objectifs (checkpoints, saferooms, teleporters, etc.)
+   */
+  private parseObjectivesLayer(objects: TiledObject[], levelData: TiledLevelData): void {
+    for (const obj of objects) {
+      const type = obj.type.toLowerCase();
+      const centerX = obj.x + obj.width / 2;
+      const centerY = obj.y + obj.height / 2;
+
+      switch (type) {
+        case 'checkpoint':
+          levelData.checkpoints.push({
+            id: obj.name || `checkpoint_${obj.id}`,
+            x: centerX,
+            y: centerY,
+            radius: this.getIntProperty(obj, 'radius'),
+            isRespawnPoint: this.getBoolProperty(obj, 'isRespawnPoint', true),
+          });
+          break;
+
+        case 'saferoom':
+        case 'safe_room':
+          levelData.saferooms.push({
+            x: centerX,
+            y: centerY,
+            width: obj.width,
+            height: obj.height,
+            healOnEnter: this.getBoolProperty(obj, 'healOnEnter', true),
+            healAmount: this.getIntProperty(obj, 'healAmount'),
+            clearZombies: this.getBoolProperty(obj, 'clearZombies', true),
+            clearRadius: this.getIntProperty(obj, 'clearRadius'),
+          });
+          break;
+
+        case 'teleporter':
+        case 'portal':
+          levelData.teleporters.push({
+            id: obj.name || `teleporter_${obj.id}`,
+            x: centerX,
+            y: centerY,
+            linkedTeleporterId: this.getStringProperty(obj, 'linkedTeleporterId'),
+            radius: this.getIntProperty(obj, 'radius'),
+            cooldown: this.getIntProperty(obj, 'cooldown'),
+            bidirectional: this.getBoolProperty(obj, 'bidirectional', true),
+          });
+          break;
+
+        case 'objective_marker':
+        case 'objectivemarker':
+        case 'objective': {
+          const objType = this.getStringProperty(obj, 'objectiveType', 'reach');
+          levelData.objectiveMarkers.push({
+            id: obj.name || `objective_${obj.id}`,
+            x: centerX,
+            y: centerY,
+            type: objType as TiledObjectiveType,
+            label: this.getStringProperty(obj, 'label'),
+            radius: this.getIntProperty(obj, 'radius'),
+            color: this.getIntProperty(obj, 'color'),
+            showOnMinimap: this.getBoolProperty(obj, 'showOnMinimap', true),
+            pulseEffect: this.getBoolProperty(obj, 'pulseEffect', true),
+            arrowIndicator: this.getBoolProperty(obj, 'arrowIndicator', true),
+          });
+          break;
+        }
+
+        case 'defend_zone':
+        case 'defendzone':
+        case 'defend':
+          levelData.defendZones.push({
+            id: obj.name || `defend_${obj.id}`,
+            x: centerX,
+            y: centerY,
+            radius: this.getIntProperty(obj, 'radius') ?? Math.max(obj.width, obj.height) / 2,
+            duration: this.getIntProperty(obj, 'duration'),
+            zombieWaves: this.getIntProperty(obj, 'zombieWaves'),
+            zombiesPerWave: this.getIntProperty(obj, 'zombiesPerWave'),
+            waveInterval: this.getIntProperty(obj, 'waveInterval'),
+            activateOnEnter: this.getBoolProperty(obj, 'activateOnEnter', true),
+            requiredStayTime: this.getIntProperty(obj, 'requiredStayTime'),
+          });
+          break;
+
+        default:
+          // Ignore unknown types in objectives layer
+          break;
+      }
+    }
+  }
+
+  /**
+   * Parse le layer des portes automatiques
+   */
+  private parseAutoDoorLayer(objects: TiledObject[], levelData: TiledLevelData): void {
+    for (const obj of objects) {
+      const type = obj.type.toLowerCase();
+
+      if (type === 'auto_door' || type === 'autodoor' || type === 'door') {
+        const centerX = obj.x + obj.width / 2;
+        const centerY = obj.y + obj.height / 2;
+        const dirStr = this.getStringProperty(obj, 'openDirection', 'up')?.toLowerCase();
+
+        levelData.autoDoors.push({
+          id: obj.name || `door_${obj.id}`,
+          x: centerX,
+          y: centerY,
+          width: obj.width,
+          height: obj.height,
+          openDirection: dirStr as TiledDoorDirection,
+          openDistance: this.getIntProperty(obj, 'openDistance'),
+          triggerRadius: this.getIntProperty(obj, 'triggerRadius'),
+          openSpeed: this.getFloatProperty(obj, 'openSpeed'),
+          closeDelay: this.getIntProperty(obj, 'closeDelay'),
+          stayOpen: this.getBoolProperty(obj, 'stayOpen', false),
+          requiresKey: this.getBoolProperty(obj, 'requiresKey', false),
+          keyId: this.getStringProperty(obj, 'keyId'),
+          blocksZombies: this.getBoolProperty(obj, 'blocksZombies', true),
+          blocksProjectiles: this.getBoolProperty(obj, 'blocksProjectiles', false),
+        });
+      }
     }
   }
 
